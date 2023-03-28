@@ -40,3 +40,30 @@ message WritefileResponse {
     // want offset
     uint32 offset =3;
 }
+
+//// readfile protocol
+
+// a protocol define a set of reuqest and responses
+message ReadfileRequest {
+    MessageData messageData = 1;
+
+    // Root hash
+    string Roothash =2;
+    // sha256 of the data
+    string Datahash = 3;
+    // data offset
+    uint32 offset = 4;
+}
+
+message ReadfileResponse {
+    MessageData messageData = 1;
+
+    // return code
+    uint32 code = 2;
+    // want offset
+    uint32 offset =3;
+    // length of the data
+    uint32 length = 4;
+    // data
+    bytes data = 5;
+}
