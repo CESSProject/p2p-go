@@ -17,8 +17,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-func SendFile(multiaddr string, path string) error {
-	fmt.Println("will send ", path, " to ", multiaddr)
+func WriteFile(multiaddr string, path string) error {
+	fmt.Println("will write ", path, " to ", multiaddr)
 	maddr, err := ma.NewMultiaddr(multiaddr)
 	if err != nil {
 		fmt.Println("NewMultiaddr err: ", err)
@@ -32,5 +32,23 @@ func SendFile(multiaddr string, path string) error {
 	}
 	node.AddAddrToPearstore(info.ID, maddr)
 	err = node.GetNode().WriteFileAction(info.ID, path)
+	return err
+}
+
+func ReadFile(multiaddr string, rootHash, datahash, path string, size int64) error {
+	fmt.Println("will read ", path, " from ", multiaddr)
+	maddr, err := ma.NewMultiaddr(multiaddr)
+	if err != nil {
+		fmt.Println("NewMultiaddr err: ", err)
+		os.Exit(1)
+	}
+	// Extract the peer ID from the multiaddr.
+	info, err := peer.AddrInfoFromP2pAddr(maddr)
+	if err != nil {
+		fmt.Println("AddrInfoFromP2pAddr err: ", err)
+		os.Exit(1)
+	}
+	node.AddAddrToPearstore(info.ID, maddr)
+	err = node.GetNode().ReadFileAction(info.ID, rootHash, datahash, path, size)
 	return err
 }

@@ -10,6 +10,7 @@ package node
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 )
@@ -30,6 +31,20 @@ func CalcPathSHA256(fpath string) (string, error) {
 func CalcFileSHA256(f *os.File) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// CalcSHA256 is used to calculate the sha256 value
+// of the data.
+func CalcSHA256(data []byte) (string, error) {
+	if len(data) <= 0 {
+		return "", errors.New("data is nil")
+	}
+	h := sha256.New()
+	_, err := h.Write(data)
+	if err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
