@@ -35,7 +35,7 @@ func WriteFile(multiaddr string, path string) error {
 	return err
 }
 
-func ReadFile(multiaddr string, hash string, path string) error {
+func ReadFile(multiaddr string, rootHash, datahash, path string, size int64) error {
 	fmt.Println("will read ", path, " from ", multiaddr)
 	maddr, err := ma.NewMultiaddr(multiaddr)
 	if err != nil {
@@ -49,6 +49,6 @@ func ReadFile(multiaddr string, hash string, path string) error {
 		os.Exit(1)
 	}
 	node.AddAddrToPearstore(info.ID, maddr)
-	err = node.GetNode().ReadFileAction(info.ID, hash, path)
+	err = node.GetNode().ReadFileAction(info.ID, rootHash, datahash, path, size)
 	return err
 }

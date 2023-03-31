@@ -12,9 +12,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
@@ -31,14 +34,19 @@ const writeFileResponse = "/file/writeresp/v0"
 const readFileRequest = "/file/readreq/v0"
 const readFileResponse = "/file/readresp/v0"
 
+type readMsgResp struct {
+	ch chan bool
+	*pb.ReadfileResponse
+}
+
 type WriteFileProtocol struct {
 	node     *Node                // local host
 	requests map[string]chan bool // determine whether it is your own response
 }
 
 type ReadFileProtocol struct {
-	node     *Node                // local host
-	requests map[string]chan bool // determine whether it is your own response
+	node     *Node                   // local host
+	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
 func NewWriteFileProtocol(node *Node) *WriteFileProtocol {
@@ -49,7 +57,7 @@ func NewWriteFileProtocol(node *Node) *WriteFileProtocol {
 }
 
 func NewReadFileProtocol(node *Node) *ReadFileProtocol {
-	e := ReadFileProtocol{node: node, requests: make(map[string]chan bool)}
+	e := ReadFileProtocol{node: node, requests: make(map[string]*readMsgResp)}
 	node.SetStreamHandler(readFileRequest, e.onReadFileRequest)
 	node.SetStreamHandler(readFileResponse, e.onReadFileResponse)
 	return &e
@@ -63,7 +71,6 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 	var num int
 	var offset int64
 	var respChan = make(chan bool, 1)
-	var timeout = time.NewTicker(P2PRespTimeout)
 
 	// create message data
 	req := &pb.WritefileRequest{
@@ -93,6 +100,7 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 	defer delete(e.requests, req.MessageData.Id)
 	defer close(respChan)
 
+	timeout := time.NewTicker(P2PWriteReqRespTime)
 	buf := make([]byte, FileProtocolBufSize)
 	for {
 		num, err = f.Read(buf)
@@ -125,7 +133,7 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 		}
 
 		//
-		timeout.Reset(P2PRespTimeout)
+		timeout.Reset(P2PWriteReqRespTime)
 		select {
 		case ok = <-e.requests[req.MessageData.Id]:
 			if !ok {
@@ -139,11 +147,6 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 		offset += int64(num)
 		log.Printf("Writefile to: %s was sent. Msg Id: %s, Data hash: %s", id, req.MessageData.Id, hex.EncodeToString(hash[:]))
 	}
-	return nil
-}
-
-func (e *ReadFileProtocol) ReadFileAction(id peer.ID, hash, path string) error {
-	log.Printf("Will Sending readfileAction to: %s....", id)
 	return nil
 }
 
@@ -244,8 +247,142 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 	log.Printf("Received Writefile response from %s. Message id:%s. Code: %d Offset:%d.", s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset)
 }
 
+func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
+	log.Printf("Will Sending readfileAction to: %s....", id)
+
+	var ok bool
+	var err error
+	var hash string
+	var offset int64
+	var num int
+	var fstat fs.FileInfo
+	var f *os.File
+	var req pb.ReadfileRequest
+	var resp *pb.ReadfileResponse
+
+	fstat, err = os.Stat(path)
+	if err == nil {
+		if fstat.IsDir() {
+			return fmt.Errorf("%s is a directory", path)
+		}
+		if fstat.Size() < size {
+			offset = fstat.Size()
+		} else if fstat.Size() == size {
+			hash, err = CalcPathSHA256(path)
+			if err != nil {
+				return err
+			}
+			if hash == datahash {
+				return nil
+			}
+			return fmt.Errorf("datahash does not match file")
+		} else {
+			buf, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			hash, err = CalcSHA256(buf[:size])
+			if err != nil {
+				return err
+			}
+			if hash == datahash {
+				f, err = os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				_, err = f.Write(buf[:size])
+				if err != nil {
+					return err
+				}
+				err = f.Sync()
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			os.Remove(path)
+		}
+	}
+	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	s, err := e.node.NewStream(context.Background(), id, readFileRequest)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	req.Roothash = roothash
+	req.Datahash = datahash
+	req.MessageData = e.node.NewMessageData(uuid.New().String(), false)
+
+	// store request so response handler has access to it
+	var respChan = make(chan bool, 1)
+	e.requests[req.MessageData.Id] = &readMsgResp{
+		ch: respChan,
+	}
+	defer delete(e.requests, req.MessageData.Id)
+	defer close(respChan)
+	timeout := time.NewTicker(P2PReadReqRespTime)
+	defer timeout.Stop()
+
+	for {
+		req.Offset = offset
+		// calc signature
+		signature, err := e.node.signProtoMessage(&req)
+		if err != nil {
+			log.Println("failed to sign message")
+			return err
+		}
+
+		// add the signature to the message
+		req.MessageData.Sign = signature
+
+		err = e.node.sendProtoMessageToStream(s, &req)
+		if err != nil {
+			return err
+		}
+
+		//
+		timeout.Reset(P2PReadReqRespTime)
+		select {
+		case ok = <-e.requests[req.MessageData.Id].ch:
+			if !ok {
+				// err, close
+				return errors.New("failed")
+			}
+		case <-timeout.C:
+			// timeout
+			return errors.New("timeout")
+		}
+		resp = e.requests[req.MessageData.Id].ReadfileResponse
+		num, err = f.Write(resp.Data[:resp.Length])
+		if err != nil {
+			return err
+		}
+
+		err = f.Sync()
+		if err != nil {
+			return err
+		}
+
+		if resp.Code == P2PResponseFinish {
+			break
+		}
+
+		req.Offset += int64(num)
+	}
+
+	return nil
+}
+
 // remote peer requests handler
 func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
+	var code = P2PResponseOK
 	// get request data
 	data := &pb.ReadfileRequest{}
 	buf, err := io.ReadAll(s)
@@ -274,13 +411,37 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 
 	log.Printf("Sending Readfile response to %s. Message id: %s...", s.Conn().RemotePeer(), data.MessageData.Id)
 
+	f, err := os.OpenFile(filepath.Join(e.node.string, FileDirectionry, data.Datahash), os.O_RDONLY, 0)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fstat, err := f.Stat()
+	if err != nil {
+		return
+	}
+
+	_, err = f.Seek(data.Offset, 0)
+	if err != nil {
+		return
+	}
+	var readBuf = make([]byte, FileProtocolBufSize)
+	num, err := f.Read(buf)
+	if err != nil {
+		return
+	}
+
+	if num+int(data.Offset) >= int(fstat.Size()) {
+		code = P2PResponseFinish
+	}
+
 	// send response to the request using the message string he provided
 	resp := &pb.ReadfileResponse{
 		MessageData: e.node.NewMessageData(data.MessageData.Id, false),
-		Code:        P2PResponseOK,
-		Offset:      0,
-		Length:      4,
-		Data:        []byte{'t', 'e', 's', 't'},
+		Code:        code,
+		Offset:      data.Offset,
+		Length:      uint32(num),
+		Data:        readBuf[:num],
 	}
 
 	// sign the data
@@ -328,10 +489,10 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 	// locate request data and remove it if found
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {
-		if data.Code == P2PResponseOK {
-			e.requests[data.MessageData.Id] <- true
+		if data.Code == P2PResponseOK || data.Code == P2PResponseFinish {
+			e.requests[data.MessageData.Id].ReadfileResponse = data
 		} else {
-			e.requests[data.MessageData.Id] <- false
+			e.requests[data.MessageData.Id].ch <- false
 		}
 	} else {
 		log.Println("Failed to locate request data boject for response")

@@ -34,6 +34,7 @@ import (
 // Node type - a p2p host implementing one or more p2p protocols
 type Node struct {
 	host.Host          // lib-p2p host
+	string             // data
 	*WriteFileProtocol // writefile protocol impl
 	*ReadFileProtocol  // readfile protocol impl
 	// add other protocols here...
@@ -63,6 +64,7 @@ func StartPeer(ip string, port int, datadir string) error {
 			return err
 		}
 		node = &Node{Host: newHost}
+		node.string = datadir
 		node.WriteFileProtocol = NewWriteFileProtocol(node)
 		node.ReadFileProtocol = NewReadFileProtocol(node)
 		return err
