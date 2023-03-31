@@ -28,8 +28,15 @@ import (
 // pattern: /protocol-name/request-or-response-message/version
 const writeFileRequest = "/file/writereq/v0"
 const writeFileResponse = "/file/writeresp/v0"
+const readFileRequest = "/file/readreq/v0"
+const readFileResponse = "/file/readresp/v0"
 
 type WriteFileProtocol struct {
+	node     *Node                // local host
+	requests map[string]chan bool // determine whether it is your own response
+}
+
+type ReadFileProtocol struct {
 	node     *Node                // local host
 	requests map[string]chan bool // determine whether it is your own response
 }
@@ -41,13 +48,20 @@ func NewWriteFileProtocol(node *Node) *WriteFileProtocol {
 	return &e
 }
 
+func NewReadFileProtocol(node *Node) *ReadFileProtocol {
+	e := ReadFileProtocol{node: node, requests: make(map[string]chan bool)}
+	node.SetStreamHandler(readFileRequest, e.onReadFileRequest)
+	node.SetStreamHandler(readFileResponse, e.onReadFileResponse)
+	return &e
+}
+
 func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 	log.Printf("Will Sending writefileAction to: %s....", id)
 
 	var err error
 	var ok bool
 	var num int
-	var offset uint32
+	var offset int64
 	var respChan = make(chan bool, 1)
 	var timeout = time.NewTicker(P2PRespTimeout)
 
@@ -122,9 +136,14 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 			// timeout
 			return errors.New("timeout")
 		}
-		offset += uint32(num)
+		offset += int64(num)
 		log.Printf("Writefile to: %s was sent. Msg Id: %s, Data hash: %s", id, req.MessageData.Id, hex.EncodeToString(hash[:]))
 	}
+	return nil
+}
+
+func (e *ReadFileProtocol) ReadFileAction(id peer.ID, hash, path string) error {
+	log.Printf("Will Sending readfileAction to: %s....", id)
 	return nil
 }
 
@@ -223,4 +242,102 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 	}
 
 	log.Printf("Received Writefile response from %s. Message id:%s. Code: %d Offset:%d.", s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset)
+}
+
+// remote peer requests handler
+func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
+	// get request data
+	data := &pb.ReadfileRequest{}
+	buf, err := io.ReadAll(s)
+	if err != nil {
+		s.Reset()
+		log.Println(err)
+		return
+	}
+	s.Close()
+
+	// unmarshal it
+	err = proto.Unmarshal(buf, data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Received Readfile from %s. Roothash:%s Datahash:%s offset:%d",
+		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Offset)
+
+	valid := e.node.authenticateMessage(data, data.MessageData)
+	if !valid {
+		log.Println("Failed to authenticate message")
+		return
+	}
+
+	log.Printf("Sending Readfile response to %s. Message id: %s...", s.Conn().RemotePeer(), data.MessageData.Id)
+
+	// send response to the request using the message string he provided
+	resp := &pb.ReadfileResponse{
+		MessageData: e.node.NewMessageData(data.MessageData.Id, false),
+		Code:        P2PResponseOK,
+		Offset:      0,
+		Length:      4,
+		Data:        []byte{'t', 'e', 's', 't'},
+	}
+
+	// sign the data
+	signature, err := e.node.signProtoMessage(resp)
+	if err != nil {
+		log.Println("failed to sign response")
+		return
+	}
+
+	// add the signature to the message
+	resp.MessageData.Sign = signature
+
+	err = e.node.sendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
+	if err != nil {
+		log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
+	}
+}
+
+// remote peer requests handler
+func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
+	data := &pb.ReadfileResponse{}
+	buf, err := io.ReadAll(s)
+	if err != nil {
+		s.Reset()
+		log.Println(err)
+		return
+	}
+	s.Close()
+
+	// unmarshal it
+	err = proto.Unmarshal(buf, data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// authenticate message content
+	valid := e.node.authenticateMessage(data, data.MessageData)
+
+	if !valid {
+		log.Println("Failed to authenticate message")
+		return
+	}
+
+	// locate request data and remove it if found
+	_, ok := e.requests[data.MessageData.Id]
+	if ok {
+		if data.Code == P2PResponseOK {
+			e.requests[data.MessageData.Id] <- true
+		} else {
+			e.requests[data.MessageData.Id] <- false
+		}
+	} else {
+		log.Println("Failed to locate request data boject for response")
+		return
+	}
+
+	log.Printf("Received Readfile response from %s. Message id:%s. Code: %d Offset:%d, Data:%s",
+		s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset, string(data.Data))
 }

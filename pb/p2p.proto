@@ -6,37 +6,65 @@ option go_package = "./;pb";
 message MessageData {
     // shared between all requests
     string clientVersion = 1; // client version
-    int64 timestamp = 2;     // unix time
-    string id = 3;           // allows requesters to use request data when processing a response
-    bool gossip = 4;         // true to have receiver peer gossip the message to neighbors
-    string nodeId = 5;       // id of node that created the message (not the peer that may have sent it). =base58(multihash(nodePubKey))
-    bytes nodePubKey = 6;    // Authoring node Secp256k1 public key (32bytes) - protobufs serielized
-    bytes sign = 7;         // signature of message data + method specific data by message authoring node.
+    string id = 2; // allows requesters to use request data when processing a response
+    string nodeId = 3; // id of node that created the message (not the peer that may have sent it). =base58(multihash(nodePubKey))
+    bytes nodePubKey = 4; // Authoring node Secp256k1 public key (32bytes) - protobufs serielized
+    bytes sign = 5; // signature of message data + method specific data by message authoring node.
+    int64 timestamp = 6; // unix time
+    bool gossip = 7; // true to have receiver peer gossip the message to neighbors 
 }
 
 //// writefile protocol
 
 // a protocol define a set of reuqest and responses
 message WritefileRequest {
-    MessageData messageData = 1;
-
-    // Root hash
-    string Roothash =2;
-    // sha256 of the data
-    string Datahash = 3;
-    // length of the data
-    uint32 length = 4;
-    // data offset
-    uint32 offset = 5;
-    // data
-    bytes data = 6;
+    // Roothash uniquely identifies a user data
+    string Roothash = 1;
+    // Datahash is the currently written data hash value
+    string Datahash = 2;
+    // Data is the data written this time
+    bytes Data = 3;
+    // MessageData is a generic message
+    MessageData messageData = 4;
+    // Offset is the offset of this write
+    int64 Offset = 5;
+    // Length is the length of the data written this time
+    uint32 Length = 6;  
 }
 
 message WritefileResponse {
+    // MessageData is a generic message
     MessageData messageData = 1;
+    // Offset is the write offset the receiver wants
+    int64 Offset = 2;
+    // Code indicates the result of this transfer
+    uint32 Code = 3;
+}
 
-    // return code
-    uint32 code = 2;
-    // want offset
-    uint32 offset =3;
+//// readfile protocol
+
+// a protocol define a set of reuqest and responses
+message ReadfileRequest {
+    // Roothash uniquely identifies a user data
+    string Roothash = 1;
+    // Datahash is the currently written data hash value
+    string Datahash = 2;
+    // MessageData is a generic message
+    MessageData messageData = 3;
+    // Offset is the offset that the reader wants to read
+    int64 offset = 4;
+}
+
+message ReadfileResponse {
+    // Data is the returned data
+    bytes Data = 1;
+    // MessageData is a generic message
+    MessageData messageData = 2;
+    // Offset is the data offset returned by the peer
+    int64 offset = 3;
+    // Code indicates the result of this transfer
+    uint32 code = 4;
+    // Length is the returned data length
+    uint32 length = 5;
+    
 }
