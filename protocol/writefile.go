@@ -1,13 +1,14 @@
 package protocol
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/CESSProject/p2p-go/core"
@@ -33,11 +34,6 @@ type WriteFileProtocol struct {
 	requests map[string]chan bool // determine whether it is your own response
 }
 
-type ReadFileProtocol struct {
-	node     *core.Node              // local host
-	requests map[string]*readMsgResp // determine whether it is your own response
-}
-
 func NewWriteFileProtocol(node *core.Node) *WriteFileProtocol {
 	e := WriteFileProtocol{node: node, requests: make(map[string]chan bool)}
 	node.SetStreamHandler(writeFileRequest, e.onWriteFileRequest)
@@ -45,39 +41,33 @@ func NewWriteFileProtocol(node *core.Node) *WriteFileProtocol {
 	return &e
 }
 
-func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
-	log.Printf("Will Sending writefileAction to: %s....", id)
-
+func (e *WriteFileProtocol) WriteFileAction(id peer.ID, roothash, path string) error {
+	log.Printf("Will Sending writefileAction to: %s", id)
 	var err error
 	var ok bool
 	var num int
 	var offset int64
-	var respChan = make(chan bool, 1)
+	var f *os.File
 
 	// create message data
 	req := &pb.WritefileRequest{
 		MessageData: e.node.NewMessageData(uuid.New().String(), false),
-		Roothash:    "This is root hash",
+		Roothash:    roothash,
 	}
 
-	f, err := os.Open(path)
+	req.Datahash, err = CalcPathSHA256(path)
+	if err != nil {
+		return err
+	}
+
+	f, err = os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	req.Datahash, err = CalcFileSHA256(f)
-	if err != nil {
-		return err
-	}
-
-	s, err := e.node.NewStream(context.Background(), id, writeFileRequest)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
 	// store request so response handler has access to it
+	respChan := make(chan bool, 1)
 	e.requests[req.MessageData.Id] = respChan
 	defer delete(e.requests, req.MessageData.Id)
 	defer close(respChan)
@@ -85,12 +75,14 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 	timeout := time.NewTicker(P2PWriteReqRespTime)
 	buf := make([]byte, FileProtocolBufSize)
 	for {
+		f.Seek(offset, 0)
 		num, err = f.Read(buf)
 		if err != nil && err != io.EOF {
-			// err
 			return err
 		}
+
 		if num == 0 {
+			fmt.Println("num: ", num)
 			break
 		}
 
@@ -98,8 +90,9 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 		req.Length = uint32(num)
 		req.Offset = offset
 		hash := sha256.Sum256(req.Data)
-
+		req.MessageData.Timestamp = time.Now().Unix()
 		// calc signature
+		req.MessageData.Sign = nil
 		signature, err := e.node.SignProtoMessage(req)
 		if err != nil {
 			log.Println("failed to sign message")
@@ -109,12 +102,14 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 		// add the signature to the message
 		req.MessageData.Sign = signature
 
-		err = e.node.SendProtoMessageToStream(s, req)
+		err = e.node.SendProtoMessage(id, writeFileRequest, req)
 		if err != nil {
 			return err
 		}
 
-		//
+		log.Printf("Writefile to: %s was sent. Msg Id: %s, Data hash: %s", id, req.MessageData.Id, hex.EncodeToString(hash[:]))
+
+		// wait response
 		timeout.Reset(P2PWriteReqRespTime)
 		select {
 		case ok = <-e.requests[req.MessageData.Id]:
@@ -127,13 +122,13 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, path string) error {
 			return errors.New("timeout")
 		}
 		offset += int64(num)
-		log.Printf("Writefile to: %s was sent. Msg Id: %s, Data hash: %s", id, req.MessageData.Id, hex.EncodeToString(hash[:]))
 	}
 	return nil
 }
 
 // remote peer requests handler
 func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
+	log.Printf("Recv writefileAction from: %s", s.ID())
 	// get request data
 	data := &pb.WritefileRequest{}
 	buf, err := io.ReadAll(s)
@@ -162,7 +157,20 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		return
 	}
 
-	log.Printf("Sending Writefile response to %s. Message id: %s...", s.Conn().RemotePeer(), data.MessageData.Id)
+	log.Printf("Sending Writefile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
+
+	f, err := os.OpenFile(filepath.Join(e.node.Workspace(), FileDirectionry, data.Datahash), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		log.Println("OpenFile err:", err)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.Write(data.Data[:data.Length])
+	if err != nil {
+		log.Println("Write err:", err)
+		return
+	}
 
 	// send response to the request using the message string he provided
 	resp := &pb.WritefileResponse{

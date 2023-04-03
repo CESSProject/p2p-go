@@ -11,18 +11,18 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -31,85 +31,44 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+// P2P is an object participating in a p2p network, which
+// implements protocols or provides services. It handles
+// requests like a Server, and issues requests like a Client.
+// It is called Host because it is both Server and Client (and Peer
+// may be confusing).
+// It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
 	host.Host // lib-p2p host
-	PrivatekeyPath() string
-	WriteFile(multiaddr string, path string) error
-	ReadFile(multiaddr string, rootHash, datahash, path string, size int64) error
 }
 
-// Node type - a p2p host implementing one or more p2p protocols
+// Node type - Implementation of a P2P Host
 type Node struct {
-	ctx       context.Context
-	ctxCancel context.CancelFunc
-	// ensures we shutdown ONLY once
-	closeSync sync.Once
-
+	ctx            context.Context
+	ctxCancel      context.CancelFunc
 	host           host.Host // lib-p2p host
 	workspace      string    // data
 	privatekeyPath string
-	protocol       map[string]interface{}
-	// *myprotocol.WriteFileProtocol // writefile protocol impl
-	// *myprotocol.ReadFileProtocol  // readfile protocol impl
-	// add other protocols here...
 }
 
-// node - p2p node instance
-// var node *Node
-
-// func GetNode() *Node {
-// 	return node
-// }
-
-func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr) {
-	n.host.Peerstore().AddAddr(id, addr, peerstore.AddressTTL)
-}
-
-func (n *Node) PrivatekeyPath() string {
-	return n.privatekeyPath
-}
-
-func (n *Node) Workspace() string {
-	return n.workspace
-}
-
-func (n *Node) AddProtocol(pid protocol.ID, handler network.StreamHandler) {
-	n.host.SetStreamHandler(pid, handler)
-}
-
-// StartPeer configures and starts the p2p node service
-// ip: listening IP address
-// port: listening IP port
-// datadir: where to save the key
+// NewBasicNode constructs a new *Node
 //
-// This function must be called before use
-func StartPeer(ip string, port int, datadir string) error {
-	// if node == nil {
-	// 	newHost, err := newHost(ip, port, datadir)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	node = &Node{Host: newHost}
-	// 	node.string = datadir
-	// 	node.WriteFileProtocol = NewWriteFileProtocol(node)
-	// 	node.ReadFileProtocol = NewReadFileProtocol(node)
-	// 	return err
-	// }
-	return nil
-}
+//	  multiaddr: listen addresses of p2p host
+//	  workspace: service working directory
+//	  privatekeypath: private key file
+//		  If it's empty, automatically created in the program working directory
+//		  If it's a directory, it will be created in the specified directory
+func NewBasicNode(multiaddr []ma.Multiaddr, workspace string, privatekeypath string) (*Node, error) {
+	if multiaddr == nil || workspace == "" {
+		return nil, errors.New("invalid parameter")
+	}
 
-func newHost(ip string, port int, datadir string) (host.Host, error) {
-	privfileName := filepath.Join(datadir, privatekeyFile)
-	prvKey, err := identify(privfileName)
+	prvKey, err := identify(privatekeypath)
 	if err != nil {
 		return nil, err
 	}
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port))
-	if err != nil {
-		return nil, err
-	}
+
 	host, err := libp2p.New(
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(multiaddr...),
 		libp2p.Identity(prvKey),
 		yamuxOpt,
 		mplexOpt,
@@ -120,17 +79,98 @@ func newHost(ip string, port int, datadir string) (host.Host, error) {
 	if !host.ID().MatchesPrivateKey(prvKey) {
 		return nil, errors.New("")
 	}
-	return host, err
+	basicCtx, cancel := context.WithCancel(context.Background())
+	n := &Node{
+		ctx:            basicCtx,
+		ctxCancel:      cancel,
+		host:           host,
+		workspace:      workspace,
+		privatekeyPath: privatekeypath,
+	}
+	return n, nil
 }
 
+func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr, t time.Duration) {
+	time := peerstore.RecentlyConnectedAddrTTL
+	if t.Seconds() > 0 {
+		time = t
+	}
+	n.Peerstore().AddAddr(id, addr, time)
+}
+
+func (n Node) PrivatekeyPath() string {
+	return n.privatekeyPath
+}
+
+func (n Node) Workspace() string {
+	return n.workspace
+}
+
+func (n Node) ID() peer.ID {
+	return n.host.ID()
+}
+
+func (n Node) Peerstore() peerstore.Peerstore {
+	return n.host.Peerstore()
+}
+
+func (n Node) Addrs() []ma.Multiaddr {
+	return n.host.Addrs()
+}
+
+func (n Node) Mux() protocol.Switch {
+	return n.host.Mux()
+}
+
+func (n Node) Close() error {
+	return n.host.Close()
+}
+
+func (n Node) Network() network.Network {
+	return n.host.Network()
+}
+
+func (n Node) ConnManager() connmgr.ConnManager {
+	return n.host.ConnManager()
+}
+
+func (n Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
+	return n.host.Connect(ctx, pi)
+}
+
+func (n Node) EventBus() event.Bus {
+	return n.host.EventBus()
+}
+
+func (n Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
+	n.host.SetStreamHandler(pid, handler)
+}
+
+func (n Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
+	n.host.SetStreamHandlerMatch(pid, m, handler)
+}
+
+func (n Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
+	return n.host.NewStream(ctx, p, pids...)
+}
+
+func (n Node) RemoveStreamHandler(pid protocol.ID) {
+	n.host.RemoveStreamHandler(pid)
+}
+
+// identify reads or creates the private key file specified by fpath
 func identify(fpath string) (crypto.PrivKey, error) {
-	_, err := os.Stat(fpath)
+	fstat, err := os.Stat(fpath)
 	if err == nil {
-		content, err := os.ReadFile(fpath)
-		if err != nil {
-			return nil, err
+		if fstat.IsDir() {
+			fpath = filepath.Join(fpath, privatekeyFile)
+		} else {
+			content, err := os.ReadFile(fpath)
+			if err != nil {
+				return nil, err
+			}
+			return crypto.UnmarshalSecp256k1PrivateKey(content)
 		}
-		return crypto.UnmarshalSecp256k1PrivateKey(content)
 	}
 
 	// Creates a new RSA key pair for this host.
@@ -191,7 +231,7 @@ func (n *Node) AuthenticateMessage(message proto.Message, data *pb.MessageData) 
 
 	// verify the data was authored by the signing peer identified by the public key
 	// and signature included in the message
-	return n.verifyData(bin, []byte(sign), peerId, data.NodePubKey)
+	return n.verifyData(bin, sign, peerId, data.NodePubKey)
 }
 
 // sign an outgoing p2p message payload
@@ -200,11 +240,11 @@ func (n *Node) SignProtoMessage(message proto.Message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return n.SignData(data)
+	return n.signData(data)
 }
 
 // sign binary data using the local node's private key
-func (n *Node) SignData(data []byte) ([]byte, error) {
+func (n *Node) signData(data []byte) ([]byte, error) {
 	key := n.host.Peerstore().PrivKey(n.host.ID())
 	res, err := key.Sign(data)
 	return res, err
@@ -283,24 +323,4 @@ func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 		return err
 	}
 	return nil
-}
-
-// helper method - writes a protobuf go data object to a network stream
-// data: reference of protobuf go data object to send (not the object itself)
-// s: network stream to write the data to
-func (n *Node) SendProtoMessageToStream(s network.Stream, data proto.Message) error {
-	writer := ggio.NewFullWriter(s)
-	err := writer.WriteMsg(data)
-	if err != nil {
-		s.Reset()
-		return err
-	}
-	return nil
-}
-
-// helper method - writes a protobuf go data object to a network stream
-// data: reference of protobuf go data object to send (not the object itself)
-// s: network stream to write the data to
-func (n *Node) NewStream(ctx context.Context, id peer.ID, p protocol.ID) (network.Stream, error) {
-	return n.host.NewStream(ctx, id, p)
 }

@@ -18,3 +18,19 @@ func ListenAddrStrings(s ...string) Option {
 		return nil
 	}
 }
+
+// ListenAddrs configures libp2p to listen on the given addresses.
+func ListenAddrs(addrs ...ma.Multiaddr) Option {
+	return func(cfg *Config) error {
+		cfg.ListenAddrs = append(cfg.ListenAddrs, addrs...)
+		return nil
+	}
+}
+
+// ListenAddrs configures libp2p to listen on the given addresses.
+func Workspace(workspace string) Option {
+	return func(cfg *Config) error {
+		cfg.Workspace = workspace
+		return nil
+	}
+}

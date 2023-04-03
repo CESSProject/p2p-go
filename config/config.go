@@ -10,7 +10,7 @@ import (
 // This is *not* a stable interface. Use the options defined in the root
 // package.
 type Config struct {
-	Dir         string
+	Workspace   string
 	ListenAddrs []ma.Multiaddr
 }
 
@@ -21,10 +21,8 @@ type Option func(cfg *Config) error
 // NewNode constructs a new libp2p Host from the Config.
 //
 // This function consumes the config. Do not reuse it (really!).
-func (cfg *Config) NewNode() (core.P2P, error) {
-	var noder core.P2P
-
-	return noder, nil
+func (cfg *Config) NewNode(privatekeyPath string) (core.P2P, error) {
+	return core.NewBasicNode(cfg.ListenAddrs, cfg.Workspace, privatekeyPath)
 }
 
 // Apply applies the given options to the config, returning the first error

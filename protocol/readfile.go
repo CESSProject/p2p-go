@@ -21,10 +21,13 @@ import (
 )
 
 // pattern: /protocol-name/request-or-response-message/version
-const ReadfileProtocol = "readfile"
-
 const readFileRequest = "/file/readreq/v0"
 const readFileResponse = "/file/readresp/v0"
+
+type ReadFileProtocol struct {
+	node     *core.Node              // local host
+	requests map[string]*readMsgResp // determine whether it is your own response
+}
 
 func NewReadFileProtocol(node *core.Node) *ReadFileProtocol {
 	e := ReadFileProtocol{node: node, requests: make(map[string]*readMsgResp)}
@@ -128,7 +131,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 		// add the signature to the message
 		req.MessageData.Sign = signature
 
-		err = e.node.SendProtoMessageToStream(s, &req)
+		err = e.node.SendProtoMessage(id, readFileRequest, &req)
 		if err != nil {
 			return err
 		}

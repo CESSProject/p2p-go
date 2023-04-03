@@ -12,21 +12,6 @@ type Config = config.Config
 // (`libp2p.New`).
 type Option = config.Option
 
-// ChainOptions chains multiple options into a single option.
-func ChainOptions(opts ...Option) Option {
-	return func(cfg *Config) error {
-		for _, opt := range opts {
-			if opt == nil {
-				continue
-			}
-			if err := opt(cfg); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
 // New constructs a new libp2p node with the given options, falling back on
 // reasonable defaults. The defaults are:
 //
@@ -49,8 +34,8 @@ func ChainOptions(opts ...Option) Option {
 // peerstore.
 //
 // To stop/shutdown the returned libp2p node, the user needs to cancel the passed context and call `Close` on the returned Host.
-func New(opts ...Option) (core.P2P, error) {
-	return NewWithoutDefaults() //append(opts, FallbackDefaults)...)
+func New(privatekeyPath string, opts ...Option) (core.P2P, error) {
+	return NewWithoutDefaults(privatekeyPath, append(opts, FallbackDefaults)...)
 }
 
 // NewWithoutDefaults constructs a new libp2p node with the given options but
@@ -59,10 +44,10 @@ func New(opts ...Option) (core.P2P, error) {
 // Warning: This function should not be considered a stable interface. We may
 // choose to add required services at any time and, by using this function, you
 // opt-out of any defaults we may provide.
-func NewWithoutDefaults(opts ...Option) (core.P2P, error) {
+func NewWithoutDefaults(privatekeyPath string, opts ...Option) (core.P2P, error) {
 	var cfg Config
 	if err := cfg.Apply(opts...); err != nil {
 		return nil, err
 	}
-	return cfg.NewNode()
+	return cfg.NewNode(privatekeyPath)
 }
