@@ -5,7 +5,7 @@
 	SPDX-License-Identifier: Apache-2.0
 */
 
-package node
+package core
 
 import (
 	"context"
@@ -15,10 +15,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
-
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
@@ -31,24 +31,50 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+type P2P interface {
+	host.Host // lib-p2p host
+	PrivatekeyPath() string
+	WriteFile(multiaddr string, path string) error
+	ReadFile(multiaddr string, rootHash, datahash, path string, size int64) error
+}
+
 // Node type - a p2p host implementing one or more p2p protocols
 type Node struct {
-	host.Host          // lib-p2p host
-	string             // data
-	*WriteFileProtocol // writefile protocol impl
-	*ReadFileProtocol  // readfile protocol impl
+	ctx       context.Context
+	ctxCancel context.CancelFunc
+	// ensures we shutdown ONLY once
+	closeSync sync.Once
+
+	host           host.Host // lib-p2p host
+	workspace      string    // data
+	privatekeyPath string
+	protocol       map[string]interface{}
+	// *myprotocol.WriteFileProtocol // writefile protocol impl
+	// *myprotocol.ReadFileProtocol  // readfile protocol impl
 	// add other protocols here...
 }
 
 // node - p2p node instance
-var node *Node
+// var node *Node
 
-func GetNode() *Node {
-	return node
+// func GetNode() *Node {
+// 	return node
+// }
+
+func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr) {
+	n.host.Peerstore().AddAddr(id, addr, peerstore.AddressTTL)
 }
 
-func AddAddrToPearstore(id peer.ID, addr ma.Multiaddr) {
-	node.Peerstore().AddAddr(id, addr, peerstore.AddressTTL)
+func (n *Node) PrivatekeyPath() string {
+	return n.privatekeyPath
+}
+
+func (n *Node) Workspace() string {
+	return n.workspace
+}
+
+func (n *Node) AddProtocol(pid protocol.ID, handler network.StreamHandler) {
+	n.host.SetStreamHandler(pid, handler)
 }
 
 // StartPeer configures and starts the p2p node service
@@ -58,17 +84,17 @@ func AddAddrToPearstore(id peer.ID, addr ma.Multiaddr) {
 //
 // This function must be called before use
 func StartPeer(ip string, port int, datadir string) error {
-	if node == nil {
-		newHost, err := newHost(ip, port, datadir)
-		if err != nil {
-			return err
-		}
-		node = &Node{Host: newHost}
-		node.string = datadir
-		node.WriteFileProtocol = NewWriteFileProtocol(node)
-		node.ReadFileProtocol = NewReadFileProtocol(node)
-		return err
-	}
+	// if node == nil {
+	// 	newHost, err := newHost(ip, port, datadir)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	node = &Node{Host: newHost}
+	// 	node.string = datadir
+	// 	node.WriteFileProtocol = NewWriteFileProtocol(node)
+	// 	node.ReadFileProtocol = NewReadFileProtocol(node)
+	// 	return err
+	// }
 	return nil
 }
 
@@ -140,7 +166,7 @@ func identify(fpath string) (crypto.PrivKey, error) {
 // Authenticate incoming p2p message
 // message: a protobufs go data object
 // data: common p2p message data
-func (n *Node) authenticateMessage(message proto.Message, data *pb.MessageData) bool {
+func (n *Node) AuthenticateMessage(message proto.Message, data *pb.MessageData) bool {
 	// store a temp ref to signature and remove it from message data
 	// sign is a string to allow easy reset to zero-value (empty string)
 	sign := data.Sign
@@ -169,17 +195,17 @@ func (n *Node) authenticateMessage(message proto.Message, data *pb.MessageData) 
 }
 
 // sign an outgoing p2p message payload
-func (n *Node) signProtoMessage(message proto.Message) ([]byte, error) {
+func (n *Node) SignProtoMessage(message proto.Message) ([]byte, error) {
 	data, err := proto.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
-	return n.signData(data)
+	return n.SignData(data)
 }
 
 // sign binary data using the local node's private key
-func (n *Node) signData(data []byte) ([]byte, error) {
-	key := n.Peerstore().PrivKey(n.ID())
+func (n *Node) SignData(data []byte) ([]byte, error) {
+	key := n.host.Peerstore().PrivKey(n.host.ID())
 	res, err := key.Sign(data)
 	return res, err
 }
@@ -224,7 +250,7 @@ func (n *Node) verifyData(data []byte, signature []byte, peerId peer.ID, pubKeyD
 func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
 	// Add protobufs bin data for message author public key
 	// this is useful for authenticating  messages forwarded by a node authored by another node
-	nodePubKey, err := crypto.MarshalPublicKey(n.Peerstore().PubKey(n.ID()))
+	nodePubKey, err := crypto.MarshalPublicKey(n.host.Peerstore().PubKey(n.host.ID()))
 
 	if err != nil {
 		panic("Failed to get public key for sender from local peer store.")
@@ -232,7 +258,7 @@ func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
 
 	return &pb.MessageData{
 		ClientVersion: p2pVersion,
-		NodeId:        n.ID().String(),
+		NodeId:        n.host.ID().String(),
 		NodePubKey:    nodePubKey,
 		Timestamp:     time.Now().Unix(),
 		Id:            messageId,
@@ -243,8 +269,8 @@ func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
 // helper method - writes a protobuf go data object to a network stream
 // data: reference of protobuf go data object to send (not the object itself)
 // s: network stream to write the data to
-func (n *Node) sendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) error {
-	s, err := n.NewStream(context.Background(), id, p)
+func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) error {
+	s, err := n.host.NewStream(context.Background(), id, p)
 	if err != nil {
 		return err
 	}
@@ -262,7 +288,7 @@ func (n *Node) sendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 // helper method - writes a protobuf go data object to a network stream
 // data: reference of protobuf go data object to send (not the object itself)
 // s: network stream to write the data to
-func (n *Node) sendProtoMessageToStream(s network.Stream, data proto.Message) error {
+func (n *Node) SendProtoMessageToStream(s network.Stream, data proto.Message) error {
 	writer := ggio.NewFullWriter(s)
 	err := writer.WriteMsg(data)
 	if err != nil {
@@ -270,4 +296,11 @@ func (n *Node) sendProtoMessageToStream(s network.Stream, data proto.Message) er
 		return err
 	}
 	return nil
+}
+
+// helper method - writes a protobuf go data object to a network stream
+// data: reference of protobuf go data object to send (not the object itself)
+// s: network stream to write the data to
+func (n *Node) NewStream(ctx context.Context, id peer.ID, p protocol.ID) (network.Stream, error) {
+	return n.host.NewStream(ctx, id, p)
 }
