@@ -1,7 +1,15 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package config
 
 import (
 	"github.com/CESSProject/p2p-go/core"
+	"github.com/libp2p/go-libp2p/core/connmgr"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -12,6 +20,7 @@ import (
 type Config struct {
 	Workspace   string
 	ListenAddrs []ma.Multiaddr
+	ConnManager connmgr.ConnManager
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor

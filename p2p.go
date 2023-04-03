@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package p2pgo
 
 import (
@@ -5,11 +12,10 @@ import (
 	"github.com/CESSProject/p2p-go/core"
 )
 
-// Config describes a set of settings for a libp2p node.
+// Config describes a set of settings for a p2p node.
 type Config = config.Config
 
-// Option is a libp2p config option that can be given to the libp2p constructor
-// (`libp2p.New`).
+// Option is a p2p config option that can be given to the p2p constructor
 type Option = config.Option
 
 // New constructs a new libp2p node with the given options, falling back on
@@ -18,22 +24,8 @@ type Option = config.Option
 // - If no transport and listen addresses are provided, the node listens to
 // the multiaddresses "/ip4/0.0.0.0/tcp/0" and "/ip6/::/tcp/0";
 //
-// - If no transport options are provided, the node uses TCP, websocket and QUIC
-// transport protocols;
-//
-// - If no multiplexer configuration is provided, the node is configured by
-// default to use yamux;
-//
-// - If no security transport is provided, the host uses the go-libp2p's noise
-// and/or tls encrypted transport to encrypt all traffic;
-//
-// - If no peer identity is provided, it generates a random RSA 2048 key-pair
-// and derives a new identity from it;
-//
-// - If no peerstore is provided, the host is initialized with an empty
-// peerstore.
-//
-// To stop/shutdown the returned libp2p node, the user needs to cancel the passed context and call `Close` on the returned Host.
+// To stop/shutdown the returned p2p node, the user needs to cancel the passed
+// context and call `Close` on the returned Host.
 func New(privatekeyPath string, opts ...Option) (core.P2P, error) {
 	return NewWithoutDefaults(privatekeyPath, append(opts, FallbackDefaults)...)
 }

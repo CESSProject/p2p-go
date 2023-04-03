@@ -1,8 +1,16 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package p2pgo
 
 import (
 	"os"
 
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -32,6 +40,16 @@ var DefaultWorkspace = func(cfg *Config) error {
 	return cfg.Apply(Workspace(workspace))
 }
 
+// DefaultConnectionManager creates a default connection manager
+var DefaultConnectionManager = func(cfg *Config) error {
+	mgr, err := connmgr.NewConnManager(160, 192)
+	if err != nil {
+		return err
+	}
+
+	return cfg.Apply(ConnectionManager(mgr))
+}
+
 // Complete list of default options and when to fallback on them.
 //
 // Please *DON'T* specify default options any other way. Putting this all here
@@ -47,6 +65,10 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.Workspace == "" },
 		opt:      DefaultWorkspace,
+	},
+	{
+		fallback: func(cfg *Config) bool { return cfg.ConnManager == nil },
+		opt:      DefaultConnectionManager,
 	},
 }
 
