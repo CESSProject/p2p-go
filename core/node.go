@@ -98,6 +98,27 @@ func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr, t time.Duration
 	n.Peerstore().AddAddr(id, addr, time)
 }
 
+func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error) {
+	time := peerstore.RecentlyConnectedAddrTTL
+	if t.Seconds() > 0 {
+		time = t
+	}
+
+	maddr, err := ma.NewMultiaddr(multiaddr)
+	if err != nil {
+		return "", err
+	}
+
+	// Extract the peer ID from the multiaddr.
+	info, err := peer.AddrInfoFromP2pAddr(maddr)
+	if err != nil {
+		return "", err
+	}
+
+	n.Peerstore().AddAddr(info.ID, maddr, time)
+	return info.ID, nil
+}
+
 func (n Node) PrivatekeyPath() string {
 	return n.privatekeyPath
 }

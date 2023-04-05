@@ -8,7 +8,6 @@
 package protocol
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -100,17 +99,11 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 			os.Remove(path)
 		}
 	}
-	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0)
+	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-
-	s, err := e.node.NewStream(context.Background(), id, readFileRequest)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
 
 	req.Roothash = roothash
 	req.Datahash = datahash
@@ -129,6 +122,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 	for {
 		req.Offset = offset
 		// calc signature
+		req.MessageData.Sign = nil
 		signature, err := e.node.SignProtoMessage(&req)
 		if err != nil {
 			log.Println("failed to sign message")
@@ -155,6 +149,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 			// timeout
 			return errors.New("timeout")
 		}
+
 		resp = e.requests[req.MessageData.Id].ReadfileResponse
 		num, err = f.Write(resp.Data[:resp.Length])
 		if err != nil {
@@ -205,7 +200,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 		return
 	}
 
-	log.Printf("Sending Readfile response to %s. Message id: %s...", s.Conn().RemotePeer(), data.MessageData.Id)
+	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
 	f, err := os.OpenFile(filepath.Join(e.node.Workspace(), FileDirectionry, data.Datahash), os.O_RDONLY, 0)
 	if err != nil {
@@ -222,7 +217,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 		return
 	}
 	var readBuf = make([]byte, FileProtocolBufSize)
-	num, err := f.Read(buf)
+	num, err := f.Read(readBuf)
 	if err != nil {
 		return
 	}
@@ -250,7 +245,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	// add the signature to the message
 	resp.MessageData.Sign = signature
 
-	err = e.node.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
+	err = e.node.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
 	if err != nil {
 		log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
 	}
@@ -286,6 +281,7 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {
 		if data.Code == P2PResponseOK || data.Code == P2PResponseFinish {
+			e.requests[data.MessageData.Id].ch <- true
 			e.requests[data.MessageData.Id].ReadfileResponse = data
 		} else {
 			e.requests[data.MessageData.Id].ch <- false
@@ -295,6 +291,6 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 		return
 	}
 
-	log.Printf("Received Readfile response from %s. Message id:%s. Code: %d Offset:%d, Data:%s",
-		s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset, string(data.Data))
+	log.Printf("Received Readfile response from %s. Message id:%s. Code: %d Offset:%d",
+		s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset)
 }

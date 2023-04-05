@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package main
 
 import (
@@ -13,7 +20,7 @@ import (
 )
 
 func main() {
-	file := "./example_writefile.go"
+	file := "./readfile"
 
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
 	sourcePort2 := flag.Int("p2", 15001, "Source port number")
@@ -57,10 +64,9 @@ func main() {
 	}
 
 	protocol := myprotocol.NewProtocol(node1)
-	protocol.WriteFileProtocol = myprotocol.NewWriteFileProtocol(node1)
 	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
 
-	myprotocol.NewWriteFileProtocol(node2)
+	myprotocol.NewReadFileProtocol(node2)
 
 	remote := fmt.Sprintf("/ip4/0.0.0.0/tcp/15001/p2p/%v", node2.ID())
 
@@ -77,6 +83,6 @@ func main() {
 	}
 	node1.AddAddrToPearstore(info.ID, maddr, 0)
 
-	go protocol.WriteFileAction(info.ID, "This is roothash", file)
+	go protocol.ReadFileAction(info.ID, "This is roothash", "641c6c9b3001636a267a6f41e0181419e7e39e8df5a978fe221ef60791f1e1cb", file, 2061)
 	select {}
 }
