@@ -12,9 +12,15 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
@@ -69,6 +75,19 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		return nil, err
 	}
 
+	ip, port, err := ExtractIp4FromMultiaddr(multiaddr.String())
+	if err != nil {
+		return nil, err
+	}
+
+	publicip := ip
+	if ip == AllIpAddress {
+		publicip, err = GetExternalIp()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	host, err := libp2p.New(
 		libp2p.ListenAddrs(multiaddr),
 		libp2p.Identity(prvKey),
@@ -88,7 +107,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		host:           host,
 		workspace:      workspace,
 		privatekeyPath: privatekeypath,
-		multiaddr:      fmt.Sprintf("%s/p2p/%s", multiaddr.String(), host.ID()),
+		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
 	}
 	return n, nil
 }
@@ -351,4 +370,84 @@ func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 		return err
 	}
 	return nil
+}
+
+func ExtractIp4FromMultiaddr(multiaddr string) (string, uint64, error) {
+	temp := strings.TrimPrefix(multiaddr, "/ip4/")
+	temps := strings.Split(temp, "/")
+	if isIPv4(temps[0]) {
+		return "", 0, fmt.Errorf("Invalid ip")
+	}
+	temp = strings.TrimPrefix(multiaddr, fmt.Sprintf("/ip4/%s/tcp/", temps[0]))
+	temps = strings.Split(temp, "/")
+	port, err := strconv.ParseUint(temps[0], 10, 64)
+	if err != nil {
+		return "", 0, fmt.Errorf("Invalid port")
+	}
+	return "", port, nil
+}
+
+// IsIPv4 is used to determine whether ipAddr is an ipv4 address
+func isIPv4(ipAddr string) bool {
+	ip := net.ParseIP(ipAddr)
+	return ip != nil && strings.Contains(ipAddr, ".")
+}
+
+// IsIPv6 is used to determine whether ipAddr is an ipv6 address
+func isIPv6(ipAddr string) bool {
+	ip := net.ParseIP(ipAddr)
+	return ip != nil && strings.Contains(ipAddr, ":")
+}
+
+// Get external network ip
+func GetExternalIp() (string, error) {
+	var (
+		err        error
+		externalIp string
+	)
+
+	client := http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
+	resp, err := client.Get("http://myexternalip.com/raw")
+	if err == nil {
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		externalIp = fmt.Sprintf("%s", string(b))
+		if isIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx1, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	output, err := exec.CommandContext(ctx1, "bash", "-c", "curl ifconfig.co").Output()
+	if err == nil {
+		externalIp = strings.ReplaceAll(string(output), "\n", "")
+		externalIp = strings.ReplaceAll(externalIp, " ", "")
+		if isIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx2, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	output, err = exec.CommandContext(ctx2, "bash", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
+	if err == nil {
+		externalIp = strings.ReplaceAll(string(output), "\n", "")
+		externalIp = strings.ReplaceAll(externalIp, " ", "")
+		if isIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx3, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	output, err = exec.CommandContext(ctx3, "bash", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
+	if err == nil {
+		externalIp = strings.ReplaceAll(string(output), "\"", "")
+		externalIp = strings.ReplaceAll(externalIp, ",", "")
+		externalIp = strings.ReplaceAll(externalIp, "\n", "")
+		if isIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+	return "", errors.New("Please check your network status")
 }
