@@ -28,9 +28,7 @@ func main() {
 	// To construct a simple host with all the default settings, just use `New`
 	h1, err := p2pgo.New(
 		".private1",
-		p2pgo.ListenAddrStrings(
-			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *sourcePort1), // regular tcp connections
-		),
+		p2pgo.ListenAddrStrings("0.0.0.0", *sourcePort1), // regular tcp connections
 	)
 	if err != nil {
 		panic(err)
@@ -42,9 +40,7 @@ func main() {
 	// To construct a simple host with all the default settings, just use `New`
 	h2, err := p2pgo.New(
 		".private2",
-		p2pgo.ListenAddrStrings(
-			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *sourcePort2), // regular tcp connections
-		),
+		p2pgo.ListenAddrStrings("0.0.0.0", *sourcePort2), // regular tcp connections
 	)
 	if err != nil {
 		panic(err)
