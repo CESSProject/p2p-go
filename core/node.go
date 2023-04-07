@@ -81,7 +81,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 	}
 
 	publicip := ip
-	if ip == AllIpAddress {
+	if ip == AllIpAddress || ip == "" {
 		publicip, err = GetExternalIp()
 		if err != nil {
 			return nil, err
@@ -373,18 +373,20 @@ func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 }
 
 func ExtractIp4FromMultiaddr(multiaddr string) (string, uint64, error) {
+	var ip string
 	temp := strings.TrimPrefix(multiaddr, "/ip4/")
 	temps := strings.Split(temp, "/")
-	if isIPv4(temps[0]) {
+	if !isIPv4(temps[0]) {
 		return "", 0, fmt.Errorf("Invalid ip")
 	}
+	ip = temps[0]
 	temp = strings.TrimPrefix(multiaddr, fmt.Sprintf("/ip4/%s/tcp/", temps[0]))
 	temps = strings.Split(temp, "/")
 	port, err := strconv.ParseUint(temps[0], 10, 64)
 	if err != nil {
 		return "", 0, fmt.Errorf("Invalid port")
 	}
-	return "", port, nil
+	return ip, port, nil
 }
 
 // IsIPv4 is used to determine whether ipAddr is an ipv4 address
