@@ -16,5 +16,8 @@ import (
 const p2pVersion = "go-p2p-node/0"
 const privatekeyFile = ".private"
 
+const AllIpAddress = "0.0.0.0"
+const LocalAddress = "127.0.0.1"
+
 var yamuxOpt = libp2p.Muxer("/yamux", yamux.DefaultTransport)
 var mplexOpt = libp2p.Muxer("/mplex", mplex.DefaultTransport)

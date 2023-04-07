@@ -10,6 +10,7 @@ package p2pgo
 import (
 	"fmt"
 
+	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/connmgr"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -18,7 +19,11 @@ import (
 // addresses.
 func ListenAddrStrings(ip string, port int) Option {
 	return func(cfg *Config) error {
-		a, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port))
+		var allip = core.AllIpAddress
+		if ip == core.LocalAddress {
+			allip = ip
+		}
+		a, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", allip, port))
 		if err != nil {
 			return err
 		}
