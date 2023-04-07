@@ -11,24 +11,13 @@ import (
 	"os"
 
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-	"github.com/multiformats/go-multiaddr"
 )
 
 // DefaultListenAddrs configures libp2p to use default listen address.
 var DefaultListenAddrs = func(cfg *Config) error {
-	addrs := []string{
-		"/ip4/0.0.0.0/tcp/0",
-		"/ip6/::/tcp/0",
-	}
-	listenAddrs := make([]multiaddr.Multiaddr, 0, len(addrs))
-	for _, s := range addrs {
-		addr, err := multiaddr.NewMultiaddr(s)
-		if err != nil {
-			return err
-		}
-		listenAddrs = append(listenAddrs, addr)
-	}
-	return cfg.Apply(ListenAddrs(listenAddrs...))
+	ip := "0.0.0.0"
+	port := 80
+	return cfg.Apply(ListenAddrStrings(ip, port))
 }
 
 // DefaultListenAddrs configures libp2p to use default listen address.

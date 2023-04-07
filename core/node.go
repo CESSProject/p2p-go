@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -48,6 +49,7 @@ type Node struct {
 	host           host.Host // lib-p2p host
 	workspace      string    // data
 	privatekeyPath string
+	multiaddr      string
 }
 
 // NewBasicNode constructs a new *Node
@@ -57,7 +59,7 @@ type Node struct {
 //	  privatekeypath: private key file
 //		  If it's empty, automatically created in the program working directory
 //		  If it's a directory, it will be created in the specified directory
-func NewBasicNode(multiaddr []ma.Multiaddr, workspace string, privatekeypath string) (*Node, error) {
+func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath string) (*Node, error) {
 	if multiaddr == nil || workspace == "" {
 		return nil, errors.New("invalid parameter")
 	}
@@ -68,7 +70,7 @@ func NewBasicNode(multiaddr []ma.Multiaddr, workspace string, privatekeypath str
 	}
 
 	host, err := libp2p.New(
-		libp2p.ListenAddrs(multiaddr...),
+		libp2p.ListenAddrs(multiaddr),
 		libp2p.Identity(prvKey),
 		yamuxOpt,
 		mplexOpt,
@@ -86,6 +88,7 @@ func NewBasicNode(multiaddr []ma.Multiaddr, workspace string, privatekeypath str
 		host:           host,
 		workspace:      workspace,
 		privatekeyPath: privatekeypath,
+		multiaddr:      fmt.Sprintf("%s/p2p/%s", multiaddr.String(), host.ID()),
 	}
 	return n, nil
 }
@@ -125,6 +128,10 @@ func (n Node) PrivatekeyPath() string {
 
 func (n Node) Workspace() string {
 	return n.workspace
+}
+
+func (n Node) Multiaddr() string {
+	return n.multiaddr
 }
 
 func (n Node) ID() peer.ID {

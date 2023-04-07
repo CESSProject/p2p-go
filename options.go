@@ -16,23 +16,21 @@ import (
 
 // ListenAddrStrings configures libp2p to listen on the given (unparsed)
 // addresses.
-func ListenAddrStrings(s ...string) Option {
+func ListenAddrStrings(ip string, port int) Option {
 	return func(cfg *Config) error {
-		for _, addrstr := range s {
-			a, err := ma.NewMultiaddr(addrstr)
-			if err != nil {
-				return err
-			}
-			cfg.ListenAddrs = append(cfg.ListenAddrs, a)
+		a, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, port))
+		if err != nil {
+			return err
 		}
+		cfg.ListenAddrs = a
 		return nil
 	}
 }
 
 // ListenAddrs configures libp2p to listen on the given addresses.
-func ListenAddrs(addrs ...ma.Multiaddr) Option {
+func ListenAddrs(addrs ma.Multiaddr) Option {
 	return func(cfg *Config) error {
-		cfg.ListenAddrs = append(cfg.ListenAddrs, addrs...)
+		cfg.ListenAddrs = addrs
 		return nil
 	}
 }

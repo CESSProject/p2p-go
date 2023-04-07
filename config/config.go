@@ -19,7 +19,7 @@ import (
 // package.
 type Config struct {
 	Workspace   string
-	ListenAddrs []ma.Multiaddr
+	ListenAddrs ma.Multiaddr
 	ConnManager connmgr.ConnManager
 }
 
