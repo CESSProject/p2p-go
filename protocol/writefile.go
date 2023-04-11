@@ -82,7 +82,10 @@ func (e *WriteFileProtocol) WriteFileAction(id peer.ID, roothash, path string) e
 	defer timeout.Stop()
 	buf := make([]byte, FileProtocolBufSize)
 	for {
-		f.Seek(offset, 0)
+		_, err = f.Seek(offset, 0)
+		if err != nil {
+			return err
+		}
 		num, err = f.Read(buf)
 		if err != nil && err != io.EOF {
 			return err
@@ -177,12 +180,13 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		if err != nil {
 			return
 		}
-	}
-	if !fstat.IsDir() {
-		os.Remove(dir)
-		err = os.MkdirAll(dir, core.DirMode)
-		if err != nil {
-			return
+	} else {
+		if !fstat.IsDir() {
+			os.Remove(dir)
+			err = os.MkdirAll(dir, core.DirMode)
+			if err != nil {
+				return
+			}
 		}
 	}
 	var size int64
@@ -191,6 +195,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	if err == nil {
 		size = fstat.Size()
 		if size >= core.FragmentSize {
+			time.Sleep(time.Second * 5)
 			if size > core.FragmentSize {
 				os.Remove(fpath)
 			} else {
@@ -217,12 +222,17 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		}
 	}
 
-	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0)
+	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		log.Println("OpenFile err:", err)
 		return
 	}
 	defer f.Close()
+	fstat, err = f.Stat()
+	if err != nil {
+		return
+	}
+	size = fstat.Size()
 
 	_, err = f.Write(data.Data[:data.Length])
 	if err != nil {
@@ -231,8 +241,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	}
 
 	if int(int(size)+int(data.Length)) == core.FragmentSize {
-		f.Seek(0, 0)
-		hash, err := CalcFileSHA256(f)
+		hash, err := CalcPathSHA256(fpath)
 		if err != nil || hash != data.Datahash {
 			os.Remove(fpath)
 		} else {
@@ -241,7 +250,6 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	} else {
 		resp.Offset = size + int64(data.Length)
 	}
-
 	// sign the data
 	signature, err := e.node.SignProtoMessage(resp)
 	if err != nil {
