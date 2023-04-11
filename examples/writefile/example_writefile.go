@@ -79,6 +79,6 @@ func main() {
 		os.Exit(1)
 	}
 	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
-	go protocol.WriteFileAction(info.ID, "This is roothash", file)
+	go protocol.WriteFileAction(info.ID, "roothash", file)
 	select {}
 }
