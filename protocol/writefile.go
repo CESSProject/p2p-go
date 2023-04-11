@@ -170,9 +170,24 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		Offset:      0,
 	}
 
-	fpath := filepath.Join(e.node.Workspace(), TmpDirectionry, data.Datahash)
+	dir := filepath.Join(e.node.Workspace(), TmpDirectionry, data.Roothash)
+	fstat, err := os.Stat(dir)
+	if err != nil {
+		err = os.MkdirAll(dir, core.DirMode)
+		if err != nil {
+			return
+		}
+	}
+	if !fstat.IsDir() {
+		os.Remove(dir)
+		err = os.MkdirAll(dir, core.DirMode)
+		if err != nil {
+			return
+		}
+	}
 	var size int64
-	fstat, err := os.Stat(fpath)
+	fpath := filepath.Join(dir, data.Datahash)
+	fstat, err = os.Stat(fpath)
 	if err == nil {
 		size = fstat.Size()
 		if size >= core.FragmentSize {
