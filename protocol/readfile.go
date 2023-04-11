@@ -30,6 +30,11 @@ import (
 const readFileRequest = "/file/readreq/v0"
 const readFileResponse = "/file/readresp/v0"
 
+type readMsgResp struct {
+	ch chan bool
+	*pb.ReadfileResponse
+}
+
 type ReadFileProtocol struct {
 	node     *core.Node              // local host
 	requests map[string]*readMsgResp // determine whether it is your own response
