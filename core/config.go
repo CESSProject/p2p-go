@@ -27,6 +27,8 @@ const (
 	SIZE_SLICE = 512 * SIZE_1MiB
 )
 
+const DirMode = 0755
+
 const SegmentSize = 16 * SIZE_1MiB
 const FragmentSize = 8 * SIZE_1MiB
 
