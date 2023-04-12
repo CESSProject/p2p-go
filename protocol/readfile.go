@@ -48,7 +48,7 @@ func NewReadFileProtocol(node *core.Node) *ReadFileProtocol {
 }
 
 func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
-	log.Printf("Will Sending readfileAction to: %s....", id)
+	log.Printf("Will Sending readfileAction to: %s", id)
 
 	var ok bool
 	var err error
@@ -170,7 +170,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 			break
 		}
 
-		req.Offset += int64(num)
+		offset = req.Offset + int64(num)
 	}
 
 	return nil
@@ -207,11 +207,19 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 
 	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
-	f, err := os.OpenFile(filepath.Join(e.node.Workspace(), FileDirectionry, data.Datahash), os.O_RDONLY, 0)
+	fpath := filepath.Join(e.node.Workspace(), TmpDirectionry, data.Roothash, data.Datahash)
+
+	_, err = os.Stat(fpath)
+	if err != nil {
+		fpath = filepath.Join(e.node.Workspace(), FileDirectionry, data.Roothash, data.Datahash)
+	}
+
+	f, err := os.Open(fpath)
 	if err != nil {
 		return
 	}
 	defer f.Close()
+
 	fstat, err := f.Stat()
 	if err != nil {
 		return
@@ -221,6 +229,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	if err != nil {
 		return
 	}
+
 	var readBuf = make([]byte, FileProtocolBufSize)
 	num, err := f.Read(readBuf)
 	if err != nil {
