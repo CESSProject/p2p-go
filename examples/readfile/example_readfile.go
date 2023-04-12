@@ -79,6 +79,6 @@ func main() {
 	}
 	node1.AddAddrToPearstore(info.ID, maddr, 0)
 
-	go protocol.ReadFileAction(info.ID, "This is roothash", "641c6c9b3001636a267a6f41e0181419e7e39e8df5a978fe221ef60791f1e1cb", file, 2061)
+	go protocol.ReadFileAction(info.ID, "roothash", "7f0221a07b204d83b743ee58091ddabe9daa2c9b1b7d0900a6dff7c2b0bd418d", file, 8388608)
 	select {}
 }
