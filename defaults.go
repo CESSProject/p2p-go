@@ -42,9 +42,7 @@ var DefaultConnectionManager = func(cfg *Config) error {
 
 // DefaultConnectionManager creates a default connection manager
 var DefaultBootPeers = func(cfg *Config) error {
-	defaultBotPeers := []string{
-		"",
-	}
+	defaultBotPeers := []string{}
 
 	return cfg.Apply(BootPeers(defaultBotPeers))
 }

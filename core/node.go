@@ -116,24 +116,26 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		return nil, errors.New("")
 	}
 
-	// Construct a datastore (needed by the DHT)
-	dstore := dsync.MutexWrap(ds.NewMapDatastore())
+	if len(bootpeers) > 0 {
+		// Construct a datastore (needed by the DHT)
+		dstore := dsync.MutexWrap(ds.NewMapDatastore())
 
-	// Make the DHT
-	dhtTable := dht.NewDHT(ctx, host, dstore)
+		// Make the DHT
+		dhtTable := dht.NewDHT(ctx, host, dstore)
 
-	// Make the routed host
-	routedHost := rhost.Wrap(host, dhtTable)
+		// Make the routed host
+		routedHost := rhost.Wrap(host, dhtTable)
 
-	err = bootstrapConnect(ctx, routedHost, convertPeers(bootpeers))
-	if err != nil {
-		return nil, err
-	}
+		err = bootstrapConnect(ctx, routedHost, convertPeers(bootpeers))
+		if err != nil {
+			return nil, err
+		}
 
-	// Bootstrap the host
-	err = dhtTable.Bootstrap(ctx)
-	if err != nil {
-		return nil, err
+		// Bootstrap the host
+		err = dhtTable.Bootstrap(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	basicCtx, cancel := context.WithCancel(context.Background())
@@ -252,12 +254,12 @@ func identify(fpath string) (crypto.PrivKey, error) {
 			if err != nil {
 				return nil, err
 			}
-			return crypto.UnmarshalSecp256k1PrivateKey(content)
+			return crypto.UnmarshalECDSAPrivateKey(content)
 		}
 	}
 
 	// Creates a new RSA key pair for this host.
-	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Secp256k1, 2048, rand.Reader)
+	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.ECDSA, -1, rand.Reader)
 	if err != nil {
 		return nil, err
 	}

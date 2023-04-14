@@ -40,7 +40,7 @@ func ListenAddrs(addrs ma.Multiaddr) Option {
 	}
 }
 
-// ListenAddrs configures libp2p to listen on the given addresses.
+// Workspace configuration working directory
 func Workspace(workspace string) Option {
 	return func(cfg *Config) error {
 		cfg.Workspace = workspace
@@ -48,7 +48,7 @@ func Workspace(workspace string) Option {
 	}
 }
 
-// ConnectionManager configures libp2p to use the given connection manager.
+// ConnectionManager configures libp2p to use the given connection manager
 func ConnectionManager(connman connmgr.ConnManager) Option {
 	return func(cfg *Config) error {
 		if cfg.ConnManager != nil {
