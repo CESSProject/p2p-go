@@ -40,7 +40,7 @@ func ListenAddrs(addrs ma.Multiaddr) Option {
 	}
 }
 
-// ListenAddrs configures libp2p to listen on the given addresses.
+// Workspace configuration working directory
 func Workspace(workspace string) Option {
 	return func(cfg *Config) error {
 		cfg.Workspace = workspace
@@ -48,16 +48,21 @@ func Workspace(workspace string) Option {
 	}
 }
 
-// ConnectionManager configures libp2p to use the given connection manager.
-//
-// The current "standard" connection manager lives in github.com/libp2p/go-libp2p-connmgr. See
-// https://pkg.go.dev/github.com/libp2p/go-libp2p-connmgr?utm_source=godoc#NewConnManager.
+// ConnectionManager configures libp2p to use the given connection manager
 func ConnectionManager(connman connmgr.ConnManager) Option {
 	return func(cfg *Config) error {
 		if cfg.ConnManager != nil {
 			return fmt.Errorf("cannot specify multiple connection managers")
 		}
 		cfg.ConnManager = connman
+		return nil
+	}
+}
+
+// BootPeers configures bootstrap nodes
+func BootPeers(bootpeers []string) Option {
+	return func(cfg *Config) error {
+		cfg.BootPeers = bootpeers
 		return nil
 	}
 }

@@ -21,6 +21,7 @@ type Config struct {
 	Workspace   string
 	ListenAddrs ma.Multiaddr
 	ConnManager connmgr.ConnManager
+	BootPeers   []string
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor
@@ -31,7 +32,7 @@ type Option func(cfg *Config) error
 //
 // This function consumes the config. Do not reuse it (really!).
 func (cfg *Config) NewNode(privatekeyPath string) (core.P2P, error) {
-	return core.NewBasicNode(cfg.ListenAddrs, cfg.Workspace, privatekeyPath)
+	return core.NewBasicNode(cfg.ListenAddrs, cfg.Workspace, privatekeyPath, cfg.BootPeers, cfg.ConnManager)
 }
 
 // Apply applies the given options to the config, returning the first error

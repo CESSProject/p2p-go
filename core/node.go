@@ -26,7 +26,10 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
+	ds "github.com/ipfs/go-datastore"
+	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/event"
@@ -35,6 +38,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -65,7 +70,8 @@ type Node struct {
 //	  privatekeypath: private key file
 //		  If it's empty, automatically created in the program working directory
 //		  If it's a directory, it will be created in the specified directory
-func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath string) (*Node, error) {
+func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath string, bootpeers []string, cmgr connmgr.ConnManager) (*Node, error) {
+	ctx := context.Background()
 	if multiaddr == nil || workspace == "" {
 		return nil, errors.New("invalid parameter")
 	}
@@ -89,17 +95,49 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 	}
 
 	host, err := libp2p.New(
-		libp2p.ListenAddrs(multiaddr),
+		// Use the keypair we generated
 		libp2p.Identity(prvKey),
-		yamuxOpt,
-		mplexOpt,
+		// Multiple listen addresses
+		libp2p.ListenAddrs(multiaddr),
+		// Let's prevent our peer from having too many
+		// connections by attaching a connection manager.
+		libp2p.ConnectionManager(cmgr),
+		// Support TLS connections
+		libp2p.Security(libp2ptls.ID, libp2ptls.New),
+		// Attempt to open ports using uPNP for NATed hosts.
+		libp2p.NATPortMap(),
+		libp2p.DefaultMuxers,
 	)
 	if err != nil {
 		return nil, err
 	}
+
 	if !host.ID().MatchesPrivateKey(prvKey) {
 		return nil, errors.New("")
 	}
+
+	if len(bootpeers) > 0 {
+		// Construct a datastore (needed by the DHT)
+		dstore := dsync.MutexWrap(ds.NewMapDatastore())
+
+		// Make the DHT
+		dhtTable := dht.NewDHT(ctx, host, dstore)
+
+		// Make the routed host
+		routedHost := rhost.Wrap(host, dhtTable)
+
+		err = bootstrapConnect(ctx, routedHost, convertPeers(bootpeers))
+		if err != nil {
+			return nil, err
+		}
+
+		// Bootstrap the host
+		err = dhtTable.Bootstrap(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	basicCtx, cancel := context.WithCancel(context.Background())
 	n := &Node{
 		ctx:            basicCtx,
@@ -216,12 +254,12 @@ func identify(fpath string) (crypto.PrivKey, error) {
 			if err != nil {
 				return nil, err
 			}
-			return crypto.UnmarshalSecp256k1PrivateKey(content)
+			return crypto.UnmarshalECDSAPrivateKey(content)
 		}
 	}
 
 	// Creates a new RSA key pair for this host.
-	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Secp256k1, 2048, rand.Reader)
+	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.ECDSA, -1, rand.Reader)
 	if err != nil {
 		return nil, err
 	}
