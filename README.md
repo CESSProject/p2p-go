@@ -2,7 +2,7 @@
 
 # Go p2p library for cess distributed storage system
 
-[![GitHub license](https://img.shields.io/badge/license-Apache2-blue)](#LICENSE) <a href=""><img src="https://img.shields.io/badge/golang-%3E%3D1.19-blue.svg" /></a> [![Go Reference](https://pkg.go.dev/badge/github.com/CESSProject/p2p-go.svg)](https://pkg.go.dev/github.com/CESSProject/p2p-go) [![Go Report Card](https://goreportcard.com/badge/github.com/CESSProject/p2p-go)](https://goreportcard.com/report/github.com/CESSProject/p2p-go)
+[![GitHub license](https://img.shields.io/badge/license-Apache2-blue)](#LICENSE) <a href=""><img src="https://img.shields.io/badge/golang-%3E%3D1.19-blue.svg" /></a> [![Go Reference](https://pkg.go.dev/badge/github.com/CESSProject/p2p-go.svg)](https://pkg.go.dev/github.com/CESSProject/p2p-go) [![build&test](https://github.com/CESSProject/p2p-go/actions/workflows/build&test.yml/badge.svg)](https://github.com/CESSProject/p2p-go/actions/workflows/build&test.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/CESSProject/p2p-go)](https://goreportcard.com/report/github.com/CESSProject/p2p-go)
 
 </div>
 
