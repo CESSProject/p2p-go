@@ -66,5 +66,59 @@ message ReadfileResponse {
     uint32 code = 4;
     // Length is the returned data length
     uint32 length = 5;
-    
+}
+
+//// file transport protocol
+
+// a protocol define a set of reuqest and responses
+message FileTransportRequest {
+    // Datahash is the currently written data hash value
+    string FileHash = 1;
+    // MessageData is a generic message
+    bytes Data = 2;
+    uint64 FileSize = 3;
+    int64 Offset = 4;
+    // Length is the Data length
+    uint32 Length = 5;
+    // 1: normal file
+    // 2: mus file
+    // 3: sigma file
+    uint32 FileType = 6;
+}
+
+message FileTransportResponse {
+    uint32 Code = 1;
+    int64 Offset = 2;
+}
+
+//// tag transport protocol
+
+// a protocol define a set of reuqest and responses
+message TagTransportRequest {
+    // Datahash is the currently written data hash value
+    string FileHash = 1;
+    // MessageData is a generic message
+    bytes Data = 2;
+}
+
+message TagTransportResponse {
+    uint32 code = 1;
+    int64 Offset = 2;
+}
+
+
+//// Message protocol
+
+// a protocol define a set of reuqest and responses
+message MessageRequest {
+    // 1: Calculate tag req
+    // 2: Calculate random file req
+    // 3: Get mus req
+    // 4: Get sigma req
+    uint32 ReqType =1;
+}
+
+message MessageResponse {
+    // Code indicates the result of this transfer
+    uint32 Code = 1;
 }
