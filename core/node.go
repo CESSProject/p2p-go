@@ -410,6 +410,17 @@ func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 	return nil
 }
 
+// NewPeerStream
+func (n *Node) NewPeerStream(id peer.ID, p protocol.ID) (network.Stream, error) {
+	return n.host.NewStream(context.Background(), id, p)
+}
+
+// SendMsgToStream
+func (n *Node) SendMsgToStream(s network.Stream, msg []byte) error {
+	_, err := s.Write(msg)
+	return err
+}
+
 func ExtractIp4FromMultiaddr(multiaddr string) (string, uint64, error) {
 	var ip string
 	temp := strings.TrimPrefix(multiaddr, "/ip4/")
