@@ -6,7 +6,7 @@
 
 </div>
 
-The go p2p library implementation of the CESS distributed storage network, which is customized based on go-libp2p, has many advantages, and at the same time abandons the bandwidth and space redundancy caused by multiple file backups, making nodes more focused on storage allocation Give yourself data to make it more in line with the needs of the CESS network.
+The go p2p library implementation of the CESS distributed storage network, which is customized based on [go-libp2p](https://github.com/libp2p/go-libp2p), has many advantages, and at the same time abandons the bandwidth and space redundancy caused by multiple file backups, making nodes more focused on storage allocation Give yourself data to make it more in line with the needs of the CESS network.
 
 ## Reporting a Vulnerability
 If you find out any vulnerability, Please send an email to frode@cess.one, we are happy to communicate with you.
