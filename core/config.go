@@ -20,6 +20,8 @@ const (
 	SIZE_1GiB = 1024 * SIZE_1MiB
 )
 
+const BufferSize = 64 * SIZE_1KiB
+
 const DirMode = 0644
 
 const SegmentSize = 16 * SIZE_1MiB

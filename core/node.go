@@ -147,6 +147,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		privatekeyPath: privatekeypath,
 		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
 	}
+	n.StarFileTransferProtocol()
 	return n, nil
 }
 
