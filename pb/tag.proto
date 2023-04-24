@@ -23,3 +23,15 @@ message TagResponse {
     // Code indicates the result of this transfer
     uint32 Code = 2;
 }
+
+//// Mus protocol
+
+// a protocol define a set of reuqest and responses
+message MusRequest {
+    Messagedata MessageData = 1;
+}
+message MusResponse {
+    Messagedata MessageData = 1;
+    // Code indicates the result of this transfer
+    uint32 Code = 2;
+}
