@@ -453,6 +453,109 @@ func (x *FileResponse) GetCode() uint32 {
 	return 0
 }
 
+// a protocol define a set of reuqest and responses
+type IdleRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PeerIndex uint64 `protobuf:"varint,1,opt,name=PeerIndex,json=peerIndex,proto3" json:"PeerIndex,omitempty"`
+	Sign      []byte `protobuf:"bytes,2,opt,name=Sign,json=sign,proto3" json:"Sign,omitempty"`
+}
+
+func (x *IdleRequest) Reset() {
+	*x = IdleRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_tee_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *IdleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IdleRequest) ProtoMessage() {}
+
+func (x *IdleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tee_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IdleRequest.ProtoReflect.Descriptor instead.
+func (*IdleRequest) Descriptor() ([]byte, []int) {
+	return file_tee_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *IdleRequest) GetPeerIndex() uint64 {
+	if x != nil {
+		return x.PeerIndex
+	}
+	return 0
+}
+
+func (x *IdleRequest) GetSign() []byte {
+	if x != nil {
+		return x.Sign
+	}
+	return nil
+}
+
+type IdleResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Code uint32 `protobuf:"varint,2,opt,name=Code,json=code,proto3" json:"Code,omitempty"`
+}
+
+func (x *IdleResponse) Reset() {
+	*x = IdleResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_tee_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *IdleResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IdleResponse) ProtoMessage() {}
+
+func (x *IdleResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tee_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IdleResponse.ProtoReflect.Descriptor instead.
+func (*IdleResponse) Descriptor() ([]byte, []int) {
+	return file_tee_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *IdleResponse) GetCode() uint32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
 var File_tee_proto protoreflect.FileDescriptor
 
 var file_tee_proto_rawDesc = []byte{
@@ -501,8 +604,15 @@ var file_tee_proto_rawDesc = []byte{
 	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x44, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
 	0x32, 0x0c, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x64, 0x61, 0x74, 0x61, 0x52, 0x0b,
 	0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x44, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x43,
-	0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x42,
-	0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x22,
+	0x3f, 0x0a, 0x0b, 0x69, 0x64, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1c,
+	0x0a, 0x09, 0x50, 0x65, 0x65, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x04, 0x52, 0x09, 0x70, 0x65, 0x65, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x12, 0x12, 0x0a, 0x04,
+	0x53, 0x69, 0x67, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x73, 0x69, 0x67, 0x6e,
+	0x22, 0x22, 0x0a, 0x0c, 0x49, 0x64, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04,
+	0x63, 0x6f, 0x64, 0x65, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -517,7 +627,7 @@ func file_tee_proto_rawDescGZIP() []byte {
 	return file_tee_proto_rawDescData
 }
 
-var file_tee_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_tee_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_tee_proto_goTypes = []interface{}{
 	(*Messagedata)(nil),  // 0: Messagedata
 	(*TagRequest)(nil),   // 1: TagRequest
@@ -526,6 +636,8 @@ var file_tee_proto_goTypes = []interface{}{
 	(*MusResponse)(nil),  // 4: MusResponse
 	(*FileRequest)(nil),  // 5: FileRequest
 	(*FileResponse)(nil), // 6: FileResponse
+	(*IdleRequest)(nil),  // 7: idleRequest
+	(*IdleResponse)(nil), // 8: IdleResponse
 }
 var file_tee_proto_depIdxs = []int32{
 	0, // 0: TagRequest.MessageData:type_name -> Messagedata
@@ -631,6 +743,30 @@ func file_tee_proto_init() {
 				return nil
 			}
 		}
+		file_tee_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*IdleRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_tee_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*IdleResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -638,7 +774,7 @@ func file_tee_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_tee_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

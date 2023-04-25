@@ -31,6 +31,7 @@ const P2PResponseFailed uint32 = 400
 
 const TagProtocolMsgBuf = 1024
 const FileProtocolMsgBuf = 2 * 1024 * 1024
+const IdleProtocolMsgBuf = 1024
 
 const MaxFileNameLength = 255
 const MaxCustomDataLength = 255
