@@ -35,3 +35,31 @@ message MusResponse {
     // Code indicates the result of this transfer
     uint32 Code = 2;
 }
+
+//// file protocol
+
+// a protocol define a set of reuqest and responses
+message FileRequest {
+    Messagedata MessageData = 1;
+    string FileName = 2;
+    uint64 FileSize = 3;
+    uint32 FileType = 4;
+    uint32 DataLength = 5;
+    bytes  Data = 6;
+}
+message FileResponse {
+    Messagedata MessageData = 1;
+    // Code indicates the result of this transfer
+    uint32 Code = 2;
+}
+
+//// idle protocol
+
+// a protocol define a set of reuqest and responses
+message idleRequest {
+    uint64 PeerIndex = 1;
+    bytes Sign = 2;
+}
+message IdleResponse {
+    uint32 Code = 2;
+}

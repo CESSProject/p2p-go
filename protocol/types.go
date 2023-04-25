@@ -14,6 +14,11 @@ import (
 
 const FileDirectionry = "file"
 const TmpDirectionry = "tmp"
+const IdleDirectionry = "idle"
+const TagDirectionry = "tag"
+const MusDirectionry = "mu"
+const NamesDirectionry = "name"
+const UsDirectionry = "us"
 
 const P2PWriteReqRespTime = time.Duration(time.Second * 15)
 const P2PReadReqRespTime = time.Duration(time.Second * 15)
@@ -25,9 +30,20 @@ const P2PResponseFinish uint32 = 210
 const P2PResponseFailed uint32 = 400
 
 const TagProtocolMsgBuf = 1024
+const FileProtocolMsgBuf = 2 * 1024 * 1024
+const IdleProtocolMsgBuf = 1024
 
 const MaxFileNameLength = 255
 const MaxCustomDataLength = 255
+
+const (
+	FileType_ServiceFile uint32 = iota
+	FileType_IdleFile
+	FileType_TagFile
+	FileType_MusFile
+	FileType_UsFile
+	FileType_NamesFile
+)
 
 var (
 	FileNameLengthErr = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
