@@ -13,7 +13,8 @@ type Protocol struct {
 	*core.Node
 	*WriteFileProtocol
 	*ReadFileProtocol
-	*TagProtocol
+	*CustomDataTagProtocol
+	*IdleDataTagProtocol
 	*MusProtocol
 	// add other protocols here...
 }

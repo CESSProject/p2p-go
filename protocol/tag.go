@@ -3,29 +3,27 @@ package protocol
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
-	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
 )
 
-const TAG_PROTOCOL = "/tag/req/1"
+const CustomDataTag_Protocol = "/kldr/cdtg/1"
 
-type TagProtocol struct {
-	node     *core.Node                // local host
-	requests map[string]*pb.TagRequest // used to access request data from response handlers
+type CustomDataTagProtocol struct {
+	node *core.Node // local host
+	//requests map[string]*pb.CustomDataTagRequest // used to access request data from response handlers
 }
 
-func NewTagProtocol(node *core.Node) *TagProtocol {
-	e := TagProtocol{node: node, requests: make(map[string]*pb.TagRequest)}
+func NewCustomDataTagProtocol(node *core.Node) *CustomDataTagProtocol {
+	e := CustomDataTagProtocol{node: node} //requests: make(map[string]*pb.CustomDataTagRequest)}
 	//node.SetStreamHandler(TAG_PROTOCOL, e.onTagRequest)
 	return &e
 }
 
-func (e *TagProtocol) TagReq(peerId peer.ID, filename, customdata string, blocknum int64) (uint32, error) {
+func (e *CustomDataTagProtocol) TagReq(peerId peer.ID, filename, customdata string, blocknum int64) (uint32, error) {
 	log.Printf("Sending tag req to: %s", peerId)
 
 	if err := checkFileName(filename); err != nil {
@@ -36,18 +34,14 @@ func (e *TagProtocol) TagReq(peerId peer.ID, filename, customdata string, blockn
 		return 0, err
 	}
 
-	s, err := e.node.NewStream(context.Background(), peerId, TAG_PROTOCOL)
+	s, err := e.node.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
 	if err != nil {
 		return 0, err
 	}
 	defer s.Close()
 
 	w := pbio.NewDelimitedWriter(s)
-	reqMsg := &pb.TagRequest{
-		MessageData: &pb.Messagedata{
-			Timestamp: time.Now().UnixMilli(),
-			Id:        uuid.NewString(),
-		},
+	reqMsg := &pb.CustomDataTagRequest{
 		FileName:   filename,
 		CustomData: customdata,
 		BlockNum:   blocknum,
@@ -60,7 +54,7 @@ func (e *TagProtocol) TagReq(peerId peer.ID, filename, customdata string, blockn
 	}
 
 	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
-	respMsg := &pb.TagResponse{}
+	respMsg := &pb.CustomDataTagResponse{}
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()

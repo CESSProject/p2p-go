@@ -8,7 +8,9 @@ require (
 	github.com/ipfs/go-datastore v0.6.0
 	github.com/libp2p/go-libp2p v0.26.3
 	github.com/libp2p/go-libp2p-kad-dht v0.23.0
+	github.com/libp2p/go-msgio v0.3.0
 	github.com/multiformats/go-multiaddr v0.8.0
+	google.golang.org/protobuf v1.28.1
 )
 
 require (
@@ -53,7 +55,6 @@ require (
 	github.com/libp2p/go-libp2p-asn-util v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.5.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
-	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/libp2p/go-nat v0.1.0 // indirect
 	github.com/libp2p/go-netroute v0.2.1 // indirect
 	github.com/libp2p/go-reuseport v0.2.0 // indirect
@@ -110,7 +111,6 @@ require (
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/tools v0.3.0 // indirect
 	gonum.org/v1/gonum v0.11.0 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )

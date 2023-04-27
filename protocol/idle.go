@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/CESSProject/p2p-go/core"
@@ -11,30 +10,32 @@ import (
 	"github.com/libp2p/go-msgio/pbio"
 )
 
-const IDLE_PROTOCOL = "/idle/req/1"
+const IdleDataTag_Protocol = "/kldr/idtg/1"
 
-type IdleProtocol struct {
-	node     *core.Node                 // local host
-	requests map[string]*pb.IdleRequest // used to access request data from response handlers
+type IdleDataTagProtocol struct {
+	node *core.Node // local host
+	//requests map[string]*pb.IdleDataTagRequest // used to access request data from response handlers
 }
 
-func NewIdleProtocol(node *core.Node) *IdleProtocol {
-	e := IdleProtocol{node: node, requests: make(map[string]*pb.IdleRequest)}
+func NewIdleDataTagProtocol(node *core.Node) *IdleDataTagProtocol {
+	e := IdleDataTagProtocol{node: node} // requests: make(map[string]*pb.IdleDataTagRequest)}
 	//node.SetStreamHandler(FILE_PROTOCOL, e.onIdleRequest)
 	return &e
 }
 
-func (e *IdleProtocol) IdleReq(peerId peer.ID, peerindex uint64, sign []byte) error {
+func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum, peerindex uint64, sign []byte) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
-	reqMsg := &pb.IdleRequest{
+	reqMsg := &pb.IdleDataTagRequest{
+		FileSize:  filesize,
+		BlockNum:  blocknum,
 		PeerIndex: peerindex,
 		Sign:      sign,
 	}
 
-	s, err := e.node.NewStream(context.Background(), peerId, IDLE_PROTOCOL)
+	s, err := e.node.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer s.Close()
 
@@ -44,20 +45,17 @@ func (e *IdleProtocol) IdleReq(peerId peer.ID, peerindex uint64, sign []byte) er
 	err = w.WriteMsg(reqMsg)
 	if err != nil {
 		s.Reset()
-		return err
+		return 0, err
 	}
-	var respMsg = &pb.FileResponse{}
+	var respMsg = &pb.IdleDataTagResponse{}
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()
-		return err
-	}
-	if respMsg.Code != P2PResponseOK {
-		return fmt.Errorf("File req returns failed: %d", respMsg.Code)
+		return 0, err
 	}
 
 	log.Printf("Idle req suc")
-	return nil
+	return respMsg.Code, nil
 }
 
 // // remote peer requests handler

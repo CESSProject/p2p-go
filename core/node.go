@@ -39,7 +39,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -51,6 +51,7 @@ import (
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
 	host.Host // lib-p2p host
+	GetMuEvent() string
 }
 
 // Node type - Implementation of a P2P Host
@@ -61,6 +62,7 @@ type Node struct {
 	workspace      string    // data
 	privatekeyPath string
 	multiaddr      string
+	muEventCh      chan string
 }
 
 // NewBasicNode constructs a new *Node
@@ -103,7 +105,8 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		// connections by attaching a connection manager.
 		libp2p.ConnectionManager(cmgr),
 		// Support TLS connections
-		libp2p.Security(libp2ptls.ID, libp2ptls.New),
+		//libp2p.Security(libp2ptls.ID, libp2ptls.New),
+		libp2p.Security(noise.ID, noise.New),
 		// Attempt to open ports using uPNP for NATed hosts.
 		libp2p.NATPortMap(),
 		libp2p.DefaultMuxers,
@@ -146,6 +149,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		workspace:      workspace,
 		privatekeyPath: privatekeypath,
 		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
+		muEventCh:      make(chan string, 1),
 	}
 	n.StarFileTransferProtocol()
 	return n, nil
@@ -244,6 +248,19 @@ func (n Node) RemoveStreamHandler(pid protocol.ID) {
 	n.host.RemoveStreamHandler(pid)
 }
 
+func (n Node) PutMuEventCh(peerid string) {
+	go func() {
+		if len(n.muEventCh) > 0 {
+			_ = <-n.muEventCh
+		}
+		n.muEventCh <- peerid
+	}()
+}
+
+func (n Node) GetMuEvent() string {
+	return <-n.muEventCh
+}
+
 // identify reads or creates the private key file specified by fpath
 func identify(fpath string) (crypto.PrivKey, error) {
 	fstat, err := os.Stat(fpath)
@@ -255,12 +272,12 @@ func identify(fpath string) (crypto.PrivKey, error) {
 			if err != nil {
 				return nil, err
 			}
-			return crypto.UnmarshalECDSAPrivateKey(content)
+			return crypto.UnmarshalEd25519PrivateKey(content)
 		}
 	}
 
 	// Creates a new RSA key pair for this host.
-	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.ECDSA, -1, rand.Reader)
+	prvKey, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, rand.Reader)
 	if err != nil {
 		return nil, err
 	}
