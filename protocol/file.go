@@ -3,9 +3,11 @@ package protocol
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
@@ -35,13 +37,12 @@ func (e *FileProtocol) FileReq(peerId peer.ID, fileId string, filetype int32, fp
 		return err
 	}
 
-	reqMsg := &pb.FileRequest{
-		FileId:   fileId,
-		FileSize: uint64(fstat.Size()),
-		FileType: pb.FileType(filetype),
-		Action:   pb.ActionType_Write,
+	reqMsg := &pb.PutRequest{
+		Hash: fileId,
+		Size: uint64(fstat.Size()),
+		Type: pb.FileType(filetype),
 	}
-	respMsg := &pb.FileResponse{}
+	respMsg := &pb.PutResponse{}
 
 	s, err := e.node.NewStream(context.Background(), peerId, FILE_PROTOCOL)
 	if err != nil {
@@ -62,6 +63,11 @@ func (e *FileProtocol) FileReq(peerId peer.ID, fileId string, filetype int32, fp
 	if err != nil {
 		s.Reset()
 		return err
+	}
+
+	if respMsg.Code != 0 {
+		s.Reset()
+		return fmt.Errorf("return failed and code:%d", respMsg.Code)
 	}
 
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
@@ -105,82 +111,122 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 		log.Println(err)
 		return
 	}
-	switch reqMsg.GetRequest().(type) {
-	case *pb.Request_PutRequest:
-	case *pb.Request_GetRequest:
-	default:
-	}
-
-	log.Printf("receive file req: %d", reqMsg.FileType)
 
 	w := pbio.NewDelimitedWriter(s)
-	respMsg := &pb.FileResponse{
-		Code: 0,
-	}
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-	err = w.WriteMsg(respMsg)
-	if err != nil {
-		s.Reset()
-		log.Println(err)
-		return
-	}
+	switch reqMsg.GetRequest().(type) {
+	case *pb.Request_PutRequest:
+		log.Printf("receive put file req")
+		respMsg := &pb.PutResponse{
+			Code: 0,
+		}
 
-	var f *os.File
-	switch reqMsg.FileType {
-	// case FileType_ServiceFile:
-	// case FileType_IdleFile:
-	// 	f, err = os.OpenFile(filepath.Join(e.node.Workspace(), IdleDirectionry), os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		respMsg.Code = P2PResponseFailed
-	// 		return
-	// 	}
-	// 	defer f.Close()
-	// case FileType_TagFile:
-	// 	f, err = os.OpenFile(filepath.Join(e.node.Workspace(), TagDirectionry), os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		respMsg.Code = P2PResponseFailed
-	// 		return
-	// 	}
-	// 	defer f.Close()
-	// case FileType_MusFile:
-	// 	f, err = os.OpenFile(filepath.Join(e.node.Workspace(), MusDirectionry), os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		respMsg.Code = P2PResponseFailed
-	// 		return
-	// 	}
-	// 	defer f.Close()
-	// case FileType_UsFile:
-	// 	f, err = os.OpenFile(filepath.Join(e.node.Workspace(), UsDirectionry), os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		respMsg.Code = P2PResponseFailed
-	// 		return
-	// 	}
-	// 	defer f.Close()
-	// case FileType_NamesFile:
-	// 	f, err = os.OpenFile(filepath.Join(e.node.Workspace(), NamesDirectionry), os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		respMsg.Code = P2PResponseFailed
-	// 		return
-	// 	}
-	// 	defer f.Close()
+		err = w.WriteMsg(respMsg)
+		if err != nil {
+			s.Reset()
+			log.Println(err)
+			return
+		}
+
+		putReq := reqMsg.GetPutRequest()
+		switch putReq.Type {
+		case pb.FileType_IdleData:
+			err = saveFileStream(rw, filepath.Join(e.node.Workspace(), IdleDirectionry, putReq.Hash), putReq.Size)
+			if err != nil {
+				log.Println(err)
+			}
+		case pb.FileType_Tag:
+			err = saveFileStream(rw, filepath.Join(e.node.Workspace(), TagDirectionry, putReq.Hash), putReq.Size)
+			if err != nil {
+				log.Println(err)
+			}
+		default:
+			log.Printf("recv put file req and invalid file type")
+		}
+	case *pb.Request_GetRequest:
+		log.Printf("receive get file req")
+		getReq := reqMsg.GetGetRequest()
+		switch getReq.Type {
+		case pb.FileType_Mu:
+			muPath := filepath.Join(e.node.Workspace(), MusDirectionry, getReq.Hash)
+			f, err := os.Open(muPath)
+			if err != nil {
+				log.Println(err)
+				s.Reset()
+				return
+			}
+			defer f.Close()
+
+			var buf = make([]byte, FileProtocolMsgBuf)
+			var num int
+
+			for {
+				num, err = f.Read(buf)
+				if err != nil && err != io.EOF {
+					log.Println(err)
+					s.Reset()
+					return
+				}
+
+				if num == 0 {
+					break
+				}
+
+				_, err = rw.Write(buf[:num])
+				if err != nil {
+					log.Println(err)
+					s.Reset()
+					return
+				}
+			}
+
+		default:
+			log.Printf("invalid file type")
+		}
 	default:
-		respMsg.Code = P2PResponseFailed
-		log.Println("Unknown file type")
-		return
-	}
-
-	f.Write(reqMsg.Data[:reqMsg.DataLength])
-	err = f.Sync()
-	if err != nil {
-		log.Println(err)
-		respMsg.Code = P2PResponseFailed
-		return
+		log.Printf("receive invalid file req")
 	}
 
 	log.Printf("%s: File response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
+	s.Reset()
+	return
+}
+
+func saveFileStream(rw *bufio.ReadWriter, fpath string, size uint64) error {
+	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var num int
+	var buf = make([]byte, FileProtocolMsgBuf)
+	for bytesRead := uint64(0); bytesRead < size; {
+		// Receive bytes
+		num, err = rw.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		if num == 0 {
+			break
+		}
+
+		bytesRead += uint64(num)
+
+		// Write bytes to the file
+		f.Write(buf)
+	}
+
+	fstat, err := f.Stat()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if uint64(fstat.Size()) != size {
+		log.Printf("recv file size = %d not equal origin size = %d", fstat.Size(), size)
+		return err
+	}
+	return nil
 }

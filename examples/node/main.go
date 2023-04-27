@@ -33,7 +33,7 @@ func main() {
 	protocol.IdleDataTagProtocol = myprotocol.NewIdleDataTagProtocol(node1)
 	protocol.MusProtocol = myprotocol.NewMusProtocol(node1)
 
-	maddr, err := ma.NewMultiaddr("/ip4/172.16.2.23/tcp/10000/p2p/12D3KooWLGGpq6Ro6AnCPQzryEbsKBdyksQGpdymNryMBjBzVxfD")
+	maddr, err := ma.NewMultiaddr(os.Args[1])
 	if err != nil {
 		fmt.Println("NewMultiaddr err: ", err)
 		os.Exit(1)

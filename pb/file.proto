@@ -20,6 +20,7 @@ enum FileType {
     CustomData = 0;
     IdleData = 1;
     Mu = 2;
+    Tag = 3;
 }
 
 message PutRequest {
