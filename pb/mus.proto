@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "./;pb";
+
+//// Mus protocol
+// a protocol define a set of reuqest and responses
+message MusRequest {    
+}
+message MusResponse {
+    uint32 Code = 1;
+    // Code indicates the result of this transfer
+    string mu_hash = 2;
+    repeated string name = 3;
+    repeated string u = 4;
+}

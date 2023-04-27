@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+option go_package = "./;pb";
+
+message Request {
+    oneof request {
+        PutRequest putRequest= 1;
+        GetRequest getRequest= 2;
+    }
+}
+
+message Response {
+    oneof response {
+        PutResponse putResponse= 1;
+        GetResponse getResponse= 2;
+    }
+}
+
+enum FileType {
+    CustomData = 0;
+    IdleData = 1;
+    Mu = 2;
+    Tag = 3;
+}
+
+message PutRequest {
+    FileType type = 1;
+    string hash = 2;
+    uint64 size = 3;
+}
+
+message PutResponse {
+    uint32 code = 1;
+}
+
+message GetRequest {
+    FileType type = 1;
+    string hash = 2;
+}
+
+message GetResponse {
+    uint32 code = 1;
+    uint64 size = 2;
+}
+
+
+//// file protocol
+
+// enum FileType {
+//     CustomData = 0;
+//     IdleData = 1;
+//     Mu = 2;
+// }
+
+// enum ActionType {
+//     Read = 0;
+//     Write = 1;
+// }
+
+// // a protocol define a set of reuqest and responses
+// message FileRequest {
+//     string FileId = 1;
+//     uint64 FileSize = 2;
+//     FileType FileType = 3;
+//     ActionType Action = 4;
+// }
+// message FileResponse {
+//     // Code indicates the result of this transfer
+//     uint32 Code = 1;
+// }

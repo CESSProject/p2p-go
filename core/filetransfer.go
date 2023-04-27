@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	fileTransferProto = "/filetransfer/1.0.0"
+	fileTransferProto = "/kldr/sft/1"
 )
 
 func (n *Node) StarFileTransferProtocol() {
