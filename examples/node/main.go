@@ -6,6 +6,7 @@ import (
 
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/CESSProject/p2p-go/core"
+	"github.com/CESSProject/p2p-go/pb"
 	myprotocol "github.com/CESSProject/p2p-go/protocol"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -26,12 +27,14 @@ func main() {
 	if !ok {
 		panic(err)
 	}
+
 	protocol := myprotocol.NewProtocol(node1)
 	protocol.WriteFileProtocol = myprotocol.NewWriteFileProtocol(node1)
 	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
 	protocol.CustomDataTagProtocol = myprotocol.NewCustomDataTagProtocol(node1)
 	protocol.IdleDataTagProtocol = myprotocol.NewIdleDataTagProtocol(node1)
 	protocol.MusProtocol = myprotocol.NewMusProtocol(node1)
+	protocol.FileProtocol = myprotocol.NewFileProtocol(node1)
 
 	maddr, err := ma.NewMultiaddr(os.Args[1])
 	if err != nil {
@@ -47,5 +50,9 @@ func main() {
 	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
 	protocol.IdleDataTagProtocol.IdleReq(info.ID, 8*1024*1024, 2, 1, []byte("123456"))
 	protocol.CustomDataTagProtocol.TagReq(info.ID, "123456", "", 2)
+	err = protocol.FileProtocol.FileReq(info.ID, "123456", int32(pb.FileType_CustomData), "./main.go")
+	if err != nil {
+		println(err)
+	}
 	select {}
 }
