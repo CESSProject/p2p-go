@@ -23,48 +23,47 @@ enum FileType {
     Tag = 3;
 }
 
-message PutRequest {
-    FileType type = 1;
-    string hash = 2;
-    uint64 size = 3;
-}
+// message PutRequest {
+//     FileType type = 1;
+//     string hash = 2;
+//     uint64 size = 3;
+// }
 
+// message PutResponse {
+//     uint32 code = 1;
+// }
+
+// message GetRequest {
+//     FileType type = 1;
+//     string hash = 2;
+// }
+
+// message GetResponse {
+//     uint32 code = 1;
+//     uint64 size = 2;
+// }
+
+
+
+// a protocol define a set of reuqest and responses
+message PutRequest {
+    FileType Type = 1;
+    string Hash = 2;
+    uint64 Size = 3;
+    bytes Data = 4;
+}
 message PutResponse {
-    uint32 code = 1;
+    // Code indicates the result of this transfer
+    uint32 Code = 1;
 }
 
 message GetRequest {
-    FileType type = 1;
-    string hash = 2;
+    FileType Type = 1;
+    string Hash = 2;
 }
 
 message GetResponse {
-    uint32 code = 1;
-    uint64 size = 2;
+    uint32 Code = 1;
+    uint64 Size = 2;
+    bytes Data = 3;
 }
-
-
-//// file protocol
-
-// enum FileType {
-//     CustomData = 0;
-//     IdleData = 1;
-//     Mu = 2;
-// }
-
-// enum ActionType {
-//     Read = 0;
-//     Write = 1;
-// }
-
-// // a protocol define a set of reuqest and responses
-// message FileRequest {
-//     string FileId = 1;
-//     uint64 FileSize = 2;
-//     FileType FileType = 3;
-//     ActionType Action = 4;
-// }
-// message FileResponse {
-//     // Code indicates the result of this transfer
-//     uint32 Code = 1;
-// }

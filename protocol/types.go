@@ -30,7 +30,7 @@ const P2PResponseFinish uint32 = 210
 const P2PResponseFailed uint32 = 400
 
 const TagProtocolMsgBuf = 1024
-const FileProtocolMsgBuf = 1024
+const FileProtocolMsgBuf = 16 * 1024 * 1024
 const IdleProtocolMsgBuf = 1024
 const MusProtocolMsgBuf = 32
 
