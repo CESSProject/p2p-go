@@ -5,8 +5,8 @@ option go_package = "./;pb";
 //// Mus protocol
 
 enum MusType {
-    CustomData = 0;
-    IdleData = 1;
+    CustomFileMu = 0;
+    IdleFileMu = 1;
 }
 
 // a protocol define a set of reuqest and responses
