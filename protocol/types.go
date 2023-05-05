@@ -12,14 +12,6 @@ import (
 	"time"
 )
 
-const FileDirectionry = "file"
-const TmpDirectionry = "tmp"
-const IdleDirectionry = "idle"
-const TagDirectionry = "tag"
-const MusDirectionry = "mu"
-const NamesDirectionry = "name"
-const UsDirectionry = "us"
-
 const P2PWriteReqRespTime = time.Duration(time.Second * 15)
 const P2PReadReqRespTime = time.Duration(time.Second * 15)
 
@@ -47,8 +39,15 @@ const (
 )
 
 var (
-	FileNameLengthErr = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
-	FileNameEmptyErr  = fmt.Errorf("filename is empty")
-
+	FileNameLengthErr   = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
+	FileNameEmptyErr    = fmt.Errorf("filename is empty")
 	CustomDataLengthErr = fmt.Errorf("custom data length exceeds %d", MaxCustomDataLength)
 )
+
+type Names struct {
+	Name []string `json:"name"`
+}
+
+type Us struct {
+	U []string `json:"u"`
+}

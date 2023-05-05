@@ -51,7 +51,7 @@ import (
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
 	host.Host // lib-p2p host
-	GetMuEvent() string
+	GetMuEvent() chan string
 }
 
 // Node type - Implementation of a P2P Host
@@ -62,6 +62,19 @@ type Node struct {
 	workspace      string    // data
 	privatekeyPath string
 	multiaddr      string
+	FileDir        string
+	TmpDir         string
+	IdleDir        string
+	TagDir         string
+	ProofDir       string
+	InamesPath     string
+	IusPath        string
+	ImuPath        string
+	SnamesPath     string
+	SusPath        string
+	SmuPath        string
+	idleDataCh     chan string
+	tagDataCh      chan string
 	muEventCh      chan string
 }
 
@@ -78,7 +91,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		return nil, errors.New("invalid parameter")
 	}
 
-	prvKey, err := identify(privatekeypath)
+	prvKey, err := identify(workspace, privatekeypath)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +162,24 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		workspace:      workspace,
 		privatekeyPath: privatekeypath,
 		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
+		FileDir:        filepath.Join(workspace, FileDirectionry),
+		TmpDir:         filepath.Join(workspace, TmpDirectionry),
+		IdleDir:        filepath.Join(workspace, IdleDirectionry),
+		TagDir:         filepath.Join(workspace, TagDirectionry),
+		ProofDir:       filepath.Join(workspace, ProofDirectionry),
+		InamesPath:     filepath.Join(workspace, ProofDirectionry, IdleNamesFile),
+		IusPath:        filepath.Join(workspace, ProofDirectionry, IdleUsFile),
+		SnamesPath:     filepath.Join(workspace, ProofDirectionry, ServiceNamesFile),
+		SusPath:        filepath.Join(workspace, ProofDirectionry, ServiceUsFile),
+		idleDataCh:     make(chan string, 1),
+		tagDataCh:      make(chan string, 1),
 		muEventCh:      make(chan string, 1),
 	}
+
+	if err := mkdir(workspace); err != nil {
+		return nil, err
+	}
+
 	n.StarFileTransferProtocol()
 	return n, nil
 }
@@ -257,12 +286,42 @@ func (n Node) PutMuEventCh(peerid string) {
 	}()
 }
 
-func (n Node) GetMuEvent() string {
-	return <-n.muEventCh
+func (n Node) GetMuEvent() chan string {
+	return n.muEventCh
+}
+
+func (n Node) PutIdleDataEventCh(path string) {
+	go func() {
+		if len(n.idleDataCh) > 0 {
+			_ = <-n.idleDataCh
+		}
+		n.idleDataCh <- path
+	}()
+}
+
+func (n Node) GetIdleDataEvent() chan string {
+	return n.idleDataCh
+}
+
+func (n Node) PutTagEventCh(path string) {
+	go func() {
+		if len(n.tagDataCh) > 0 {
+			_ = <-n.tagDataCh
+		}
+		n.tagDataCh <- path
+	}()
+}
+
+func (n Node) GetTagEvent() chan string {
+	return n.tagDataCh
 }
 
 // identify reads or creates the private key file specified by fpath
-func identify(fpath string) (crypto.PrivKey, error) {
+func identify(workspace, fpath string) (crypto.PrivKey, error) {
+	if fpath == "" {
+		fpath = filepath.Join(workspace, privatekeyFile)
+	}
+
 	fstat, err := os.Stat(fpath)
 	if err == nil {
 		if fstat.IsDir() {
@@ -304,6 +363,25 @@ func identify(fpath string) (crypto.PrivKey, error) {
 	}
 
 	return prvKey, nil
+}
+
+func mkdir(workspace string) error {
+	if err := os.MkdirAll(filepath.Join(workspace, FileDirectionry), DirMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, TmpDirectionry), DirMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, IdleDirectionry), DirMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, TagDirectionry), DirMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, ProofDirectionry), DirMode); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Authenticate incoming p2p message
