@@ -3,9 +3,17 @@ syntax = "proto3";
 option go_package = "./;pb";
 
 //// Mus protocol
-// a protocol define a set of reuqest and responses
-message MusRequest {    
+
+enum MusType {
+    CustomData = 0;
+    IdleData = 1;
 }
+
+// a protocol define a set of reuqest and responses
+message MusRequest {
+    MusType type = 1;   
+}
+
 message MusResponse {
     uint32 Code = 1;
     // Code indicates the result of this transfer

@@ -20,6 +20,22 @@ const (
 	SIZE_1GiB = 1024 * SIZE_1MiB
 )
 
+const (
+	//
+	FileDirectionry  = "file"
+	TmpDirectionry   = "tmp"
+	IdleDirectionry  = "space"
+	TagDirectionry   = "tag"
+	ProofDirectionry = "proof"
+	//
+	IdleNamesFile    = "inames"
+	IdleUsFile       = "ius"
+	IdleMuFile       = "imu"
+	ServiceNamesFile = "snames"
+	ServiceUsFile    = "sus"
+	ServiceMuFile    = "smu"
+)
+
 const BufferSize = 64 * SIZE_1KiB
 
 const DirMode = 0644
