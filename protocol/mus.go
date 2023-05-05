@@ -87,7 +87,7 @@ func (e *MusProtocol) onMusRequest(s network.Stream) {
 	var muPath = ""
 
 	switch reqMsg.Type {
-	case pb.MusType_CustomData:
+	case pb.MusType_CustomFileMu:
 		namespath = e.node.SnamesPath
 		uspath = e.node.SusPath
 		muPath = e.node.SmuPath
@@ -98,7 +98,7 @@ func (e *MusProtocol) onMusRequest(s network.Stream) {
 			return
 		}
 
-	case pb.MusType_IdleData:
+	case pb.MusType_IdleFileMu:
 		namespath = e.node.InamesPath
 		uspath = e.node.IusPath
 		muPath = e.node.ImuPath
