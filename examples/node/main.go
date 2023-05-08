@@ -48,7 +48,7 @@ func main() {
 		os.Exit(1)
 	}
 	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
-	protocol.IdleDataTagProtocol.IdleReq(info.ID, 8*1024*1024, 2, 1, []byte("123456"))
+	protocol.IdleDataTagProtocol.IdleReq(info.ID, 8*1024*1024, 2, []byte("123456"))
 	protocol.CustomDataTagProtocol.TagReq(info.ID, "123456", "", 2)
 	err = protocol.FileProtocol.FileReq(info.ID, "123456", int32(pb.FileType_CustomData), "./main.go")
 	if err != nil {

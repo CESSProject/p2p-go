@@ -23,28 +23,6 @@ enum FileType {
     Tag = 3;
 }
 
-// message PutRequest {
-//     FileType type = 1;
-//     string hash = 2;
-//     uint64 size = 3;
-// }
-
-// message PutResponse {
-//     uint32 code = 1;
-// }
-
-// message GetRequest {
-//     FileType type = 1;
-//     string hash = 2;
-// }
-
-// message GetResponse {
-//     uint32 code = 1;
-//     uint64 size = 2;
-// }
-
-
-
 // a protocol define a set of reuqest and responses
 message PutRequest {
     FileType Type = 1;

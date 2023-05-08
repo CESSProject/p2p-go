@@ -8,7 +8,7 @@ option go_package = "./;pb";
 message CustomDataTagRequest {
     string FileName   = 1;
     string CustomData = 2;
-    int64  BlockNum   = 3;
+    uint64 BlockNum   = 3;
 }
 message CustomDataTagResponse {
     // Code indicates the result of this transfer
@@ -19,8 +19,7 @@ message CustomDataTagResponse {
 message IdleDataTagRequest {
     uint64 file_size = 1;
     uint64 block_num = 2;
-    uint64 peer_index = 3;
-    bytes sign = 4;
+    bytes sign = 3;
 }
 message IdleDataTagResponse {
     uint32 Code = 1;    

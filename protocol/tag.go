@@ -23,7 +23,7 @@ func NewCustomDataTagProtocol(node *core.Node) *CustomDataTagProtocol {
 	return &e
 }
 
-func (e *CustomDataTagProtocol) TagReq(peerId peer.ID, filename, customdata string, blocknum int64) (uint32, error) {
+func (e *CustomDataTagProtocol) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
 	log.Printf("Sending tag req to: %s", peerId)
 
 	if err := checkFileName(filename); err != nil {
