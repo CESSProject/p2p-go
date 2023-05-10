@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "./;pb";
+
+//// proof protocol
+
+message Qslice {
+    int64 i = 1;
+    string v =2;
+}
+
+// a protocol define a set of reuqest and responses
+message AggrProofRequest {
+    string idle_proof_file_hash = 1;
+    string service_proof_file_hash = 2;
+    repeated Qslice qslice = 3;
+    bytes publickey = 4;
+    bytes sign = 5;
+}
+
+message AggrProofResponse {
+    uint32 Code = 1;
+}

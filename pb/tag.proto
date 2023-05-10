@@ -19,7 +19,8 @@ message CustomDataTagResponse {
 message IdleDataTagRequest {
     uint64 file_size = 1;
     uint64 block_num = 2;
-    bytes sign = 3;
+    bytes publickey = 3;
+    bytes sign = 4;
 }
 message IdleDataTagResponse {
     uint32 Code = 1;    

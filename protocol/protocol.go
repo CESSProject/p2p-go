@@ -15,8 +15,8 @@ type Protocol struct {
 	*ReadFileProtocol
 	*CustomDataTagProtocol
 	*IdleDataTagProtocol
-	*MusProtocol
 	*FileProtocol
+	*AggrProofProtocol
 	// add other protocols here...
 }
 
