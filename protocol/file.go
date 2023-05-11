@@ -77,6 +77,10 @@ func (e *FileProtocol) FileReq(peerId peer.ID, filehash string, filetype pb.File
 		return 0, err
 	}
 
+	if respMsg.Code == 0 {
+		e.node.SetServiceFileTee(string(peerId))
+	}
+
 	log.Printf("File req resp suc")
 	return respMsg.Code, nil
 }
@@ -108,14 +112,6 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 				log.Println(err)
 			}
 			e.node.PutIdleDataEventCh(fpath)
-		case pb.FileType_Tag:
-			fpath := filepath.Join(e.node.TagDir, putReq.Hash)
-			err = saveFileStream(s, fpath, putReq.Size)
-			if err != nil {
-				respMsg.Code = 1
-				log.Println(err)
-			}
-			e.node.PutTagEventCh(fpath)
 		default:
 			respMsg.Code = 1
 			log.Printf("recv put file req and invalid file type")

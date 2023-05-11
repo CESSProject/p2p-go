@@ -34,8 +34,15 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		log.Println(err)
 		return
 	}
+	remotePeer := s.Conn().RemotePeer()
+	log.Printf("receive push tag req: %s", remotePeer)
 
-	log.Printf("receive push tag req: %s", s.Conn().RemotePeer())
+	if e.node.GetIdleFileTee() != string(remotePeer) &&
+		e.node.GetServiceFileTee() != string(remotePeer) {
+		log.Printf("receive invalid push tag req: %s", remotePeer)
+		s.Reset()
+		return
+	}
 
 	respMsg := &pb.TagPushResponse{
 		Code: 0,
@@ -52,17 +59,33 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		w.WriteMsg(respMsg)
 		return
 	}
-
 	defer f.Close()
+
 	b, err := json.Marshal(reqMsg.Tag)
 	if err != nil {
+		os.Remove(tagpath)
 		respMsg.Code = 1
 		log.Println(err)
 		w.WriteMsg(respMsg)
 		return
 	}
-	f.Write(b)
-	f.Sync()
+	_, err = f.Write(b)
+	if err != nil {
+		os.Remove(tagpath)
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	err = f.Sync()
+	if err != nil {
+		os.Remove(tagpath)
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	e.node.PutTagEventCh(tagpath)
 	w.WriteMsg(respMsg)
 	log.Printf("%s: push tag response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
 }

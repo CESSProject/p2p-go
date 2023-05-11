@@ -28,11 +28,9 @@ const (
 	TagDirectionry   = "tag"
 	ProofDirectionry = "proof"
 	//
-	IdleNamesFile    = "inames"
-	IdleUsFile       = "ius"
+	IdleProofFile    = "iproof"
 	IdleMuFile       = "imu"
-	ServiceNamesFile = "snames"
-	ServiceUsFile    = "sus"
+	ServiceProofFile = "sproof"
 	ServiceMuFile    = "smu"
 )
 
