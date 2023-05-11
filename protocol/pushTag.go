@@ -35,20 +35,22 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		return
 	}
 	remotePeer := s.Conn().RemotePeer()
+	tagpath := ""
 	log.Printf("receive push tag req: %s", remotePeer)
 
-	if e.node.GetIdleFileTee() != string(remotePeer) &&
-		e.node.GetServiceFileTee() != string(remotePeer) {
-		log.Printf("receive invalid push tag req: %s", remotePeer)
+	if e.node.GetIdleFileTee() == string(remotePeer) {
+		tagpath = filepath.Join(e.node.IdleTagDir, reqMsg.Tag.T.Name+".tag")
+	} else if e.node.GetServiceFileTee() == string(remotePeer) {
+		tagpath = filepath.Join(e.node.ServiceTagDir, reqMsg.Tag.T.Name+".tag")
+	} else {
 		s.Reset()
+		log.Printf("receive invalid push tag req: %s", remotePeer)
 		return
 	}
 
 	respMsg := &pb.TagPushResponse{
 		Code: 0,
 	}
-
-	tagpath := filepath.Join(e.node.TagDir, reqMsg.Tag.T.Name+".tag")
 
 	w := pbio.NewDelimitedWriter(s)
 
