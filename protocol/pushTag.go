@@ -1,7 +1,10 @@
 package protocol
 
 import (
+	"encoding/json"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
@@ -34,11 +37,32 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 
 	log.Printf("receive push tag req: %s", s.Conn().RemotePeer())
 
-	w := pbio.NewDelimitedWriter(s)
 	respMsg := &pb.TagPushResponse{
 		Code: 0,
 	}
-	w.WriteMsg(respMsg)
 
+	tagpath := filepath.Join(e.node.TagDir, reqMsg.Tag.T.Name+".tag")
+
+	w := pbio.NewDelimitedWriter(s)
+
+	f, err := os.OpenFile(tagpath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+
+	defer f.Close()
+	b, err := json.Marshal(reqMsg.Tag)
+	if err != nil {
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	f.Write(b)
+	f.Sync()
+	w.WriteMsg(respMsg)
 	log.Printf("%s: push tag response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
 }
