@@ -22,11 +22,12 @@ const (
 
 const (
 	//
-	FileDirectionry  = "file"
-	TmpDirectionry   = "tmp"
-	IdleDirectionry  = "space"
-	TagDirectionry   = "tag"
-	ProofDirectionry = "proof"
+	FileDataDirectionry   = "file"
+	TmpDataDirectionry    = "tmp"
+	IdleDataDirectionry   = "space"
+	IdleTagDirectionry    = "itag"
+	ServiceTagDirectionry = "stag"
+	ProofDirectionry      = "proof"
 	//
 	IdleProofFile    = "iproof"
 	IdleMuFile       = "imu"

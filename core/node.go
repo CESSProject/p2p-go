@@ -65,8 +65,9 @@ type Node struct {
 	serviceFileTee string
 	FileDir        string
 	TmpDir         string
-	IdleDir        string
-	TagDir         string
+	IdleDataDir    string
+	IdleTagDir     string
+	ServiceTagDir  string
 	ProofDir       string
 	IproofFile     string
 	IproofMuFile   string
@@ -160,10 +161,11 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		workspace:      workspace,
 		privatekeyPath: privatekeypath,
 		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
-		FileDir:        filepath.Join(workspace, FileDirectionry),
-		TmpDir:         filepath.Join(workspace, TmpDirectionry),
-		IdleDir:        filepath.Join(workspace, IdleDirectionry),
-		TagDir:         filepath.Join(workspace, TagDirectionry),
+		FileDir:        filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:         filepath.Join(workspace, TmpDataDirectionry),
+		IdleDataDir:    filepath.Join(workspace, IdleDataDirectionry),
+		IdleTagDir:     filepath.Join(workspace, IdleTagDirectionry),
+		ServiceTagDir:  filepath.Join(workspace, ServiceTagDirectionry),
 		ProofDir:       filepath.Join(workspace, ProofDirectionry),
 		IproofFile:     filepath.Join(workspace, ProofDirectionry, IdleProofFile),
 		IproofMuFile:   filepath.Join(workspace, ProofDirectionry, IdleMuFile),
@@ -366,16 +368,19 @@ func identify(workspace, fpath string) (crypto.PrivKey, error) {
 }
 
 func mkdir(workspace string) error {
-	if err := os.MkdirAll(filepath.Join(workspace, FileDirectionry), DirMode); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, FileDataDirectionry), DirMode); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, TmpDirectionry), DirMode); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, TmpDataDirectionry), DirMode); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, IdleDirectionry), DirMode); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, IdleDataDirectionry), DirMode); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, TagDirectionry), DirMode); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, IdleTagDirectionry), DirMode); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, ServiceTagDirectionry), DirMode); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Join(workspace, ProofDirectionry), DirMode); err != nil {
