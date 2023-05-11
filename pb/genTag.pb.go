@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.27.1
 // 	protoc        (unknown)
-// source: tag.proto
+// source: genTag.proto
 
 package pb
 
@@ -34,7 +34,7 @@ type CustomDataTagRequest struct {
 func (x *CustomDataTagRequest) Reset() {
 	*x = CustomDataTagRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_tag_proto_msgTypes[0]
+		mi := &file_genTag_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -47,7 +47,7 @@ func (x *CustomDataTagRequest) String() string {
 func (*CustomDataTagRequest) ProtoMessage() {}
 
 func (x *CustomDataTagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tag_proto_msgTypes[0]
+	mi := &file_genTag_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +60,7 @@ func (x *CustomDataTagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomDataTagRequest.ProtoReflect.Descriptor instead.
 func (*CustomDataTagRequest) Descriptor() ([]byte, []int) {
-	return file_tag_proto_rawDescGZIP(), []int{0}
+	return file_genTag_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CustomDataTagRequest) GetFileName() string {
@@ -96,7 +96,7 @@ type CustomDataTagResponse struct {
 func (x *CustomDataTagResponse) Reset() {
 	*x = CustomDataTagResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_tag_proto_msgTypes[1]
+		mi := &file_genTag_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -109,7 +109,7 @@ func (x *CustomDataTagResponse) String() string {
 func (*CustomDataTagResponse) ProtoMessage() {}
 
 func (x *CustomDataTagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tag_proto_msgTypes[1]
+	mi := &file_genTag_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -122,7 +122,7 @@ func (x *CustomDataTagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomDataTagResponse.ProtoReflect.Descriptor instead.
 func (*CustomDataTagResponse) Descriptor() ([]byte, []int) {
-	return file_tag_proto_rawDescGZIP(), []int{1}
+	return file_genTag_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CustomDataTagResponse) GetCode() uint32 {
@@ -138,15 +138,16 @@ type IdleDataTagRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	FileSize uint64 `protobuf:"varint,1,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
-	BlockNum uint64 `protobuf:"varint,2,opt,name=block_num,json=blockNum,proto3" json:"block_num,omitempty"`
-	Sign     []byte `protobuf:"bytes,3,opt,name=sign,proto3" json:"sign,omitempty"`
+	FileSize  uint64 `protobuf:"varint,1,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
+	BlockNum  uint64 `protobuf:"varint,2,opt,name=block_num,json=blockNum,proto3" json:"block_num,omitempty"`
+	Publickey []byte `protobuf:"bytes,3,opt,name=publickey,proto3" json:"publickey,omitempty"`
+	Sign      []byte `protobuf:"bytes,4,opt,name=sign,proto3" json:"sign,omitempty"`
 }
 
 func (x *IdleDataTagRequest) Reset() {
 	*x = IdleDataTagRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_tag_proto_msgTypes[2]
+		mi := &file_genTag_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -159,7 +160,7 @@ func (x *IdleDataTagRequest) String() string {
 func (*IdleDataTagRequest) ProtoMessage() {}
 
 func (x *IdleDataTagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tag_proto_msgTypes[2]
+	mi := &file_genTag_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +173,7 @@ func (x *IdleDataTagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdleDataTagRequest.ProtoReflect.Descriptor instead.
 func (*IdleDataTagRequest) Descriptor() ([]byte, []int) {
-	return file_tag_proto_rawDescGZIP(), []int{2}
+	return file_genTag_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *IdleDataTagRequest) GetFileSize() uint64 {
@@ -187,6 +188,13 @@ func (x *IdleDataTagRequest) GetBlockNum() uint64 {
 		return x.BlockNum
 	}
 	return 0
+}
+
+func (x *IdleDataTagRequest) GetPublickey() []byte {
+	if x != nil {
+		return x.Publickey
+	}
+	return nil
 }
 
 func (x *IdleDataTagRequest) GetSign() []byte {
@@ -207,7 +215,7 @@ type IdleDataTagResponse struct {
 func (x *IdleDataTagResponse) Reset() {
 	*x = IdleDataTagResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_tag_proto_msgTypes[3]
+		mi := &file_genTag_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -220,7 +228,7 @@ func (x *IdleDataTagResponse) String() string {
 func (*IdleDataTagResponse) ProtoMessage() {}
 
 func (x *IdleDataTagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tag_proto_msgTypes[3]
+	mi := &file_genTag_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +241,7 @@ func (x *IdleDataTagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdleDataTagResponse.ProtoReflect.Descriptor instead.
 func (*IdleDataTagResponse) Descriptor() ([]byte, []int) {
-	return file_tag_proto_rawDescGZIP(), []int{3}
+	return file_genTag_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *IdleDataTagResponse) GetCode() uint32 {
@@ -243,52 +251,54 @@ func (x *IdleDataTagResponse) GetCode() uint32 {
 	return 0
 }
 
-var File_tag_proto protoreflect.FileDescriptor
+var File_genTag_proto protoreflect.FileDescriptor
 
-var file_tag_proto_rawDesc = []byte{
-	0x0a, 0x09, 0x74, 0x61, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6e, 0x0a, 0x14, 0x43,
-	0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x46, 0x69, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12,
-	0x1e, 0x0a, 0x0a, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x12,
-	0x1a, 0x0a, 0x08, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x04, 0x52, 0x08, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x22, 0x2b, 0x0a, 0x15, 0x43,
-	0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x22, 0x62, 0x0a, 0x12, 0x49, 0x64, 0x6c, 0x65,
-	0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b,
-	0x0a, 0x09, 0x66, 0x69, 0x6c, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x04, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x53, 0x69, 0x7a, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x62,
-	0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x67, 0x6e,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x73, 0x69, 0x67, 0x6e, 0x22, 0x29, 0x0a, 0x13,
-	0x49, 0x64, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+var file_genTag_proto_rawDesc = []byte{
+	0x0a, 0x0c, 0x67, 0x65, 0x6e, 0x54, 0x61, 0x67, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x6e,
+	0x0a, 0x14, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x46, 0x69, 0x6c, 0x65, 0x4e, 0x61,
+	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x4e, 0x61,
+	0x6d, 0x65, 0x12, 0x1e, 0x0a, 0x0a, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61,
+	0x74, 0x61, 0x12, 0x1a, 0x0a, 0x08, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x22, 0x2b,
+	0x0a, 0x15, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x22, 0x80, 0x01, 0x0a, 0x12,
+	0x49, 0x64, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x66, 0x69, 0x6c, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x66, 0x69, 0x6c, 0x65, 0x53, 0x69, 0x7a, 0x65, 0x12,
+	0x1b, 0x0a, 0x09, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x6e, 0x75, 0x6d, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x08, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x4e, 0x75, 0x6d, 0x12, 0x1c, 0x0a, 0x09,
+	0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x6b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52,
+	0x09, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x6b, 0x65, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69,
+	0x67, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x73, 0x69, 0x67, 0x6e, 0x22, 0x29,
+	0x0a, 0x13, 0x49, 0x64, 0x6c, 0x65, 0x44, 0x61, 0x74, 0x61, 0x54, 0x61, 0x67, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b,
+	0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
-	file_tag_proto_rawDescOnce sync.Once
-	file_tag_proto_rawDescData = file_tag_proto_rawDesc
+	file_genTag_proto_rawDescOnce sync.Once
+	file_genTag_proto_rawDescData = file_genTag_proto_rawDesc
 )
 
-func file_tag_proto_rawDescGZIP() []byte {
-	file_tag_proto_rawDescOnce.Do(func() {
-		file_tag_proto_rawDescData = protoimpl.X.CompressGZIP(file_tag_proto_rawDescData)
+func file_genTag_proto_rawDescGZIP() []byte {
+	file_genTag_proto_rawDescOnce.Do(func() {
+		file_genTag_proto_rawDescData = protoimpl.X.CompressGZIP(file_genTag_proto_rawDescData)
 	})
-	return file_tag_proto_rawDescData
+	return file_genTag_proto_rawDescData
 }
 
-var file_tag_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_tag_proto_goTypes = []interface{}{
+var file_genTag_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_genTag_proto_goTypes = []interface{}{
 	(*CustomDataTagRequest)(nil),  // 0: CustomDataTagRequest
 	(*CustomDataTagResponse)(nil), // 1: CustomDataTagResponse
 	(*IdleDataTagRequest)(nil),    // 2: IdleDataTagRequest
 	(*IdleDataTagResponse)(nil),   // 3: IdleDataTagResponse
 }
-var file_tag_proto_depIdxs = []int32{
+var file_genTag_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -296,13 +306,13 @@ var file_tag_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_tag_proto_init() }
-func file_tag_proto_init() {
-	if File_tag_proto != nil {
+func init() { file_genTag_proto_init() }
+func file_genTag_proto_init() {
+	if File_genTag_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_tag_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_genTag_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CustomDataTagRequest); i {
 			case 0:
 				return &v.state
@@ -314,7 +324,7 @@ func file_tag_proto_init() {
 				return nil
 			}
 		}
-		file_tag_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_genTag_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CustomDataTagResponse); i {
 			case 0:
 				return &v.state
@@ -326,7 +336,7 @@ func file_tag_proto_init() {
 				return nil
 			}
 		}
-		file_tag_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_genTag_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IdleDataTagRequest); i {
 			case 0:
 				return &v.state
@@ -338,7 +348,7 @@ func file_tag_proto_init() {
 				return nil
 			}
 		}
-		file_tag_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_genTag_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*IdleDataTagResponse); i {
 			case 0:
 				return &v.state
@@ -355,18 +365,18 @@ func file_tag_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_tag_proto_rawDesc,
+			RawDescriptor: file_genTag_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_tag_proto_goTypes,
-		DependencyIndexes: file_tag_proto_depIdxs,
-		MessageInfos:      file_tag_proto_msgTypes,
+		GoTypes:           file_genTag_proto_goTypes,
+		DependencyIndexes: file_genTag_proto_depIdxs,
+		MessageInfos:      file_genTag_proto_msgTypes,
 	}.Build()
-	File_tag_proto = out.File
-	file_tag_proto_rawDesc = nil
-	file_tag_proto_goTypes = nil
-	file_tag_proto_depIdxs = nil
+	File_genTag_proto = out.File
+	file_genTag_proto_rawDesc = nil
+	file_genTag_proto_goTypes = nil
+	file_genTag_proto_depIdxs = nil
 }

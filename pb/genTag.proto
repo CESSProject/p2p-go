@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "./;pb";
 
-//// Tag protocol
+//// genTag protocol
 
 // a protocol define a set of reuqest and responses
 message CustomDataTagRequest {
