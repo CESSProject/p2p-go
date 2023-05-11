@@ -51,7 +51,6 @@ import (
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
 	host.Host // lib-p2p host
-	GetMuEvent() chan string
 }
 
 // Node type - Implementation of a P2P Host
@@ -62,20 +61,19 @@ type Node struct {
 	workspace      string    // data
 	privatekeyPath string
 	multiaddr      string
+	idleFileTee    string
+	serviceFileTee string
 	FileDir        string
 	TmpDir         string
 	IdleDir        string
 	TagDir         string
 	ProofDir       string
-	InamesPath     string
-	IusPath        string
-	ImuPath        string
-	SnamesPath     string
-	SusPath        string
-	SmuPath        string
+	IproofFile     string
+	IproofMuFile   string
+	SproofFile     string
+	SproofMuFile   string
 	idleDataCh     chan string
 	tagDataCh      chan string
-	muEventCh      chan string
 }
 
 // NewBasicNode constructs a new *Node
@@ -167,20 +165,19 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		IdleDir:        filepath.Join(workspace, IdleDirectionry),
 		TagDir:         filepath.Join(workspace, TagDirectionry),
 		ProofDir:       filepath.Join(workspace, ProofDirectionry),
-		InamesPath:     filepath.Join(workspace, ProofDirectionry, IdleNamesFile),
-		IusPath:        filepath.Join(workspace, ProofDirectionry, IdleUsFile),
-		SnamesPath:     filepath.Join(workspace, ProofDirectionry, ServiceNamesFile),
-		SusPath:        filepath.Join(workspace, ProofDirectionry, ServiceUsFile),
+		IproofFile:     filepath.Join(workspace, ProofDirectionry, IdleProofFile),
+		IproofMuFile:   filepath.Join(workspace, ProofDirectionry, IdleMuFile),
+		SproofFile:     filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
+		SproofMuFile:   filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
 		idleDataCh:     make(chan string, 1),
 		tagDataCh:      make(chan string, 1),
-		muEventCh:      make(chan string, 1),
 	}
 
 	if err := mkdir(workspace); err != nil {
 		return nil, err
 	}
 
-	n.StarFileTransferProtocol()
+	//n.StarFileTransferProtocol()
 	return n, nil
 }
 
@@ -213,84 +210,71 @@ func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.
 	return info.ID, nil
 }
 
-func (n Node) PrivatekeyPath() string {
+func (n *Node) PrivatekeyPath() string {
 	return n.privatekeyPath
 }
 
-func (n Node) Workspace() string {
+func (n *Node) Workspace() string {
 	return n.workspace
 }
 
-func (n Node) Multiaddr() string {
+func (n *Node) Multiaddr() string {
 	return n.multiaddr
 }
 
-func (n Node) ID() peer.ID {
+func (n *Node) ID() peer.ID {
 	return n.host.ID()
 }
 
-func (n Node) Peerstore() peerstore.Peerstore {
+func (n *Node) Peerstore() peerstore.Peerstore {
 	return n.host.Peerstore()
 }
 
-func (n Node) Addrs() []ma.Multiaddr {
+func (n *Node) Addrs() []ma.Multiaddr {
 	return n.host.Addrs()
 }
 
-func (n Node) Mux() protocol.Switch {
+func (n *Node) Mux() protocol.Switch {
 	return n.host.Mux()
 }
 
-func (n Node) Close() error {
+func (n *Node) Close() error {
 	return n.host.Close()
 }
 
-func (n Node) Network() network.Network {
+func (n *Node) Network() network.Network {
 	return n.host.Network()
 }
 
-func (n Node) ConnManager() connmgr.ConnManager {
+func (n *Node) ConnManager() connmgr.ConnManager {
 	return n.host.ConnManager()
 }
 
-func (n Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
+func (n *Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
 	return n.host.Connect(ctx, pi)
 }
 
-func (n Node) EventBus() event.Bus {
+func (n *Node) EventBus() event.Bus {
 	return n.host.EventBus()
 }
 
-func (n Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
+func (n *Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
 	n.host.SetStreamHandler(pid, handler)
 }
 
-func (n Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
+func (n *Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
 	n.host.SetStreamHandlerMatch(pid, m, handler)
 }
 
-func (n Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
+func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
 	return n.host.NewStream(ctx, p, pids...)
 }
 
-func (n Node) RemoveStreamHandler(pid protocol.ID) {
+func (n *Node) RemoveStreamHandler(pid protocol.ID) {
 	n.host.RemoveStreamHandler(pid)
 }
 
-func (n Node) PutMuEventCh(peerid string) {
-	go func() {
-		if len(n.muEventCh) > 0 {
-			_ = <-n.muEventCh
-		}
-		n.muEventCh <- peerid
-	}()
-}
-
-func (n Node) GetMuEvent() chan string {
-	return n.muEventCh
-}
-
-func (n Node) PutIdleDataEventCh(path string) {
+func (n *Node) PutIdleDataEventCh(path string) {
 	go func() {
 		if len(n.idleDataCh) > 0 {
 			_ = <-n.idleDataCh
@@ -299,11 +283,11 @@ func (n Node) PutIdleDataEventCh(path string) {
 	}()
 }
 
-func (n Node) GetIdleDataEvent() chan string {
+func (n *Node) GetIdleDataEvent() chan string {
 	return n.idleDataCh
 }
 
-func (n Node) PutTagEventCh(path string) {
+func (n *Node) PutTagEventCh(path string) {
 	go func() {
 		if len(n.tagDataCh) > 0 {
 			_ = <-n.tagDataCh
@@ -312,8 +296,24 @@ func (n Node) PutTagEventCh(path string) {
 	}()
 }
 
-func (n Node) GetTagEvent() chan string {
+func (n *Node) GetTagEvent() chan string {
 	return n.tagDataCh
+}
+
+func (n *Node) SetIdleFileTee(peerid string) {
+	n.idleFileTee = peerid
+}
+
+func (n *Node) GetIdleFileTee() string {
+	return n.idleFileTee
+}
+
+func (n *Node) SetServiceFileTee(peerid string) {
+	n.serviceFileTee = peerid
+}
+
+func (n *Node) GetServiceFileTee() string {
+	return n.serviceFileTee
 }
 
 // identify reads or creates the private key file specified by fpath

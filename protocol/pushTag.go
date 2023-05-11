@@ -1,7 +1,10 @@
 package protocol
 
 import (
+	"encoding/json"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
@@ -31,14 +34,58 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		log.Println(err)
 		return
 	}
+	remotePeer := s.Conn().RemotePeer()
+	log.Printf("receive push tag req: %s", remotePeer)
 
-	log.Printf("receive push tag req: %s", s.Conn().RemotePeer())
+	if e.node.GetIdleFileTee() != string(remotePeer) &&
+		e.node.GetServiceFileTee() != string(remotePeer) {
+		log.Printf("receive invalid push tag req: %s", remotePeer)
+		s.Reset()
+		return
+	}
 
-	w := pbio.NewDelimitedWriter(s)
 	respMsg := &pb.TagPushResponse{
 		Code: 0,
 	}
-	w.WriteMsg(respMsg)
 
+	tagpath := filepath.Join(e.node.TagDir, reqMsg.Tag.T.Name+".tag")
+
+	w := pbio.NewDelimitedWriter(s)
+
+	f, err := os.OpenFile(tagpath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	defer f.Close()
+
+	b, err := json.Marshal(reqMsg.Tag)
+	if err != nil {
+		os.Remove(tagpath)
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	_, err = f.Write(b)
+	if err != nil {
+		os.Remove(tagpath)
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	err = f.Sync()
+	if err != nil {
+		os.Remove(tagpath)
+		respMsg.Code = 1
+		log.Println(err)
+		w.WriteMsg(respMsg)
+		return
+	}
+	e.node.PutTagEventCh(tagpath)
+	w.WriteMsg(respMsg)
 	log.Printf("%s: push tag response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
 }

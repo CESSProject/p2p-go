@@ -13,13 +13,11 @@ import (
 const IdleDataTag_Protocol = "/kldr/idtg/1"
 
 type IdleDataTagProtocol struct {
-	node *core.Node // local host
-	//requests map[string]*pb.IdleDataTagRequest // used to access request data from response handlers
+	node *core.Node
 }
 
 func NewIdleDataTagProtocol(node *core.Node) *IdleDataTagProtocol {
-	e := IdleDataTagProtocol{node: node} // requests: make(map[string]*pb.IdleDataTagRequest)}
-	//node.SetStreamHandler(FILE_PROTOCOL, e.onIdleRequest)
+	e := IdleDataTagProtocol{node: node}
 	return &e
 }
 
@@ -38,51 +36,23 @@ func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64,
 	}
 	defer s.Close()
 
-	r := pbio.NewDelimitedReader(s, FileProtocolMsgBuf)
 	w := pbio.NewDelimitedWriter(s)
-
 	err = w.WriteMsg(reqMsg)
 	if err != nil {
 		s.Reset()
 		return 0, err
 	}
+
+	r := pbio.NewDelimitedReader(s, FileProtocolMsgBuf)
 	var respMsg = &pb.IdleDataTagResponse{}
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()
 		return 0, err
 	}
-
+	if respMsg.Code == 0 {
+		e.node.SetIdleFileTee(string(peerId))
+	}
 	log.Printf("Idle req suc")
 	return respMsg.Code, nil
 }
-
-// // remote peer requests handler
-// func (e *IdleProtocol) onIdleRequest(s network.Stream) {
-// 	r := pbio.NewDelimitedReader(s, IdleProtocolMsgBuf)
-// 	reqMsg := &pb.IdleRequest{}
-// 	err := r.ReadMsg(reqMsg)
-// 	if err != nil {
-// 		s.Reset()
-// 		log.Println(err)
-// 		return
-// 	}
-
-// 	log.Printf("receive file req: %d", reqMsg.PeerIndex)
-
-// 	w := pbio.NewDelimitedWriter(s)
-// 	respMsg := &pb.TagResponse{
-// 		Code: P2PResponseOK,
-// 	}
-
-// 	defer func() {
-// 		respMsg.MessageData.Timestamp = time.Now().UnixMilli()
-// 		err = w.WriteMsg(respMsg)
-// 		if err != nil {
-// 			s.Reset()
-// 			log.Println(err)
-// 		}
-// 	}()
-
-// 	log.Printf("%s: File response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
-// }
