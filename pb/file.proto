@@ -19,8 +19,9 @@ message Response {
 enum FileType {
     CustomData = 0;
     IdleData = 1;
-    Mu = 2;
-    Tag = 3;
+    IdleMu = 2;
+    CustomMu = 3;
+    Tag = 4;
 }
 
 // a protocol define a set of reuqest and responses

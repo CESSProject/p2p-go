@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "./;pb";
+
+/// tag push protocol: /kldr/tagpush/1
+
+message T {
+    string name = 1;
+    string u = 2;
+    repeated string phi = 3;
+}
+
+message Tag {
+    T t = 1;
+    string phi_hash = 2;
+    string attest = 3;
+}
+message TagPushRequest {
+    Tag tag = 1;    
+    /// podr2 key sign(peer_id)
+    bytes sign = 2;
+}
+message TagPushResponse {
+    uint32 code = 1;
+}

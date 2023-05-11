@@ -3,7 +3,6 @@ package protocol
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,36 +18,33 @@ import (
 const FILE_PROTOCOL = "/kldr/sft/1"
 
 type FileProtocol struct {
-	node *core.Node // local host
-	//requests map[string]*pb.FileRequest // used to access request data from response handlers
+	node *core.Node
 }
 
 func NewFileProtocol(node *core.Node) *FileProtocol {
-	e := FileProtocol{node: node} //requests: make(map[string]*pb.FileRequest)}
+	e := FileProtocol{node: node}
 	node.SetStreamHandler(FILE_PROTOCOL, e.onFileRequest)
 	return &e
 }
 
-func (e *FileProtocol) FileReq(peerId peer.ID, fileId string, filetype int32, fpath string) error {
+func (e *FileProtocol) FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
 	fstat, err := os.Stat(fpath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var req = &pb.Request{}
 	var putReq = &pb.PutRequest{
-		Hash: fileId,
+		Type: filetype,
+		Hash: filehash,
 		Size: uint64(fstat.Size()),
-		Type: pb.FileType(filetype),
 	}
-
-	respMsg := &pb.PutResponse{}
 
 	s, err := e.node.NewStream(context.Background(), peerId, FILE_PROTOCOL)
 	if err != nil {
 		log.Println(err)
-		return err
+		return 0, err
 	}
 	defer s.Close()
 
@@ -56,7 +52,7 @@ func (e *FileProtocol) FileReq(peerId peer.ID, fileId string, filetype int32, fp
 	if err != nil {
 		s.Reset()
 		log.Println(err)
-		return err
+		return 0, err
 	}
 
 	var reqMsg = &pb.Request_PutRequest{
@@ -69,23 +65,20 @@ func (e *FileProtocol) FileReq(peerId peer.ID, fileId string, filetype int32, fp
 	err = w.WriteMsg(req)
 	if err != nil {
 		s.Reset()
-		return err
+		return 0, err
 	}
+
+	respMsg := &pb.PutResponse{}
 
 	r := pbio.NewDelimitedReader(s, FileProtocolMsgBuf)
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()
-		return err
+		return 0, err
 	}
 
-	if respMsg.Code != 0 {
-		s.Reset()
-		return fmt.Errorf("return failed and code:%d", respMsg.Code)
-	}
-
-	log.Printf("File req suc")
-	return nil
+	log.Printf("File req resp suc")
+	return respMsg.Code, nil
 }
 
 // remote peer requests handler
@@ -143,7 +136,7 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 		}
 		getReq := reqMsg.GetGetRequest()
 		switch getReq.Type {
-		case pb.FileType_Mu:
+		case pb.FileType_IdleData:
 			muPath := filepath.Join(e.node.ProofDir, getReq.Hash)
 			getResp.Data, err = os.ReadFile(muPath)
 			if err != nil {

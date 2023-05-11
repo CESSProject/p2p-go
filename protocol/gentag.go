@@ -13,13 +13,11 @@ import (
 const CustomDataTag_Protocol = "/kldr/cdtg/1"
 
 type CustomDataTagProtocol struct {
-	node *core.Node // local host
-	//requests map[string]*pb.CustomDataTagRequest // used to access request data from response handlers
+	node *core.Node
 }
 
 func NewCustomDataTagProtocol(node *core.Node) *CustomDataTagProtocol {
-	e := CustomDataTagProtocol{node: node} //requests: make(map[string]*pb.CustomDataTagRequest)}
-	//node.SetStreamHandler(TAG_PROTOCOL, e.onTagRequest)
+	e := CustomDataTagProtocol{node: node}
 	return &e
 }
 

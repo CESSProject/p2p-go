@@ -33,7 +33,7 @@ func main() {
 	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
 	protocol.CustomDataTagProtocol = myprotocol.NewCustomDataTagProtocol(node1)
 	protocol.IdleDataTagProtocol = myprotocol.NewIdleDataTagProtocol(node1)
-	protocol.MusProtocol = myprotocol.NewMusProtocol(node1)
+	protocol.AggrProofProtocol = myprotocol.NewAggrProofProtocol(node1)
 	protocol.FileProtocol = myprotocol.NewFileProtocol(node1)
 
 	maddr, err := ma.NewMultiaddr(os.Args[1])
@@ -50,7 +50,7 @@ func main() {
 	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
 	protocol.IdleDataTagProtocol.IdleReq(info.ID, 8*1024*1024, 2, []byte("123456"))
 	protocol.CustomDataTagProtocol.TagReq(info.ID, "123456", "", 2)
-	err = protocol.FileProtocol.FileReq(info.ID, "123456", int32(pb.FileType_CustomData), "./main.go")
+	_, err = protocol.FileProtocol.FileReq(info.ID, "123456", pb.FileType_CustomData, "./main.go")
 	if err != nil {
 		println(err)
 	}
