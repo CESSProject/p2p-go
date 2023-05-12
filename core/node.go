@@ -55,26 +55,27 @@ type P2P interface {
 
 // Node type - Implementation of a P2P Host
 type Node struct {
-	ctx            context.Context
-	ctxCancel      context.CancelFunc
-	host           host.Host // lib-p2p host
-	workspace      string    // data
-	privatekeyPath string
-	multiaddr      string
-	idleFileTee    string
-	serviceFileTee string
-	FileDir        string
-	TmpDir         string
-	IdleDataDir    string
-	IdleTagDir     string
-	ServiceTagDir  string
-	ProofDir       string
-	IproofFile     string
-	IproofMuFile   string
-	SproofFile     string
-	SproofMuFile   string
-	idleDataCh     chan string
-	tagDataCh      chan string
+	ctx              context.Context
+	ctxCancel        context.CancelFunc
+	host             host.Host // lib-p2p host
+	workspace        string    // data
+	privatekeyPath   string
+	multiaddr        string
+	idleFileTee      string
+	serviceFileTee   string
+	FileDir          string
+	TmpDir           string
+	IdleDataDir      string
+	IdleTagDir       string
+	ServiceTagDir    string
+	ProofDir         string
+	IproofFile       string
+	IproofMuFile     string
+	SproofFile       string
+	SproofMuFile     string
+	idleDataCh       chan string
+	idleTagDataCh    chan string
+	serviceTagDataCh chan string
 }
 
 // NewBasicNode constructs a new *Node
@@ -155,24 +156,25 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 
 	basicCtx, cancel := context.WithCancel(context.Background())
 	n := &Node{
-		ctx:            basicCtx,
-		ctxCancel:      cancel,
-		host:           host,
-		workspace:      workspace,
-		privatekeyPath: privatekeypath,
-		multiaddr:      fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
-		FileDir:        filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:         filepath.Join(workspace, TmpDataDirectionry),
-		IdleDataDir:    filepath.Join(workspace, IdleDataDirectionry),
-		IdleTagDir:     filepath.Join(workspace, IdleTagDirectionry),
-		ServiceTagDir:  filepath.Join(workspace, ServiceTagDirectionry),
-		ProofDir:       filepath.Join(workspace, ProofDirectionry),
-		IproofFile:     filepath.Join(workspace, ProofDirectionry, IdleProofFile),
-		IproofMuFile:   filepath.Join(workspace, ProofDirectionry, IdleMuFile),
-		SproofFile:     filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
-		SproofMuFile:   filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
-		idleDataCh:     make(chan string, 1),
-		tagDataCh:      make(chan string, 1),
+		ctx:              basicCtx,
+		ctxCancel:        cancel,
+		host:             host,
+		workspace:        workspace,
+		privatekeyPath:   privatekeypath,
+		multiaddr:        fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
+		FileDir:          filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:           filepath.Join(workspace, TmpDataDirectionry),
+		IdleDataDir:      filepath.Join(workspace, IdleDataDirectionry),
+		IdleTagDir:       filepath.Join(workspace, IdleTagDirectionry),
+		ServiceTagDir:    filepath.Join(workspace, ServiceTagDirectionry),
+		ProofDir:         filepath.Join(workspace, ProofDirectionry),
+		IproofFile:       filepath.Join(workspace, ProofDirectionry, IdleProofFile),
+		IproofMuFile:     filepath.Join(workspace, ProofDirectionry, IdleMuFile),
+		SproofFile:       filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
+		SproofMuFile:     filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
+		idleDataCh:       make(chan string, 1),
+		idleTagDataCh:    make(chan string, 1),
+		serviceTagDataCh: make(chan string, 1),
 	}
 
 	if err := mkdir(workspace); err != nil {
@@ -289,17 +291,30 @@ func (n *Node) GetIdleDataEvent() chan string {
 	return n.idleDataCh
 }
 
-func (n *Node) PutTagEventCh(path string) {
+func (n *Node) PutIdleTagEventCh(path string) {
 	go func() {
-		if len(n.tagDataCh) > 0 {
-			_ = <-n.tagDataCh
+		if len(n.idleTagDataCh) > 0 {
+			_ = <-n.idleTagDataCh
 		}
-		n.tagDataCh <- path
+		n.idleTagDataCh <- path
 	}()
 }
 
-func (n *Node) GetTagEvent() chan string {
-	return n.tagDataCh
+func (n *Node) GetIdleTagEvent() chan string {
+	return n.idleTagDataCh
+}
+
+func (n *Node) PutServiceTagEventCh(path string) {
+	go func() {
+		if len(n.serviceTagDataCh) > 0 {
+			_ = <-n.serviceTagDataCh
+		}
+		n.serviceTagDataCh <- path
+	}()
+}
+
+func (n *Node) GetServiceTagEvent() chan string {
+	return n.serviceTagDataCh
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
