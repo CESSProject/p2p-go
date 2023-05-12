@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-msgio/pbio"
 )
 
-const AggrProof_PROTOCOL = "/kldr/vdf/1"
+const AggrProof_PROTOCOL = "/kldr/kdf/1"
 
 type AggrProofProtocol struct {
 	node *core.Node

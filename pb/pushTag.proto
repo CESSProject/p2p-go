@@ -15,11 +15,29 @@ message Tag {
     string phi_hash = 2;
     string attest = 3;
 }
-message TagPushRequest {
-    Tag tag = 1;    
-    /// podr2 key sign(peer_id)
+
+message CustomTagGenResult {
+    Tag tag = 1;
+}
+
+message IdleTagGenResult {
+    Tag tag = 1;
     bytes sign = 2;
 }
+
+message GenErrorResult {
+    uint32 code = 1;
+    string msg = 2;
+}
+
+message TagPushRequest {
+    oneof result {
+        CustomTagGenResult ctgr = 1;
+        IdleTagGenResult itgr = 2;
+        GenErrorResult error = 3;
+    }
+}
+
 message TagPushResponse {
     uint32 code = 1;
 }
