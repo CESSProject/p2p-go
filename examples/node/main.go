@@ -27,7 +27,7 @@ func main() {
 	if !ok {
 		panic(err)
 	}
-
+	return
 	protocol := myprotocol.NewProtocol(node1)
 	protocol.WriteFileProtocol = myprotocol.NewWriteFileProtocol(node1)
 	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
