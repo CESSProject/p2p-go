@@ -17,6 +17,7 @@ type Protocol struct {
 	*IdleDataTagProtocol
 	*FileProtocol
 	*AggrProofProtocol
+	*PushTagProtocol
 	// add other protocols here...
 }
 

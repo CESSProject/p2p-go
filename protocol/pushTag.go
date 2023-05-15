@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
 )
 
@@ -22,6 +24,37 @@ func NewPushTagProtocol(node *core.Node) *PushTagProtocol {
 	e := PushTagProtocol{node: node}
 	node.SetStreamHandler(PushTag_Protocol, e.onPushTagRequest)
 	return &e
+}
+
+// remote peer requests handler
+func (e *PushTagProtocol) TagPushReq(peerid peer.ID) (uint32, error) {
+	log.Printf("Sending TagPushReq req to: %s", peerid)
+
+	s, err := e.node.NewStream(context.Background(), peerid, PushTag_Protocol)
+	if err != nil {
+		return 0, err
+	}
+	defer s.Close()
+
+	w := pbio.NewDelimitedWriter(s)
+	reqMsg := &pb.IdleTagGenResult{}
+
+	err = w.WriteMsg(reqMsg)
+	if err != nil {
+		s.Reset()
+		return 0, err
+	}
+
+	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
+	respMsg := &pb.AggrProofResponse{}
+	err = r.ReadMsg(respMsg)
+	if err != nil {
+		s.Reset()
+		return 0, err
+	}
+
+	log.Printf("TagPushReq resp code: %d", respMsg.Code)
+	return respMsg.Code, nil
 }
 
 // remote peer requests handler

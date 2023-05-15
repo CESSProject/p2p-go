@@ -21,13 +21,14 @@ func NewIdleDataTagProtocol(node *core.Node) *IdleDataTagProtocol {
 	return &e
 }
 
-func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64, sign []byte) (uint32, error) {
+func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
 	reqMsg := &pb.IdleDataTagRequest{
-		FileSize: filesize,
-		BlockNum: blocknum,
-		Sign:     sign,
+		FileSize:  filesize,
+		BlockNum:  blocknum,
+		Publickey: pubkey,
+		Sign:      sign,
 	}
 
 	s, err := e.node.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
