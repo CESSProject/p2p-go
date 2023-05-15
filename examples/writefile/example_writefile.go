@@ -62,8 +62,10 @@ func main() {
 	protocol := myprotocol.NewProtocol(node1)
 	protocol.WriteFileProtocol = myprotocol.NewWriteFileProtocol(node1)
 	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
+	protocol.PushTagProtocol = myprotocol.NewPushTagProtocol(node1)
 
 	myprotocol.NewWriteFileProtocol(node2)
+	myprotocol.NewPushTagProtocol(node2)
 
 	remote := fmt.Sprintf("/ip4/0.0.0.0/tcp/15001/p2p/%v", node2.ID())
 
@@ -79,6 +81,8 @@ func main() {
 		os.Exit(1)
 	}
 	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
+
+	go protocol.TagPushReq(info.ID)
 	go protocol.WriteFileAction(info.ID, "roothash", file)
 	select {}
 }
