@@ -73,6 +73,7 @@ type Node struct {
 	IproofMuFile     string
 	SproofFile       string
 	SproofMuFile     string
+	PublicKey        []byte
 	idleDataCh       chan string
 	idleTagDataCh    chan string
 	serviceTagDataCh chan string
@@ -92,6 +93,11 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 	}
 
 	prvKey, err := identify(workspace, privatekeypath)
+	if err != nil {
+		return nil, err
+	}
+
+	pk, err := prvKey.GetPublic().Raw()
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +133,8 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 	if err != nil {
 		return nil, err
 	}
+
+	host.ID().ExtractPublicKey()
 
 	if !host.ID().MatchesPrivateKey(prvKey) {
 		return nil, errors.New("")
@@ -172,6 +180,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		IproofMuFile:     filepath.Join(workspace, ProofDirectionry, IdleMuFile),
 		SproofFile:       filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 		SproofMuFile:     filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
+		PublicKey:        pk,
 		idleDataCh:       make(chan string, 1),
 		idleTagDataCh:    make(chan string, 1),
 		serviceTagDataCh: make(chan string, 1),
@@ -276,6 +285,18 @@ func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (n
 
 func (n *Node) RemoveStreamHandler(pid protocol.ID) {
 	n.host.RemoveStreamHandler(pid)
+}
+
+func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
+	pkey, err := crypto.UnmarshalEd25519PublicKey(pubkey)
+	if err != nil {
+		return "", err
+	}
+	pid, err := peer.IDFromPublicKey(pkey)
+	if err != nil {
+		return "", err
+	}
+	return pid.String(), nil
 }
 
 func (n *Node) PutIdleDataEventCh(path string) {

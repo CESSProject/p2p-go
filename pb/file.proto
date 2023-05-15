@@ -21,7 +21,6 @@ enum FileType {
     IdleData = 1;
     IdleMu = 2;
     CustomMu = 3;
-    Tag = 4;
 }
 
 // a protocol define a set of reuqest and responses
