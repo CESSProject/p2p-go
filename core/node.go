@@ -40,6 +40,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
+	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -73,7 +74,7 @@ type Node struct {
 	IproofMuFile     string
 	SproofFile       string
 	SproofMuFile     string
-	PublicKey        []byte
+	PeerId           []byte
 	idleDataCh       chan string
 	idleTagDataCh    chan string
 	serviceTagDataCh chan string
@@ -93,11 +94,6 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 	}
 
 	prvKey, err := identify(workspace, privatekeypath)
-	if err != nil {
-		return nil, err
-	}
-
-	pk, err := prvKey.GetPublic().Raw()
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +130,13 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		return nil, err
 	}
 
-	host.ID().ExtractPublicKey()
-
 	if !host.ID().MatchesPrivateKey(prvKey) {
 		return nil, errors.New("")
+	}
+
+	peerid, err := base58.Decode(host.ID().String())
+	if err != nil {
+		return nil, err
 	}
 
 	if len(bootpeers) > 0 {
@@ -180,7 +179,7 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		IproofMuFile:     filepath.Join(workspace, ProofDirectionry, IdleMuFile),
 		SproofFile:       filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 		SproofMuFile:     filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
-		PublicKey:        pk,
+		PeerId:           peerid,
 		idleDataCh:       make(chan string, 1),
 		idleTagDataCh:    make(chan string, 1),
 		serviceTagDataCh: make(chan string, 1),
