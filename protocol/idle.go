@@ -52,7 +52,7 @@ func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64,
 		return 0, err
 	}
 	if respMsg.Code == 0 {
-		e.node.SetIdleFileTee(string(peerId))
+		e.node.SetIdleFileTee(peerId.String())
 	}
 	log.Printf("Idle req suc")
 	return respMsg.Code, nil
