@@ -34,9 +34,9 @@ func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash []byte, qs
 	reqMsg := &pb.AggrProofRequest{
 		IdleProofFileHash:    ihash,
 		ServiceProofFileHash: shash,
-		Qslice:               qslice,
 		Publickey:            puk,
 		Sign:                 sign,
+		Qslice:               qslice,
 	}
 
 	err = w.WriteMsg(reqMsg)
