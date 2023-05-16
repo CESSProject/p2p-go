@@ -59,6 +59,7 @@ func (e *PushTagProtocol) TagPushReq(peerid peer.ID) (uint32, error) {
 
 // remote peer requests handler
 func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
+	defer s.Close()
 	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
 	reqMsg := &pb.TagPushRequest{}
 	err := r.ReadMsg(reqMsg)
@@ -68,6 +69,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		return
 	}
 	remotePeer := s.Conn().RemotePeer().String()
+
 	log.Println("receive push tag req: ", remotePeer)
 	if e.node.GetIdleFileTee() != string(remotePeer) &&
 		e.node.GetServiceFileTee() != string(remotePeer) {
@@ -93,7 +95,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 			e.node.PutServiceTagEventCh(tagpath)
 		}
 	case *pb.TagPushRequest_Itgr:
-		idleTag := reqMsg.GetCtgr()
+		idleTag := reqMsg.GetItgr()
 		tagpath := filepath.Join(e.node.IdleTagDir, idleTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, idleTag.Tag)
 		if err != nil {

@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -76,7 +77,7 @@ func (e *FileProtocol) FileReq(peerId peer.ID, filehash string, filetype pb.File
 	}
 
 	if respMsg.Code == 0 {
-		e.node.SetServiceFileTee(string(peerId))
+		e.node.SetServiceFileTee(peerId.String())
 	}
 
 	log.Printf("File req resp suc")
@@ -85,6 +86,7 @@ func (e *FileProtocol) FileReq(peerId peer.ID, filehash string, filetype pb.File
 
 // remote peer requests handler
 func (e *FileProtocol) onFileRequest(s network.Stream) {
+	defer s.Close()
 	log.Println("Receiving FileReq from: ", s.Conn().RemotePeer().String())
 	var resp = &pb.Response{}
 	var reqMsg = &pb.Request{}
@@ -126,50 +128,18 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 			putResp.Code = 1
 			log.Printf("recv put file req and invalid file type")
 		}
-	// case *pb.Request_GetRequest:
-	// 	log.Printf("receive get file req")
-
-	// 	getResp := &pb.GetResponse{
-	// 		Code: 0,
-	// 	}
-	// 	getReq := reqMsg.GetGetRequest()
-	// 	switch getReq.Type {
-	// 	case pb.FileType_IdleData:
-	// 		muPath := filepath.Join(e.node.ProofDir, getReq.Hash)
-	// 		getResp.Data, err = os.ReadFile(muPath)
-	// 		if err != nil {
-	// 			log.Println(err)
-	// 			s.Reset()
-	// 			return
-	// 		}
-	// 		getResp.Size = uint64(len(getResp.Data))
-	// 	default:
-	// 		getResp.Code = 1
-	// 		log.Printf("invalid file type")
-	// 	}
-
-	// 	w := pbio.NewDelimitedWriter(s)
-	// 	respMsg := &pb.Response_GetResponse{
-	// 		GetResponse: getResp,
-	// 	}
-	// 	//resp.GetResponse = respMsg
-	// 	resp.Response = respMsg
-	// 	err = w.WriteMsg(resp)
-	// 	if err != nil {
-	// 		s.Reset()
-	// 		log.Println(err)
-	// 		return
-	// 	}
 	default:
 		putResp.Code = 1
 		log.Printf("receive invalid file req")
 	}
 
-	err = w.WriteMsg(resp)
-	if err != nil {
-		s.Reset()
-		log.Println(err)
-		return
+	if putResp.Code == 1 {
+		err = w.WriteMsg(resp)
+		if err != nil {
+			s.Reset()
+			log.Println(err)
+			return
+		}
 	}
 
 	log.Printf("%s: File response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
@@ -193,14 +163,19 @@ func saveFileStream(r pbio.ReadCloser, w pbio.WriteCloser, reqMsg *pb.Request, r
 		// Receive bytes
 		err := r.ReadMsg(reqMsg)
 		if err != nil {
-			return err
+			if err != io.EOF {
+				return err
+			}
+			break
 		}
+
 		err = w.WriteMsg(resp)
 		if err != nil {
 			return err
 		}
+
 		putReq = reqMsg.GetPutRequest()
-		bytesRead = bytesRead + uint64(len(putReq.Data))
+
 		// Write bytes to the file
 		_, err = f.Write(putReq.Data)
 		if err != nil {
