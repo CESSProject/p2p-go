@@ -1,9 +1,7 @@
 package protocol
 
 import (
-	"bufio"
 	"context"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,7 +13,7 @@ import (
 	"github.com/libp2p/go-msgio/pbio"
 )
 
-const FILE_PROTOCOL = "/kldr/sft/1"
+const FILE_PROTOCOL = "/kldr/kft/1"
 
 type FileProtocol struct {
 	node *core.Node
@@ -87,119 +85,138 @@ func (e *FileProtocol) FileReq(peerId peer.ID, filehash string, filetype pb.File
 
 // remote peer requests handler
 func (e *FileProtocol) onFileRequest(s network.Stream) {
+	log.Println("Receiving FileReq from: ", s.Conn().RemotePeer().String())
+	var resp = &pb.Response{}
+	var reqMsg = &pb.Request{}
+
 	r := pbio.NewDelimitedReader(s, FileProtocolMsgBuf)
-	reqMsg := &pb.Request{}
+	w := pbio.NewDelimitedWriter(s)
+
 	err := r.ReadMsg(reqMsg)
+	if err != nil {
+		s.Reset()
+		log.Println("[ReadMsg err]", err)
+		return
+	}
+	var putResp = &pb.PutResponse{
+		Code: 0,
+	}
+	var respMsg = &pb.Response_PutResponse{
+		PutResponse: putResp,
+	}
+	resp.Response = respMsg
+
+	switch reqMsg.GetRequest().(type) {
+	case *pb.Request_PutRequest:
+		log.Printf("receive put file req")
+
+		w.WriteMsg(resp)
+
+		putReq := reqMsg.GetPutRequest()
+		switch putReq.Type {
+		case pb.FileType_IdleData:
+			fpath := filepath.Join(e.node.IdleDataDir, putReq.Hash)
+			err = saveFileStream(r, w, reqMsg, resp, fpath, putReq.Size, putReq.Data)
+			if err != nil {
+				putResp.Code = 1
+				log.Println(err)
+			}
+			e.node.PutIdleDataEventCh(fpath)
+		default:
+			putResp.Code = 1
+			log.Printf("recv put file req and invalid file type")
+		}
+	// case *pb.Request_GetRequest:
+	// 	log.Printf("receive get file req")
+
+	// 	getResp := &pb.GetResponse{
+	// 		Code: 0,
+	// 	}
+	// 	getReq := reqMsg.GetGetRequest()
+	// 	switch getReq.Type {
+	// 	case pb.FileType_IdleData:
+	// 		muPath := filepath.Join(e.node.ProofDir, getReq.Hash)
+	// 		getResp.Data, err = os.ReadFile(muPath)
+	// 		if err != nil {
+	// 			log.Println(err)
+	// 			s.Reset()
+	// 			return
+	// 		}
+	// 		getResp.Size = uint64(len(getResp.Data))
+	// 	default:
+	// 		getResp.Code = 1
+	// 		log.Printf("invalid file type")
+	// 	}
+
+	// 	w := pbio.NewDelimitedWriter(s)
+	// 	respMsg := &pb.Response_GetResponse{
+	// 		GetResponse: getResp,
+	// 	}
+	// 	//resp.GetResponse = respMsg
+	// 	resp.Response = respMsg
+	// 	err = w.WriteMsg(resp)
+	// 	if err != nil {
+	// 		s.Reset()
+	// 		log.Println(err)
+	// 		return
+	// 	}
+	default:
+		putResp.Code = 1
+		log.Printf("receive invalid file req")
+	}
+
+	err = w.WriteMsg(resp)
 	if err != nil {
 		s.Reset()
 		log.Println(err)
 		return
 	}
-	var resp = &pb.Response{}
-	switch reqMsg.GetRequest().(type) {
-	case *pb.Request_PutRequest:
-		log.Printf("receive put file req")
-		respMsg := &pb.PutResponse{
-			Code: 0,
-		}
-		putReq := reqMsg.GetPutRequest()
-		switch putReq.Type {
-		case pb.FileType_IdleData:
-			fpath := filepath.Join(e.node.IdleDataDir, putReq.Hash)
-			err = saveFileStream(s, fpath, putReq.Size)
-			if err != nil {
-				respMsg.Code = 1
-				log.Println(err)
-			}
-			e.node.PutIdleDataEventCh(fpath)
-		default:
-			respMsg.Code = 1
-			log.Printf("recv put file req and invalid file type")
-		}
-
-		w := pbio.NewDelimitedWriter(s)
-		err = w.WriteMsg(respMsg)
-		if err != nil {
-			s.Reset()
-			log.Println(err)
-			return
-		}
-	case *pb.Request_GetRequest:
-		log.Printf("receive get file req")
-
-		getResp := &pb.GetResponse{
-			Code: 0,
-		}
-		getReq := reqMsg.GetGetRequest()
-		switch getReq.Type {
-		case pb.FileType_IdleData:
-			muPath := filepath.Join(e.node.ProofDir, getReq.Hash)
-			getResp.Data, err = os.ReadFile(muPath)
-			if err != nil {
-				log.Println(err)
-				s.Reset()
-				return
-			}
-			getResp.Size = uint64(len(getResp.Data))
-		default:
-			getResp.Code = 1
-			log.Printf("invalid file type")
-		}
-
-		w := pbio.NewDelimitedWriter(s)
-		respMsg := &pb.Response_GetResponse{
-			GetResponse: getResp,
-		}
-		//resp.GetResponse = respMsg
-		resp.Response = respMsg
-		err = w.WriteMsg(resp)
-		if err != nil {
-			s.Reset()
-			log.Println(err)
-			return
-		}
-	default:
-		log.Printf("receive invalid file req")
-	}
 
 	log.Printf("%s: File response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
-	s.Reset()
 	return
 }
 
-func saveFileStream(s network.Stream, fpath string, size uint64) error {
+func saveFileStream(r pbio.ReadCloser, w pbio.WriteCloser, reqMsg *pb.Request, resp *pb.Response, fpath string, size uint64, data []byte) error {
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	var num int
-	var buf = make([]byte, FileProtocolMsgBuf)
-	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	_, err = f.Write(data)
+	if err != nil {
+		return err
+	}
 
+	putReq := &pb.PutRequest{}
 	for bytesRead := uint64(0); bytesRead < size; {
 		// Receive bytes
-		num, err = rw.Read(buf)
-		if err != nil && err != io.EOF {
+		err := r.ReadMsg(reqMsg)
+		if err != nil {
 			return err
 		}
-
-		if num == 0 {
-			break
+		err = w.WriteMsg(resp)
+		if err != nil {
+			return err
 		}
-
-		bytesRead += uint64(num)
-
+		putReq = reqMsg.GetPutRequest()
+		bytesRead = bytesRead + uint64(len(putReq.Data))
 		// Write bytes to the file
-		f.Write(buf)
+		_, err = f.Write(putReq.Data)
+		if err != nil {
+			return err
+		}
+	}
+	err = f.Sync()
+	if err != nil {
+		return err
 	}
 
 	fstat, err := f.Stat()
 	if err != nil {
-		log.Println(err)
 		return err
 	}
+
 	if uint64(fstat.Size()) != size {
 		log.Printf("recv file size = %d not equal origin size = %d", fstat.Size(), size)
 		return err
