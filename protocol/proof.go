@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-msgio/pbio"
 )
 
-const AggrProof_PROTOCOL = "/kldr/kdf/1"
+const AggrProof_PROTOCOL = "/kldr/apv/1"
 
 type AggrProofProtocol struct {
 	node *core.Node
@@ -21,7 +21,7 @@ func NewAggrProofProtocol(node *core.Node) *AggrProofProtocol {
 	return &e
 }
 
-func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash string, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
+func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
 	log.Printf("Sending AggrProof req to: %s", peerId)
 
 	s, err := e.node.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
@@ -34,9 +34,9 @@ func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash string, qs
 	reqMsg := &pb.AggrProofRequest{
 		IdleProofFileHash:    ihash,
 		ServiceProofFileHash: shash,
-		Qslice:               qslice,
 		Publickey:            puk,
 		Sign:                 sign,
+		Qslice:               qslice,
 	}
 
 	err = w.WriteMsg(reqMsg)
