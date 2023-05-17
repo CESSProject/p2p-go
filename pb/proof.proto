@@ -5,8 +5,8 @@ option go_package = "./;pb";
 //// proof protocol
 
 message Qslice {
-    int64 i = 1;
-    string v =2;
+    uint64 i = 1;
+    bytes v =2;
 }
 
 // a protocol define a set of reuqest and responses
