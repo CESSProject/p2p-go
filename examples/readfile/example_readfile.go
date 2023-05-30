@@ -29,6 +29,7 @@ func main() {
 		ctx,
 		".private1",
 		p2pgo.ListenPort(*sourcePort1), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)
@@ -42,6 +43,7 @@ func main() {
 		ctx,
 		".private2",
 		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)

@@ -137,7 +137,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 // remote peer requests handler
 func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
-	log.Printf("Recv writefileAction from: %s", s.ID())
+	log.Printf("Recv writefileAction from: %s", s.Conn().RemotePeer().Pretty())
 	// get request data
 	data := &pb.WritefileRequest{}
 	buf, err := io.ReadAll(s)

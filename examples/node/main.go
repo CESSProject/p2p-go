@@ -24,6 +24,7 @@ func main() {
 		ctx,
 		".private1",
 		p2pgo.ListenPort(8080), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)
