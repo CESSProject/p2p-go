@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -30,6 +31,7 @@ func main() {
 		ctx,
 		".private1",
 		p2pgo.ListenPort(*sourcePort1), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)
@@ -43,6 +45,7 @@ func main() {
 		ctx,
 		".private2",
 		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)
@@ -65,9 +68,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	h1.Peerstore().AddAddr(info.ID, maddr, 0)
+	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	go h1.TagPushReq(info.ID)
 	go h1.WriteFileAction(info.ID, "roothash", file)
 	select {}
 }
