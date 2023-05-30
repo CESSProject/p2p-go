@@ -55,11 +55,12 @@ import (
 type P2P interface {
 	host.Host // lib-p2p host
 	Protocol  // protocol
-	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
+	GetDiscoverSt() bool
+	StartDiscover()
 	PrivatekeyPath() string
 	Workspace() string
 	Multiaddr() string
-	DiscoveredPeer() <-chan DiscoveredPeer
+	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
 	GetPeerIdFromPubkey(pubkey []byte) (string, error)
 	GetOwnPublickey() []byte
 	GetProtocolVersion() string
@@ -67,17 +68,19 @@ type P2P interface {
 	GetDirs() DataDirs
 	GetBootstraps() []string
 	SetBootstraps(bootstrap []string)
-	GetDiscoverSt() bool
-	StartDiscover()
+	DiscoveredPeer() <-chan DiscoveredPeer
+	GetIdleDataCh() <-chan string
+	GetIdleTagCh() <-chan string
+	GetServiceTagCh() <-chan string
 }
 
 // Node type - Implementation of a P2P Host
 type Node struct {
 	ctx                context.Context
-	host               host.Host // lib-p2p host
+	host               host.Host
 	dir                DataDirs
 	peerPublickey      []byte
-	workspace          string // data
+	workspace          string
 	privatekeyPath     string
 	multiaddr          string
 	idleTee            string
@@ -349,42 +352,36 @@ func (n *Node) GetDirs() DataDirs {
 	return n.dir
 }
 
-func (n *Node) PutIdleDataEventCh(path string) {
-	go func() {
-		if len(n.idleDataCh) > 0 {
-			_ = <-n.idleDataCh
-		}
-		n.idleDataCh <- path
-	}()
+func (n *Node) putIdleDataCh(path string) {
+	if len(n.idleDataCh) > 0 {
+		_ = <-n.idleDataCh
+	}
+	n.idleDataCh <- path
 }
 
-func (n *Node) GetIdleDataEvent() chan string {
+func (n *Node) GetIdleDataCh() <-chan string {
 	return n.idleDataCh
 }
 
-func (n *Node) PutIdleTagEventCh(path string) {
-	go func() {
-		if len(n.idleTagDataCh) > 0 {
-			_ = <-n.idleTagDataCh
-		}
-		n.idleTagDataCh <- path
-	}()
+func (n *Node) putIdleTagCh(path string) {
+	if len(n.idleTagDataCh) > 0 {
+		_ = <-n.idleTagDataCh
+	}
+	n.idleTagDataCh <- path
 }
 
-func (n *Node) GetIdleTagEvent() chan string {
+func (n *Node) GetIdleTagCh() <-chan string {
 	return n.idleTagDataCh
 }
 
-func (n *Node) PutServiceTagEventCh(path string) {
-	go func() {
-		if len(n.serviceTagDataCh) > 0 {
-			_ = <-n.serviceTagDataCh
-		}
-		n.serviceTagDataCh <- path
-	}()
+func (n *Node) putServiceTagCh(path string) {
+	if len(n.serviceTagDataCh) > 0 {
+		_ = <-n.serviceTagDataCh
+	}
+	n.serviceTagDataCh <- path
 }
 
-func (n *Node) GetServiceTagEvent() chan string {
+func (n *Node) GetServiceTagCh() <-chan string {
 	return n.serviceTagDataCh
 }
 

@@ -129,7 +129,7 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 				putResp.Code = 1
 				log.Println(err)
 			}
-			e.FileProtocol.PutIdleDataEventCh(fpath)
+			e.FileProtocol.putIdleDataCh(fpath)
 		default:
 			putResp.Code = 1
 			log.Printf("recv put file req and invalid file type")

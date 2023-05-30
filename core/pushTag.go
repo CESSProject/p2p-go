@@ -98,7 +98,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 			os.Remove(tagpath)
 		} else {
 			respMsg.Code = 0
-			e.PushTagProtocol.PutServiceTagEventCh(tagpath)
+			e.PushTagProtocol.putServiceTagCh(tagpath)
 		}
 	case *pb.TagPushRequest_Itgr:
 		idleTag := reqMsg.GetItgr()
@@ -109,7 +109,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 			os.Remove(tagpath)
 		} else {
 			respMsg.Code = 0
-			e.PushTagProtocol.PutIdleTagEventCh(tagpath)
+			e.PushTagProtocol.putIdleTagCh(tagpath)
 		}
 	case *pb.TagPushRequest_Error:
 		log.Println("receive file req err")
