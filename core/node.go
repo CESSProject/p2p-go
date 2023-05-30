@@ -64,6 +64,7 @@ type P2P interface {
 	GetOwnPublickey() []byte
 	GetProtocolVersion() string
 	GetDhtProtocolVersion() string
+	GetDirs() DataDirs
 	GetBootstraps() []string
 	SetBootstraps(bootstrap []string)
 	GetDiscoverSt() bool
@@ -74,22 +75,13 @@ type P2P interface {
 type Node struct {
 	ctx                context.Context
 	host               host.Host // lib-p2p host
-	workspace          string    // data
+	dir                DataDirs
+	peerPublickey      []byte
+	workspace          string // data
 	privatekeyPath     string
 	multiaddr          string
-	idleFileTee        string
-	serviceFileTee     string
-	FileDir            string
-	TmpDir             string
-	IdleDataDir        string
-	IdleTagDir         string
-	ServiceTagDir      string
-	ProofDir           string
-	IproofFile         string
-	IproofMuFile       string
-	SproofFile         string
-	SproofMuFile       string
-	peerPublickey      []byte
+	idleTee            string
+	serviceTee         string
 	idleDataCh         chan string
 	idleTagDataCh      chan string
 	serviceTagDataCh   chan string
@@ -167,7 +159,8 @@ func NewBasicNode(
 	// }
 	// iser.Start()
 
-	if err := mkdir(workspace); err != nil {
+	dataDir, err := mkdir(workspace)
+	if err != nil {
 		return nil, err
 	}
 
@@ -177,16 +170,7 @@ func NewBasicNode(
 		workspace:          workspace,
 		privatekeyPath:     privatekeypath,
 		multiaddr:          fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", externalIp, port, host.ID().Pretty()),
-		FileDir:            filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:             filepath.Join(workspace, TmpDataDirectionry),
-		IdleDataDir:        filepath.Join(workspace, IdleDataDirectionry),
-		IdleTagDir:         filepath.Join(workspace, IdleTagDirectionry),
-		ServiceTagDir:      filepath.Join(workspace, ServiceTagDirectionry),
-		ProofDir:           filepath.Join(workspace, ProofDirectionry),
-		IproofFile:         filepath.Join(workspace, ProofDirectionry, IdleProofFile),
-		IproofMuFile:       filepath.Join(workspace, ProofDirectionry, IdleMuFile),
-		SproofFile:         filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
-		SproofMuFile:       filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
+		dir:                dataDir,
 		peerPublickey:      publickey,
 		idleDataCh:         make(chan string, 1),
 		idleTagDataCh:      make(chan string, 1),
@@ -361,6 +345,10 @@ func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
 	return peerid.Pretty(), nil
 }
 
+func (n *Node) GetDirs() DataDirs {
+	return n.dir
+}
+
 func (n *Node) PutIdleDataEventCh(path string) {
 	go func() {
 		if len(n.idleDataCh) > 0 {
@@ -401,19 +389,19 @@ func (n *Node) GetServiceTagEvent() chan string {
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
-	n.idleFileTee = peerid
+	n.idleTee = peerid
 }
 
 func (n *Node) GetIdleFileTee() string {
-	return n.idleFileTee
+	return n.idleTee
 }
 
 func (n *Node) SetServiceFileTee(peerid string) {
-	n.serviceFileTee = peerid
+	n.serviceTee = peerid
 }
 
 func (n *Node) GetServiceFileTee() string {
-	return n.serviceFileTee
+	return n.serviceTee
 }
 
 // identify reads or creates the private key file specified by fpath
@@ -465,26 +453,36 @@ func identification(workspace, fpath string) (crypto.PrivKey, error) {
 	return prvKey, nil
 }
 
-func mkdir(workspace string) error {
-	if err := os.MkdirAll(filepath.Join(workspace, FileDataDirectionry), DirMode); err != nil {
-		return err
+func mkdir(workspace string) (DataDirs, error) {
+	dataDir := DataDirs{
+		FileDir:       filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:        filepath.Join(workspace, TmpDataDirectionry),
+		IdleDataDir:   filepath.Join(workspace, IdleDataDirectionry),
+		IdleTagDir:    filepath.Join(workspace, IdleTagDirectionry),
+		ServiceTagDir: filepath.Join(workspace, ServiceTagDirectionry),
+		ProofDir:      filepath.Join(workspace, ProofDirectionry),
+		IproofFile:    filepath.Join(workspace, ProofDirectionry, IdleProofFile),
+		SproofFile:    filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, TmpDataDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.FileDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, IdleDataDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.TmpDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, IdleTagDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.IdleDataDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, ServiceTagDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.IdleTagDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, ProofDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.ServiceTagDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	return nil
+	if err := os.MkdirAll(dataDir.ProofDir, DirMode); err != nil {
+		return dataDir, err
+	}
+	return dataDir, nil
 }
 
 // Authenticate incoming p2p message

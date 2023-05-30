@@ -92,7 +92,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	switch reqMsg.GetResult().(type) {
 	case *pb.TagPushRequest_Ctgr:
 		customTag := reqMsg.GetCtgr()
-		tagpath := filepath.Join(e.PushTagProtocol.ServiceTagDir, customTag.Tag.T.Name+".tag")
+		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().ServiceTagDir, customTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, customTag.Tag)
 		if err != nil {
 			os.Remove(tagpath)
@@ -102,7 +102,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		}
 	case *pb.TagPushRequest_Itgr:
 		idleTag := reqMsg.GetItgr()
-		tagpath := filepath.Join(e.PushTagProtocol.IdleTagDir, idleTag.Tag.T.Name+".tag")
+		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().IdleTagDir, idleTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, idleTag.Tag)
 		if err != nil {
 			log.Println("file req save tag err:", err)

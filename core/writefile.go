@@ -172,7 +172,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		Offset:      0,
 	}
 
-	dir := filepath.Join(e.TmpDir, data.Roothash)
+	dir := filepath.Join(e.GetDirs().TmpDir, data.Roothash)
 	fstat, err := os.Stat(dir)
 	if err != nil {
 		err = os.MkdirAll(dir, DirMode)

@@ -206,11 +206,11 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 
 	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
-	fpath := filepath.Join(e.ReadFileProtocol.TmpDir, data.Roothash, data.Datahash)
+	fpath := filepath.Join(e.ReadFileProtocol.GetDirs().TmpDir, data.Roothash, data.Datahash)
 
 	_, err = os.Stat(fpath)
 	if err != nil {
-		fpath = filepath.Join(e.ReadFileProtocol.FileDir, data.Roothash, data.Datahash)
+		fpath = filepath.Join(e.ReadFileProtocol.GetDirs().FileDir, data.Roothash, data.Datahash)
 	}
 
 	f, err := os.Open(fpath)

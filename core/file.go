@@ -123,7 +123,7 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 		putReq := reqMsg.GetPutRequest()
 		switch putReq.Type {
 		case pb.FileType_IdleData:
-			fpath := filepath.Join(e.FileProtocol.IdleDataDir, putReq.Hash)
+			fpath := filepath.Join(e.FileProtocol.GetDirs().IdleDataDir, putReq.Hash)
 			err = saveFileStream(r, w, reqMsg, resp, fpath, putReq.Size, putReq.Data)
 			if err != nil {
 				putResp.Code = 1
