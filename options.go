@@ -10,32 +10,14 @@ package p2pgo
 import (
 	"fmt"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/connmgr"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 // ListenAddrStrings configures libp2p to listen on the given (unparsed)
 // addresses.
-func ListenAddrStrings(ip string, port int) Option {
+func ListenPort(port int) Option {
 	return func(cfg *Config) error {
-		var allip = core.AllIpAddress
-		if ip == core.LocalAddress {
-			allip = ip
-		}
-		a, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", allip, port))
-		if err != nil {
-			return err
-		}
-		cfg.ListenAddrs = a
-		return nil
-	}
-}
-
-// ListenAddrs configures libp2p to listen on the given addresses.
-func ListenAddrs(addrs ma.Multiaddr) Option {
-	return func(cfg *Config) error {
-		cfg.ListenAddrs = addrs
+		cfg.ListenPort = port
 		return nil
 	}
 }
@@ -63,6 +45,22 @@ func ConnectionManager(connman connmgr.ConnManager) Option {
 func BootPeers(bootpeers []string) Option {
 	return func(cfg *Config) error {
 		cfg.BootPeers = bootpeers
+		return nil
+	}
+}
+
+// BootPeers configures bootstrap nodes
+func ProtocolVersion(protocolVersion string) Option {
+	return func(cfg *Config) error {
+		cfg.ProtocolVersion = protocolVersion
+		return nil
+	}
+}
+
+// BootPeers configures bootstrap nodes
+func DhtProtocolVersion(dhtProtocolVersion string) Option {
+	return func(cfg *Config) error {
+		cfg.DhtProtocolVersion = dhtProtocolVersion
 		return nil
 	}
 }

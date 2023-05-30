@@ -5,7 +5,7 @@
 	SPDX-License-Identifier: Apache-2.0
 */
 
-package protocol
+package core
 
 import (
 	"crypto/sha256"

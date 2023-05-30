@@ -1,10 +1,9 @@
-package protocol
+package core
 
 import (
 	"context"
 	"log"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
@@ -13,15 +12,15 @@ import (
 const IdleDataTag_Protocol = "/kldr/idtg/1"
 
 type IdleDataTagProtocol struct {
-	node *core.Node
+	node *Node
 }
 
-func NewIdleDataTagProtocol(node *core.Node) *IdleDataTagProtocol {
+func NewIdleDataTagProtocol(node *Node) *IdleDataTagProtocol {
 	e := IdleDataTagProtocol{node: node}
 	return &e
 }
 
-func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
+func (e *Protocol) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
 	reqMsg := &pb.IdleDataTagRequest{
@@ -31,7 +30,7 @@ func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64,
 		Sign:      sign,
 	}
 
-	s, err := e.node.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
+	s, err := e.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
 	if err != nil {
 		return 0, err
 	}
@@ -52,7 +51,7 @@ func (e *IdleDataTagProtocol) IdleReq(peerId peer.ID, filesize, blocknum uint64,
 		return 0, err
 	}
 	if respMsg.Code == 0 {
-		e.node.SetIdleFileTee(peerId.String())
+		e.SetIdleFileTee(peerId.String())
 	}
 	log.Printf("Idle req suc")
 	return respMsg.Code, nil

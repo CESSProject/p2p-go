@@ -1,10 +1,9 @@
-package protocol
+package core
 
 import (
 	"context"
 	"log"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
@@ -13,10 +12,10 @@ import (
 const AggrProof_PROTOCOL = "/kldr/apv/1"
 
 type AggrProofProtocol struct {
-	node *core.Node
+	node *Node
 }
 
-func NewAggrProofProtocol(node *core.Node) *AggrProofProtocol {
+func NewAggrProofProtocol(node *Node) *AggrProofProtocol {
 	e := AggrProofProtocol{node: node}
 	return &e
 }

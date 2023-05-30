@@ -8,9 +8,10 @@
 package config
 
 import (
+	"context"
+
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/connmgr"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 // Config describes a set of settings for a libp2p node
@@ -18,10 +19,12 @@ import (
 // This is *not* a stable interface. Use the options defined in the root
 // package.
 type Config struct {
-	Workspace   string
-	ListenAddrs ma.Multiaddr
-	ConnManager connmgr.ConnManager
-	BootPeers   []string
+	ListenPort         int
+	ConnManager        connmgr.ConnManager
+	BootPeers          []string
+	Workspace          string
+	ProtocolVersion    string
+	DhtProtocolVersion string
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor
@@ -31,8 +34,8 @@ type Option func(cfg *Config) error
 // NewNode constructs a new libp2p Host from the Config.
 //
 // This function consumes the config. Do not reuse it (really!).
-func (cfg *Config) NewNode(privatekeyPath string) (core.P2P, error) {
-	return core.NewBasicNode(cfg.ListenAddrs, cfg.Workspace, privatekeyPath, cfg.BootPeers, cfg.ConnManager)
+func (cfg *Config) NewNode(ctx context.Context, privatekeyPath string) (core.P2P, error) {
+	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.ProtocolVersion, cfg.DhtProtocolVersion, privatekeyPath, cfg.BootPeers, cfg.ConnManager)
 }
 
 // Apply applies the given options to the config, returning the first error

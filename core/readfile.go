@@ -5,7 +5,7 @@
 	SPDX-License-Identifier: Apache-2.0
 */
 
-package protocol
+package core
 
 import (
 	"errors"
@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 
 	"github.com/gogo/protobuf/proto"
@@ -36,18 +35,18 @@ type readMsgResp struct {
 }
 
 type ReadFileProtocol struct {
-	node     *core.Node              // local host
+	node     *Node                   // local host
 	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
-func NewReadFileProtocol(node *core.Node) *ReadFileProtocol {
+func NewReadFileProtocol(node *Node) *ReadFileProtocol {
 	e := ReadFileProtocol{node: node, requests: make(map[string]*readMsgResp)}
 	node.SetStreamHandler(readFileRequest, e.onReadFileRequest)
 	node.SetStreamHandler(readFileResponse, e.onReadFileResponse)
 	return &e
 }
 
-func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
+func (e *Protocol) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
 	log.Printf("Will Sending readfileAction to: %s", id)
 
 	var ok bool
@@ -112,14 +111,14 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 
 	req.Roothash = roothash
 	req.Datahash = datahash
-	req.MessageData = e.node.NewMessageData(uuid.New().String(), false)
+	req.MessageData = e.NewMessageData(uuid.New().String(), false)
 
 	// store request so response handler has access to it
 	var respChan = make(chan bool, 1)
-	e.requests[req.MessageData.Id] = &readMsgResp{
+	e.ReadFileProtocol.requests[req.MessageData.Id] = &readMsgResp{
 		ch: respChan,
 	}
-	defer delete(e.requests, req.MessageData.Id)
+	defer delete(e.ReadFileProtocol.requests, req.MessageData.Id)
 	defer close(respChan)
 	timeout := time.NewTicker(P2PReadReqRespTime)
 	defer timeout.Stop()
@@ -128,7 +127,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 		req.Offset = offset
 		// calc signature
 		req.MessageData.Sign = nil
-		signature, err := e.node.SignProtoMessage(&req)
+		signature, err := e.SignProtoMessage(&req)
 		if err != nil {
 			log.Println("failed to sign message")
 			return err
@@ -137,7 +136,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 		// add the signature to the message
 		req.MessageData.Sign = signature
 
-		err = e.node.SendProtoMessage(id, readFileRequest, &req)
+		err = e.SendProtoMessage(id, readFileRequest, &req)
 		if err != nil {
 			return err
 		}
@@ -145,7 +144,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 		//
 		timeout.Reset(P2PReadReqRespTime)
 		select {
-		case ok = <-e.requests[req.MessageData.Id].ch:
+		case ok = <-e.ReadFileProtocol.requests[req.MessageData.Id].ch:
 			if !ok {
 				// err, close
 				return errors.New("failed")
@@ -155,7 +154,7 @@ func (e *ReadFileProtocol) ReadFileAction(id peer.ID, roothash, datahash, path s
 			return errors.New("timeout")
 		}
 
-		resp = e.requests[req.MessageData.Id].ReadfileResponse
+		resp = e.ReadFileProtocol.requests[req.MessageData.Id].ReadfileResponse
 		num, err = f.Write(resp.Data[:resp.Length])
 		if err != nil {
 			return err
