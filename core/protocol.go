@@ -12,7 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-type Protocoler interface {
+type Protocol interface {
 	WriteFileAction(id peer.ID, roothash, path string) error
 	ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error
 	TagPushReq(peerid peer.ID) (uint32, error)
@@ -21,7 +21,7 @@ type Protocoler interface {
 	FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error)
 }
 
-type Protocol struct {
+type protocols struct {
 	*WriteFileProtocol
 	*ReadFileProtocol
 	*CustomDataTagProtocol
@@ -32,6 +32,6 @@ type Protocol struct {
 	// add other protocols here...
 }
 
-func NewProtocol() *Protocol {
-	return &Protocol{}
+func NewProtocol() *protocols {
+	return &protocols{}
 }

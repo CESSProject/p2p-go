@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
@@ -20,7 +27,7 @@ func NewCustomDataTagProtocol(node *Node) *CustomDataTagProtocol {
 	return &e
 }
 
-func (e *Protocol) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
+func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
 	log.Printf("Sending tag req to: %s", peerId)
 
 	if err := checkFileName(filename); err != nil {

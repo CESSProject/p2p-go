@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
@@ -20,7 +27,7 @@ func NewIdleDataTagProtocol(node *Node) *IdleDataTagProtocol {
 	return &e
 }
 
-func (e *Protocol) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
+func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
 	reqMsg := &pb.IdleDataTagRequest{

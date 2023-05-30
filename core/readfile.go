@@ -46,7 +46,7 @@ func NewReadFileProtocol(node *Node) *ReadFileProtocol {
 	return &e
 }
 
-func (e *Protocol) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
+func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
 	log.Printf("Will Sending readfileAction to: %s", id)
 
 	var ok bool

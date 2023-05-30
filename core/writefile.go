@@ -44,7 +44,7 @@ func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
 	return &e
 }
 
-func (e *Protocol) WriteFileAction(id peer.ID, roothash, path string) error {
+func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 	log.Printf("Will Sending writefileAction to: %s", id)
 	var err error
 	var ok bool

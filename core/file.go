@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
@@ -25,7 +32,7 @@ func NewFileProtocol(node *Node) *FileProtocol {
 	return &e
 }
 
-func (e *Protocol) FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error) {
+func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error) {
 	log.Printf("Sending file req to: %s", peerId)
 
 	fstat, err := os.Stat(fpath)

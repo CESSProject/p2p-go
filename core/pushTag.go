@@ -1,3 +1,10 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
@@ -26,7 +33,7 @@ func NewPushTagProtocol(node *Node) *PushTagProtocol {
 }
 
 // remote peer requests handler
-func (e *Protocol) TagPushReq(peerid peer.ID) (uint32, error) {
+func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
 	log.Printf("Sending TagPushReq req to: %s", peerid)
 
 	s, err := e.NewStream(context.Background(), peerid, PushTag_Protocol)

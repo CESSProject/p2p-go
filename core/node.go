@@ -53,8 +53,8 @@ import (
 // may be confusing).
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
-	host.Host  // lib-p2p host
-	Protocoler // protocol
+	host.Host // lib-p2p host
+	Protocol  // protocol
 	GetDiscoverSt() bool
 	StartDiscover()
 }
@@ -86,7 +86,7 @@ type Node struct {
 	dhtProtocolVersion string
 	discoverStat       atomic.Uint32
 	bootstrap          []string
-	*Protocol
+	*protocols
 }
 
 // NewBasicNode constructs a new *Node
@@ -183,7 +183,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		Protocol:           new(Protocol),
+		protocols:          NewProtocol(),
 	}
 
 	go n.discoverPeers(n.ctx, n.host, dhtProtocolVersion, bootstrap)
