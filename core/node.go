@@ -55,6 +55,11 @@ import (
 type P2P interface {
 	host.Host // lib-p2p host
 	Protocol  // protocol
+	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
+	PrivatekeyPath() string
+	Workspace() string
+	Multiaddr() string
+	DiscoveredPeer() <-chan DiscoveredPeer
 	GetDiscoverSt() bool
 	StartDiscover()
 }
@@ -86,6 +91,7 @@ type Node struct {
 	dhtProtocolVersion string
 	discoverStat       atomic.Uint32
 	bootstrap          []string
+	discoveredPeer     chan DiscoveredPeer
 	*protocols
 }
 
@@ -183,14 +189,14 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
+		discoveredPeer:     make(chan DiscoveredPeer, 10),
 		protocols:          NewProtocol(),
 	}
 
+	n.initProtocol()
+
 	go n.discoverPeers(n.ctx, n.host, dhtProtocolVersion, bootstrap)
 
-	n.WriteFileProtocol = n.NewWriteFileProtocol()
-
-	//n.StarFileTransferProtocol()
 	return n, nil
 }
 
@@ -275,17 +281,9 @@ func (n *Node) EventBus() event.Bus {
 func (n *Node) GetDiscoverSt() bool {
 	return n.discoverStat.Load() > 0
 }
+
 func (n *Node) StartDiscover() {
 	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
-}
-
-// AddAddrToPearstore
-func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr, t time.Duration) {
-	time := peerstore.RecentlyConnectedAddrTTL
-	if t.Seconds() > 0 {
-		time = t
-	}
-	n.Peerstore().AddAddr(id, addr, time)
 }
 
 func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error) {
@@ -321,16 +319,20 @@ func (n *Node) Multiaddr() string {
 	return n.multiaddr
 }
 
+func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
+	return n.discoveredPeer
+}
+
 func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
 	pkey, err := crypto.UnmarshalEd25519PublicKey(pubkey)
 	if err != nil {
 		return "", err
 	}
-	pid, err := peer.IDFromPublicKey(pkey)
+	peerid, err := peer.IDFromPublicKey(pkey)
 	if err != nil {
 		return "", err
 	}
-	return pid.String(), nil
+	return peerid.Pretty(), nil
 }
 
 func (n *Node) PutIdleDataEventCh(path string) {
@@ -734,6 +736,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
 
+	var skipFlag bool
 	for {
 		select {
 		case <-tick.C:
@@ -741,7 +744,23 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 			select {
 			case peer := <-events:
 				for _, v := range peer.Responses {
-					fmt.Println("***************************Fount id:", v.ID.String(), "addr: ", v.Addrs)
+					skipFlag = false
+					var discoveredpeer DiscoveredPeer
+					for _, value := range v.Addrs {
+						temps := strings.Split(value.String(), "/")
+						for _, temp := range temps {
+							if checkExternalIpv4(temp) {
+								discoveredpeer.PeerID = v.ID
+								discoveredpeer.Addr = value
+								n.discoveredPeer <- discoveredpeer
+								skipFlag = true
+								break
+							}
+						}
+						if skipFlag {
+							break
+						}
+					}
 				}
 			}
 		}
