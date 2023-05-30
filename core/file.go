@@ -23,12 +23,12 @@ import (
 const FILE_PROTOCOL = "/kldr/kft/1"
 
 type FileProtocol struct {
-	node *Node
+	*Node
 }
 
-func NewFileProtocol(node *Node) *FileProtocol {
-	e := FileProtocol{node: node}
-	node.SetStreamHandler(FILE_PROTOCOL, e.onFileRequest)
+func (n *Node) NewFileProtocol() *FileProtocol {
+	e := FileProtocol{Node: n}
+	n.SetStreamHandler(FILE_PROTOCOL, e.onFileRequest)
 	return &e
 }
 
@@ -46,7 +46,7 @@ func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileTyp
 		Size: uint64(fstat.Size()),
 	}
 
-	s, err := e.NewStream(context.Background(), peerId, FILE_PROTOCOL)
+	s, err := e.FileProtocol.NewStream(context.Background(), peerId, FILE_PROTOCOL)
 	if err != nil {
 		log.Println(err)
 		return 0, err
@@ -83,7 +83,7 @@ func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileTyp
 	}
 
 	if respMsg.Code == 0 {
-		e.SetServiceFileTee(peerId.String())
+		e.FileProtocol.SetServiceFileTee(peerId.String())
 	}
 
 	log.Printf("File req resp suc")
@@ -123,13 +123,13 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 		putReq := reqMsg.GetPutRequest()
 		switch putReq.Type {
 		case pb.FileType_IdleData:
-			fpath := filepath.Join(e.node.IdleDataDir, putReq.Hash)
+			fpath := filepath.Join(e.FileProtocol.IdleDataDir, putReq.Hash)
 			err = saveFileStream(r, w, reqMsg, resp, fpath, putReq.Size, putReq.Data)
 			if err != nil {
 				putResp.Code = 1
 				log.Println(err)
 			}
-			e.node.PutIdleDataEventCh(fpath)
+			e.FileProtocol.PutIdleDataEventCh(fpath)
 		default:
 			putResp.Code = 1
 			log.Printf("recv put file req and invalid file type")

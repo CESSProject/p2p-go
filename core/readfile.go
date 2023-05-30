@@ -35,14 +35,14 @@ type readMsgResp struct {
 }
 
 type ReadFileProtocol struct {
-	node     *Node                   // local host
+	*Node                            // local host
 	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
-func NewReadFileProtocol(node *Node) *ReadFileProtocol {
-	e := ReadFileProtocol{node: node, requests: make(map[string]*readMsgResp)}
-	node.SetStreamHandler(readFileRequest, e.onReadFileRequest)
-	node.SetStreamHandler(readFileResponse, e.onReadFileResponse)
+func (n *Node) NewReadFileProtocol() *ReadFileProtocol {
+	e := ReadFileProtocol{Node: n, requests: make(map[string]*readMsgResp)}
+	n.SetStreamHandler(readFileRequest, e.onReadFileRequest)
+	n.SetStreamHandler(readFileResponse, e.onReadFileResponse)
 	return &e
 }
 
@@ -111,7 +111,7 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 
 	req.Roothash = roothash
 	req.Datahash = datahash
-	req.MessageData = e.NewMessageData(uuid.New().String(), false)
+	req.MessageData = e.ReadFileProtocol.NewMessageData(uuid.New().String(), false)
 
 	// store request so response handler has access to it
 	var respChan = make(chan bool, 1)
@@ -127,7 +127,7 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 		req.Offset = offset
 		// calc signature
 		req.MessageData.Sign = nil
-		signature, err := e.SignProtoMessage(&req)
+		signature, err := e.ReadFileProtocol.SignProtoMessage(&req)
 		if err != nil {
 			log.Println("failed to sign message")
 			return err
@@ -136,7 +136,7 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 		// add the signature to the message
 		req.MessageData.Sign = signature
 
-		err = e.SendProtoMessage(id, readFileRequest, &req)
+		err = e.ReadFileProtocol.SendProtoMessage(id, readFileRequest, &req)
 		if err != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	log.Printf("Received Readfile from %s. Roothash:%s Datahash:%s offset:%d",
 		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Offset)
 
-	valid := e.node.AuthenticateMessage(data, data.MessageData)
+	valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
 	if !valid {
 		log.Println("Failed to authenticate message")
 		return
@@ -206,11 +206,11 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 
 	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
-	fpath := filepath.Join(e.node.TmpDir, data.Roothash, data.Datahash)
+	fpath := filepath.Join(e.ReadFileProtocol.TmpDir, data.Roothash, data.Datahash)
 
 	_, err = os.Stat(fpath)
 	if err != nil {
-		fpath = filepath.Join(e.node.FileDir, data.Roothash, data.Datahash)
+		fpath = filepath.Join(e.ReadFileProtocol.FileDir, data.Roothash, data.Datahash)
 	}
 
 	f, err := os.Open(fpath)
@@ -241,7 +241,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 
 	// send response to the request using the message string he provided
 	resp := &pb.ReadfileResponse{
-		MessageData: e.node.NewMessageData(data.MessageData.Id, false),
+		MessageData: e.ReadFileProtocol.NewMessageData(data.MessageData.Id, false),
 		Code:        code,
 		Offset:      data.Offset,
 		Length:      uint32(num),
@@ -249,7 +249,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	}
 
 	// sign the data
-	signature, err := e.node.SignProtoMessage(resp)
+	signature, err := e.ReadFileProtocol.SignProtoMessage(resp)
 	if err != nil {
 		log.Println("failed to sign response")
 		return
@@ -258,7 +258,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	// add the signature to the message
 	resp.MessageData.Sign = signature
 
-	err = e.node.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
+	err = e.ReadFileProtocol.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
 	if err != nil {
 		log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
 	}
@@ -283,7 +283,7 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 	}
 
 	// authenticate message content
-	valid := e.node.AuthenticateMessage(data, data.MessageData)
+	valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")

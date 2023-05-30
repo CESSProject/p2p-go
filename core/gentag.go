@@ -19,11 +19,11 @@ import (
 const CustomDataTag_Protocol = "/kldr/cdtg/1"
 
 type CustomDataTagProtocol struct {
-	node *Node
+	*Node
 }
 
-func NewCustomDataTagProtocol(node *Node) *CustomDataTagProtocol {
-	e := CustomDataTagProtocol{node: node}
+func (n *Node) NewCustomDataTagProtocol() *CustomDataTagProtocol {
+	e := CustomDataTagProtocol{Node: n}
 	return &e
 }
 
@@ -38,7 +38,7 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 		return 0, err
 	}
 
-	s, err := e.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
+	s, err := e.CustomDataTagProtocol.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
 	if err != nil {
 		return 0, err
 	}

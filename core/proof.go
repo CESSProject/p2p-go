@@ -19,18 +19,18 @@ import (
 const AggrProof_PROTOCOL = "/kldr/apv/1"
 
 type AggrProofProtocol struct {
-	node *Node
+	*Node
 }
 
-func NewAggrProofProtocol(node *Node) *AggrProofProtocol {
-	e := AggrProofProtocol{node: node}
+func (n *Node) NewAggrProofProtocol() *AggrProofProtocol {
+	e := AggrProofProtocol{Node: n}
 	return &e
 }
 
 func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
 	log.Printf("Sending AggrProof req to: %s", peerId)
 
-	s, err := e.node.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
+	s, err := e.AggrProofProtocol.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
 	if err != nil {
 		return 0, err
 	}

@@ -54,7 +54,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 	// create message data
 	req := &pb.WritefileRequest{
-		MessageData: e.NewMessageData(uuid.New().String(), false),
+		MessageData: e.WriteFileProtocol.NewMessageData(uuid.New().String(), false),
 		Roothash:    roothash,
 	}
 
@@ -100,7 +100,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		req.MessageData.Timestamp = time.Now().Unix()
 		// calc signature
 		req.MessageData.Sign = nil
-		signature, err := e.SignProtoMessage(req)
+		signature, err := e.WriteFileProtocol.SignProtoMessage(req)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		// add the signature to the message
 		req.MessageData.Sign = signature
 
-		err = e.SendProtoMessage(id, writeFileRequest, req)
+		err = e.WriteFileProtocol.SendProtoMessage(id, writeFileRequest, req)
 		if err != nil {
 			return err
 		}

@@ -748,6 +748,16 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	}
 }
 
+func (n *Node) initProtocol() {
+	n.WriteFileProtocol = n.NewWriteFileProtocol()
+	n.ReadFileProtocol = n.NewReadFileProtocol()
+	n.CustomDataTagProtocol = n.NewCustomDataTagProtocol()
+	n.IdleDataTagProtocol = n.NewIdleDataTagProtocol()
+	n.FileProtocol = n.NewFileProtocol()
+	n.AggrProofProtocol = n.NewAggrProofProtocol()
+	n.PushTagProtocol = n.NewPushTagProtocol()
+}
+
 func initDHT(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) (*dht.IpfsDHT, error) {
 	var options []dht.Option
 	options = append(options, dht.V1ProtocolOverride("/kldr/kad/1.0"))

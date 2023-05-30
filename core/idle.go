@@ -19,11 +19,11 @@ import (
 const IdleDataTag_Protocol = "/kldr/idtg/1"
 
 type IdleDataTagProtocol struct {
-	node *Node
+	*Node
 }
 
-func NewIdleDataTagProtocol(node *Node) *IdleDataTagProtocol {
-	e := IdleDataTagProtocol{node: node}
+func (n *Node) NewIdleDataTagProtocol() *IdleDataTagProtocol {
+	e := IdleDataTagProtocol{Node: n}
 	return &e
 }
 
@@ -37,7 +37,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 		Sign:      sign,
 	}
 
-	s, err := e.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
+	s, err := e.IdleDataTagProtocol.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
 	if err != nil {
 		return 0, err
 	}
@@ -58,7 +58,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 		return 0, err
 	}
 	if respMsg.Code == 0 {
-		e.SetIdleFileTee(peerId.String())
+		e.IdleDataTagProtocol.SetIdleFileTee(peerId.String())
 	}
 	log.Printf("Idle req suc")
 	return respMsg.Code, nil
