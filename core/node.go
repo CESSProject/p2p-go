@@ -60,6 +60,12 @@ type P2P interface {
 	Workspace() string
 	Multiaddr() string
 	DiscoveredPeer() <-chan DiscoveredPeer
+	GetPeerIdFromPubkey(pubkey []byte) (string, error)
+	GetOwnPublickey() []byte
+	GetProtocolVersion() string
+	GetDhtProtocolVersion() string
+	GetBootstraps() []string
+	SetBootstraps(bootstrap []string)
 	GetDiscoverSt() bool
 	StartDiscover()
 }
@@ -83,7 +89,7 @@ type Node struct {
 	IproofMuFile       string
 	SproofFile         string
 	SproofMuFile       string
-	PeerId             []byte
+	peerPublickey      []byte
 	idleDataCh         chan string
 	idleTagDataCh      chan string
 	serviceTagDataCh   chan string
@@ -138,7 +144,7 @@ func NewBasicNode(
 		return nil, errors.New("")
 	}
 
-	peerid, err := base58.Decode(host.ID().String())
+	publickey, err := base58.Decode(host.ID().String())
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +187,7 @@ func NewBasicNode(
 		IproofMuFile:       filepath.Join(workspace, ProofDirectionry, IdleMuFile),
 		SproofFile:         filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 		SproofMuFile:       filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
-		PeerId:             peerid,
+		peerPublickey:      publickey,
 		idleDataCh:         make(chan string, 1),
 		idleTagDataCh:      make(chan string, 1),
 		serviceTagDataCh:   make(chan string, 1),
@@ -195,7 +201,7 @@ func NewBasicNode(
 
 	n.initProtocol()
 
-	go n.discoverPeers(n.ctx, n.host, dhtProtocolVersion, bootstrap)
+	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
 
 	return n, nil
 }
@@ -321,6 +327,26 @@ func (n *Node) Multiaddr() string {
 
 func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
 	return n.discoveredPeer
+}
+
+func (n *Node) GetOwnPublickey() []byte {
+	return n.peerPublickey
+}
+
+func (n *Node) GetProtocolVersion() string {
+	return n.protocolVersion
+}
+
+func (n *Node) GetDhtProtocolVersion() string {
+	return n.dhtProtocolVersion
+}
+
+func (n *Node) GetBootstraps() []string {
+	return n.bootstrap
+}
+
+func (n *Node) SetBootstraps(bootstrap []string) {
+	n.bootstrap = bootstrap
 }
 
 func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
