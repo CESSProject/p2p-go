@@ -21,13 +21,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -38,7 +38,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	"github.com/libp2p/go-libp2p/core/routing"
+	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
+	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
@@ -52,32 +54,46 @@ import (
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
 	host.Host // lib-p2p host
+	Protocol  // protocol
+	GetDiscoverSt() bool
+	StartDiscover()
+	PrivatekeyPath() string
+	Workspace() string
+	Multiaddr() string
+	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
+	GetPeerIdFromPubkey(pubkey []byte) (string, error)
+	GetOwnPublickey() []byte
+	GetProtocolVersion() string
+	GetDhtProtocolVersion() string
+	GetDirs() DataDirs
+	GetBootstraps() []string
+	SetBootstraps(bootstrap []string)
+	DiscoveredPeer() <-chan DiscoveredPeer
+	GetIdleDataCh() <-chan string
+	GetIdleTagCh() <-chan string
+	GetServiceTagCh() <-chan string
 }
 
 // Node type - Implementation of a P2P Host
 type Node struct {
-	ctx              context.Context
-	ctxCancel        context.CancelFunc
-	host             host.Host // lib-p2p host
-	workspace        string    // data
-	privatekeyPath   string
-	multiaddr        string
-	idleFileTee      string
-	serviceFileTee   string
-	FileDir          string
-	TmpDir           string
-	IdleDataDir      string
-	IdleTagDir       string
-	ServiceTagDir    string
-	ProofDir         string
-	IproofFile       string
-	IproofMuFile     string
-	SproofFile       string
-	SproofMuFile     string
-	PeerId           []byte
-	idleDataCh       chan string
-	idleTagDataCh    chan string
-	serviceTagDataCh chan string
+	ctx                context.Context
+	host               host.Host
+	dir                DataDirs
+	peerPublickey      []byte
+	workspace          string
+	privatekeyPath     string
+	multiaddr          string
+	idleTee            string
+	serviceTee         string
+	idleDataCh         chan string
+	idleTagDataCh      chan string
+	serviceTagDataCh   chan string
+	protocolVersion    string
+	dhtProtocolVersion string
+	discoverStat       atomic.Uint32
+	bootstrap          []string
+	discoveredPeerCh   chan DiscoveredPeer
+	*protocols
 }
 
 // NewBasicNode constructs a new *Node
@@ -87,43 +103,32 @@ type Node struct {
 //	  privatekeypath: private key file
 //		  If it's empty, automatically created in the program working directory
 //		  If it's a directory, it will be created in the specified directory
-func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath string, bootpeers []string, cmgr connmgr.ConnManager) (*Node, error) {
-	ctx := context.Background()
-	if multiaddr == nil || workspace == "" {
-		return nil, errors.New("invalid parameter")
-	}
-
-	prvKey, err := identify(workspace, privatekeypath)
-	if err != nil {
+func NewBasicNode(
+	ctx context.Context,
+	port int,
+	workspace string,
+	protocolVersion string,
+	dhtProtocolVersion string,
+	privatekeypath string,
+	bootstrap []string,
+	cmgr connmgr.ConnManager,
+) (P2P, error) {
+	if err := verifyWorkspace(workspace); err != nil {
 		return nil, err
 	}
 
-	ip, port, err := ExtractIp4FromMultiaddr(multiaddr.String())
+	prvKey, err := identification(workspace, privatekeypath)
 	if err != nil {
 		return nil, err
-	}
-
-	publicip := ip
-	if ip == AllIpAddress || ip == "" {
-		publicip, err = GetExternalIp()
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	host, err := libp2p.New(
-		// Use the keypair we generated
 		libp2p.Identity(prvKey),
-		// Multiple listen addresses
-		libp2p.ListenAddrs(multiaddr),
-		// Let's prevent our peer from having too many
-		// connections by attaching a connection manager.
+		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
 		libp2p.ConnectionManager(cmgr),
-		// Support TLS connections
-		//libp2p.Security(libp2ptls.ID, libp2ptls.New),
 		libp2p.Security(noise.ID, noise.New),
-		// Attempt to open ports using uPNP for NATed hosts.
 		libp2p.NATPortMap(),
+		libp2p.ProtocolVersion(protocolVersion),
 		libp2p.DefaultMuxers,
 	)
 	if err != nil {
@@ -134,71 +139,149 @@ func NewBasicNode(multiaddr ma.Multiaddr, workspace string, privatekeypath strin
 		return nil, errors.New("")
 	}
 
-	peerid, err := base58.Decode(host.ID().String())
+	publickey, err := base58.Decode(host.ID().String())
 	if err != nil {
 		return nil, err
 	}
 
-	if len(bootpeers) > 0 {
-		// Construct a datastore (needed by the DHT)
-		dstore := dsync.MutexWrap(ds.NewMapDatastore())
-
-		// Make the DHT
-		dhtTable := dht.NewDHT(ctx, host, dstore)
-
-		// Make the routed host
-		routedHost := rhost.Wrap(host, dhtTable)
-
-		err = bootstrapConnect(ctx, routedHost, convertPeers(bootpeers))
-		if err != nil {
-			return nil, err
-		}
-
-		// Bootstrap the host
-		err = dhtTable.Bootstrap(ctx)
-		if err != nil {
-			return nil, err
+	externalIp, err := getExternalIp()
+	if err != nil {
+		for _, v := range host.Addrs() {
+			temp := strings.Split(v.String(), "/")
+			for _, vv := range temp {
+				if isIPv4(vv) && vv != LocalAddress {
+					externalIp = vv
+				}
+			}
 		}
 	}
 
-	basicCtx, cancel := context.WithCancel(context.Background())
-	n := &Node{
-		ctx:              basicCtx,
-		ctxCancel:        cancel,
-		host:             host,
-		workspace:        workspace,
-		privatekeyPath:   privatekeypath,
-		multiaddr:        fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", publicip, port, host.ID()),
-		FileDir:          filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:           filepath.Join(workspace, TmpDataDirectionry),
-		IdleDataDir:      filepath.Join(workspace, IdleDataDirectionry),
-		IdleTagDir:       filepath.Join(workspace, IdleTagDirectionry),
-		ServiceTagDir:    filepath.Join(workspace, ServiceTagDirectionry),
-		ProofDir:         filepath.Join(workspace, ProofDirectionry),
-		IproofFile:       filepath.Join(workspace, ProofDirectionry, IdleProofFile),
-		IproofMuFile:     filepath.Join(workspace, ProofDirectionry, IdleMuFile),
-		SproofFile:       filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
-		SproofMuFile:     filepath.Join(workspace, ProofDirectionry, ServiceMuFile),
-		PeerId:           peerid,
-		idleDataCh:       make(chan string, 1),
-		idleTagDataCh:    make(chan string, 1),
-		serviceTagDataCh: make(chan string, 1),
-	}
+	// iser, err := identify.NewIDService(host, identify.ProtocolVersion(protocolVersion))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// iser.Start()
 
-	if err := mkdir(workspace); err != nil {
+	dataDir, err := mkdir(workspace)
+	if err != nil {
 		return nil, err
 	}
 
-	//n.StarFileTransferProtocol()
+	n := &Node{
+		ctx:                ctx,
+		host:               host,
+		workspace:          workspace,
+		privatekeyPath:     privatekeypath,
+		multiaddr:          fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", externalIp, port, host.ID().Pretty()),
+		dir:                dataDir,
+		peerPublickey:      publickey,
+		idleDataCh:         make(chan string, 1),
+		idleTagDataCh:      make(chan string, 1),
+		serviceTagDataCh:   make(chan string, 1),
+		protocolVersion:    protocolVersion,
+		dhtProtocolVersion: dhtProtocolVersion,
+		discoverStat:       atomic.Uint32{},
+		bootstrap:          bootstrap,
+		discoveredPeerCh:   make(chan DiscoveredPeer, 10),
+		protocols:          NewProtocol(),
+	}
+
+	n.initProtocol()
+
+	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
+
 	return n, nil
 }
 
-func (n *Node) AddAddrToPearstore(id peer.ID, addr ma.Multiaddr, t time.Duration) {
-	time := peerstore.RecentlyConnectedAddrTTL
-	if t.Seconds() > 0 {
-		time = t
+// ID returns the (local) peer.ID associated with this Host
+func (n *Node) ID() peer.ID {
+	return n.host.ID()
+}
+
+// Peerstore returns the Host's repository of Peer Addresses and Keys.
+func (n *Node) Peerstore() peerstore.Peerstore {
+	return n.host.Peerstore()
+}
+
+// Returns the listen addresses of the Host
+func (n *Node) Addrs() []ma.Multiaddr {
+	return n.host.Addrs()
+}
+
+// Networks returns the Network interface of the Host
+func (n *Node) Network() network.Network {
+	return n.host.Network()
+}
+
+// Mux returns the Mux multiplexing incoming streams to protocol handlers
+func (n *Node) Mux() protocol.Switch {
+	return n.host.Mux()
+}
+
+// Connect ensures there is a connection between this host and the peer with
+// given peer.ID. Connect will absorb the addresses in pi into its internal
+// peerstore. If there is not an active connection, Connect will issue a
+// h.Network.Dial, and block until a connection is open, or an error is
+// returned. // TODO: Relay + NAT.
+func (n *Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
+	return n.host.Connect(ctx, pi)
+}
+
+// SetStreamHandler sets the protocol handler on the Host's Mux.
+// This is equivalent to: host.Mux().SetHandler(proto, handler) (Threadsafe)
+func (n *Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
+	n.host.SetStreamHandler(pid, handler)
+}
+
+// SetStreamHandlerMatch sets the protocol handler on the Host's Mux
+// using a matching function for protocol selection.
+func (n *Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
+	n.host.SetStreamHandlerMatch(pid, m, handler)
+}
+
+// RemoveStreamHandler removes a handler on the mux that was set by
+// SetStreamHandler
+func (n *Node) RemoveStreamHandler(pid protocol.ID) {
+	n.host.RemoveStreamHandler(pid)
+}
+
+// NewStream opens a new stream to given peer p, and writes a p2p/protocol
+// header with given ProtocolID. If there is no connection to p, attempts
+// to create one. If ProtocolID is "", writes no header.
+// (Threadsafe)
+func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
+	return n.host.NewStream(ctx, p, pids...)
+}
+
+// Close shuts down the host, its Network, and services.
+func (n *Node) Close() error {
+	err := n.host.Close()
+	if err != nil {
+		return err
 	}
-	n.Peerstore().AddAddr(id, addr, time)
+	close(n.idleDataCh)
+	close(n.idleTagDataCh)
+	close(n.serviceTagDataCh)
+	close(n.discoveredPeerCh)
+	return nil
+}
+
+// ConnManager returns this hosts connection manager
+func (n *Node) ConnManager() connmgr.ConnManager {
+	return n.host.ConnManager()
+}
+
+// EventBus returns the hosts eventbus
+func (n *Node) EventBus() event.Bus {
+	return n.host.EventBus()
+}
+
+func (n *Node) GetDiscoverSt() bool {
+	return n.discoverStat.Load() > 0
+}
+
+func (n *Node) StartDiscover() {
+	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
 }
 
 func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error) {
@@ -234,56 +317,28 @@ func (n *Node) Multiaddr() string {
 	return n.multiaddr
 }
 
-func (n *Node) ID() peer.ID {
-	return n.host.ID()
+func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
+	return n.discoveredPeerCh
 }
 
-func (n *Node) Peerstore() peerstore.Peerstore {
-	return n.host.Peerstore()
+func (n *Node) GetOwnPublickey() []byte {
+	return n.peerPublickey
 }
 
-func (n *Node) Addrs() []ma.Multiaddr {
-	return n.host.Addrs()
+func (n *Node) GetProtocolVersion() string {
+	return n.protocolVersion
 }
 
-func (n *Node) Mux() protocol.Switch {
-	return n.host.Mux()
+func (n *Node) GetDhtProtocolVersion() string {
+	return n.dhtProtocolVersion
 }
 
-func (n *Node) Close() error {
-	return n.host.Close()
+func (n *Node) GetBootstraps() []string {
+	return n.bootstrap
 }
 
-func (n *Node) Network() network.Network {
-	return n.host.Network()
-}
-
-func (n *Node) ConnManager() connmgr.ConnManager {
-	return n.host.ConnManager()
-}
-
-func (n *Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
-	return n.host.Connect(ctx, pi)
-}
-
-func (n *Node) EventBus() event.Bus {
-	return n.host.EventBus()
-}
-
-func (n *Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
-	n.host.SetStreamHandler(pid, handler)
-}
-
-func (n *Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
-	n.host.SetStreamHandlerMatch(pid, m, handler)
-}
-
-func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
-	return n.host.NewStream(ctx, p, pids...)
-}
-
-func (n *Node) RemoveStreamHandler(pid protocol.ID) {
-	n.host.RemoveStreamHandler(pid)
+func (n *Node) SetBootstraps(bootstrap []string) {
+	n.bootstrap = bootstrap
 }
 
 func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
@@ -291,70 +346,68 @@ func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pid, err := peer.IDFromPublicKey(pkey)
+	peerid, err := peer.IDFromPublicKey(pkey)
 	if err != nil {
 		return "", err
 	}
-	return pid.String(), nil
+	return peerid.Pretty(), nil
 }
 
-func (n *Node) PutIdleDataEventCh(path string) {
-	go func() {
-		if len(n.idleDataCh) > 0 {
-			_ = <-n.idleDataCh
-		}
-		n.idleDataCh <- path
-	}()
+func (n *Node) GetDirs() DataDirs {
+	return n.dir
 }
 
-func (n *Node) GetIdleDataEvent() chan string {
+func (n *Node) putIdleDataCh(path string) {
+	if len(n.idleDataCh) > 0 {
+		_ = <-n.idleDataCh
+	}
+	n.idleDataCh <- path
+}
+
+func (n *Node) GetIdleDataCh() <-chan string {
 	return n.idleDataCh
 }
 
-func (n *Node) PutIdleTagEventCh(path string) {
-	go func() {
-		if len(n.idleTagDataCh) > 0 {
-			_ = <-n.idleTagDataCh
-		}
-		n.idleTagDataCh <- path
-	}()
+func (n *Node) putIdleTagCh(path string) {
+	if len(n.idleTagDataCh) > 0 {
+		_ = <-n.idleTagDataCh
+	}
+	n.idleTagDataCh <- path
 }
 
-func (n *Node) GetIdleTagEvent() chan string {
+func (n *Node) GetIdleTagCh() <-chan string {
 	return n.idleTagDataCh
 }
 
-func (n *Node) PutServiceTagEventCh(path string) {
-	go func() {
-		if len(n.serviceTagDataCh) > 0 {
-			_ = <-n.serviceTagDataCh
-		}
-		n.serviceTagDataCh <- path
-	}()
+func (n *Node) putServiceTagCh(path string) {
+	if len(n.serviceTagDataCh) > 0 {
+		_ = <-n.serviceTagDataCh
+	}
+	n.serviceTagDataCh <- path
 }
 
-func (n *Node) GetServiceTagEvent() chan string {
+func (n *Node) GetServiceTagCh() <-chan string {
 	return n.serviceTagDataCh
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
-	n.idleFileTee = peerid
+	n.idleTee = peerid
 }
 
 func (n *Node) GetIdleFileTee() string {
-	return n.idleFileTee
+	return n.idleTee
 }
 
 func (n *Node) SetServiceFileTee(peerid string) {
-	n.serviceFileTee = peerid
+	n.serviceTee = peerid
 }
 
 func (n *Node) GetServiceFileTee() string {
-	return n.serviceFileTee
+	return n.serviceTee
 }
 
 // identify reads or creates the private key file specified by fpath
-func identify(workspace, fpath string) (crypto.PrivKey, error) {
+func identification(workspace, fpath string) (crypto.PrivKey, error) {
 	if fpath == "" {
 		fpath = filepath.Join(workspace, privatekeyFile)
 	}
@@ -402,26 +455,36 @@ func identify(workspace, fpath string) (crypto.PrivKey, error) {
 	return prvKey, nil
 }
 
-func mkdir(workspace string) error {
-	if err := os.MkdirAll(filepath.Join(workspace, FileDataDirectionry), DirMode); err != nil {
-		return err
+func mkdir(workspace string) (DataDirs, error) {
+	dataDir := DataDirs{
+		FileDir:       filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:        filepath.Join(workspace, TmpDataDirectionry),
+		IdleDataDir:   filepath.Join(workspace, IdleDataDirectionry),
+		IdleTagDir:    filepath.Join(workspace, IdleTagDirectionry),
+		ServiceTagDir: filepath.Join(workspace, ServiceTagDirectionry),
+		ProofDir:      filepath.Join(workspace, ProofDirectionry),
+		IproofFile:    filepath.Join(workspace, ProofDirectionry, IdleProofFile),
+		SproofFile:    filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, TmpDataDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.FileDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, IdleDataDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.TmpDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, IdleTagDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.IdleDataDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, ServiceTagDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.IdleTagDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, ProofDirectionry), DirMode); err != nil {
-		return err
+	if err := os.MkdirAll(dataDir.ServiceTagDir, DirMode); err != nil {
+		return dataDir, err
 	}
-	return nil
+	if err := os.MkdirAll(dataDir.ProofDir, DirMode); err != nil {
+		return dataDir, err
+	}
+	return dataDir, nil
 }
 
 // Authenticate incoming p2p message
@@ -557,23 +620,6 @@ func (n *Node) SendMsgToStream(s network.Stream, msg []byte) error {
 	return err
 }
 
-func ExtractIp4FromMultiaddr(multiaddr string) (string, uint64, error) {
-	var ip string
-	temp := strings.TrimPrefix(multiaddr, "/ip4/")
-	temps := strings.Split(temp, "/")
-	if !isIPv4(temps[0]) {
-		return "", 0, fmt.Errorf("Invalid ip")
-	}
-	ip = temps[0]
-	temp = strings.TrimPrefix(multiaddr, fmt.Sprintf("/ip4/%s/tcp/", temps[0]))
-	temps = strings.Split(temp, "/")
-	port, err := strconv.ParseUint(temps[0], 10, 64)
-	if err != nil {
-		return "", 0, fmt.Errorf("Invalid port")
-	}
-	return ip, port, nil
-}
-
 // IsIPv4 is used to determine whether ipAddr is an ipv4 address
 func isIPv4(ipAddr string) bool {
 	ip := net.ParseIP(ipAddr)
@@ -586,8 +632,52 @@ func isIPv6(ipAddr string) bool {
 	return ip != nil && strings.Contains(ipAddr, ":")
 }
 
+func checkExternalIpv4(ip string) bool {
+	if isIPv4(ip) {
+		values := strings.Split(ip, ".")
+		if len(values) < 2 {
+			return false
+		}
+		if values[0] == "10" || values[0] == "127" {
+			return false
+		}
+		if values[0] == "192" && values[1] == "168" {
+			return false
+		}
+		if values[0] == "169" && values[1] == "254" {
+			return false
+		}
+		if values[0] == "172" {
+			number, err := strconv.Atoi(values[1])
+			if err != nil {
+				return false
+			}
+			if number >= 16 && number <= 31 {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func verifyWorkspace(ws string) error {
+	if ws == "" {
+		return fmt.Errorf("empty workspace")
+	}
+	fstat, err := os.Stat(ws)
+	if err != nil {
+		return os.MkdirAll(ws, DirMode)
+	} else {
+		if !fstat.IsDir() {
+			return fmt.Errorf("workspace is not a directory")
+		}
+	}
+	return nil
+}
+
 // Get external network ip
-func GetExternalIp() (string, error) {
+func getExternalIp() (string, error) {
 	var (
 		err        error
 		externalIp string
@@ -596,6 +686,7 @@ func GetExternalIp() (string, error) {
 	client := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
+
 	resp, err := client.Get("http://myexternalip.com/raw")
 	if err == nil {
 		defer resp.Body.Close()
@@ -636,5 +727,124 @@ func GetExternalIp() (string, error) {
 			return externalIp, nil
 		}
 	}
+
 	return "", errors.New("Please check your network status")
+}
+
+func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) {
+	if n.discoverStat.Load() > 0 {
+		return
+	}
+
+	defer func() {
+		recover()
+		n.discoverStat.Store(0)
+	}()
+
+	n.discoverStat.Add(1)
+	time.Sleep(time.Second)
+	if n.discoverStat.Load() != 1 {
+		return
+	}
+
+	kademliaDHT, err := initDHT(ctx, h, dhtProtocolVersion, bootstrap)
+	if err != nil {
+		return
+	}
+
+	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
+	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	_, events := routing.RegisterForQueryEvents(ctx)
+
+	tick := time.NewTicker(time.Minute)
+	defer tick.Stop()
+
+	var skipFlag bool
+	for {
+		select {
+		case <-tick.C:
+			routingDiscovery.FindPeers(ctx, Rendezvous)
+			select {
+			case peer := <-events:
+				for _, v := range peer.Responses {
+					skipFlag = false
+					var discoveredpeer DiscoveredPeer
+					for _, value := range v.Addrs {
+						temps := strings.Split(value.String(), "/")
+						for _, temp := range temps {
+							if checkExternalIpv4(temp) {
+								discoveredpeer.PeerID = v.ID
+								discoveredpeer.Addr = value
+								n.discoveredPeerCh <- discoveredpeer
+								skipFlag = true
+								break
+							}
+						}
+						if skipFlag {
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func (n *Node) initProtocol() {
+	n.WriteFileProtocol = n.NewWriteFileProtocol()
+	n.ReadFileProtocol = n.NewReadFileProtocol()
+	n.CustomDataTagProtocol = n.NewCustomDataTagProtocol()
+	n.IdleDataTagProtocol = n.NewIdleDataTagProtocol()
+	n.FileProtocol = n.NewFileProtocol()
+	n.AggrProofProtocol = n.NewAggrProofProtocol()
+	n.PushTagProtocol = n.NewPushTagProtocol()
+}
+
+func initDHT(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) (*dht.IpfsDHT, error) {
+	var options []dht.Option
+	options = append(options, dht.V1ProtocolOverride("/kldr/kad/1.0"))
+
+	if len(bootstrap) == 0 {
+		options = append(options, dht.Mode(dht.ModeServer))
+	} else {
+		options = append(options, dht.Mode(dht.ModeClient))
+	}
+
+	// Start a DHT, for use in peer discovery. We can't just make a new DHT
+	// client because we want each peer to maintain its own local copy of the
+	// DHT, so that the bootstrapping node of the DHT can go down without
+	// inhibiting future peer discovery.
+	kademliaDHT, err := dht.New(ctx, h, options...)
+	if err != nil {
+		return nil, err
+	}
+	if err = kademliaDHT.Bootstrap(ctx); err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	for _, peerAddr := range bootstrap {
+		bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
+		if err != nil {
+			continue
+		}
+
+		peerinfo, _ := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := h.Connect(ctx, *peerinfo)
+			if err != nil {
+				log.Println("Failed to connect to the bootstrap node: ", peerinfo.ID.Pretty())
+			} else {
+				log.Println("Connected to the bootstrap node: ", peerinfo.ID.Pretty())
+			}
+		}()
+	}
+	wg.Wait()
+
+	return kademliaDHT, nil
 }

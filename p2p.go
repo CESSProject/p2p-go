@@ -8,6 +8,8 @@
 package p2pgo
 
 import (
+	"context"
+
 	"github.com/CESSProject/p2p-go/config"
 	"github.com/CESSProject/p2p-go/core"
 )
@@ -26,8 +28,8 @@ type Option = config.Option
 //
 // To stop/shutdown the returned p2p node, the user needs to cancel the passed
 // context and call `Close` on the returned Host.
-func New(privatekeyPath string, opts ...Option) (core.P2P, error) {
-	return NewWithoutDefaults(privatekeyPath, append(opts, FallbackDefaults)...)
+func New(ctx context.Context, privatekeyPath string, opts ...Option) (core.P2P, error) {
+	return NewWithoutDefaults(ctx, privatekeyPath, append(opts, FallbackDefaults)...)
 }
 
 // NewWithoutDefaults constructs a new libp2p node with the given options but
@@ -36,10 +38,10 @@ func New(privatekeyPath string, opts ...Option) (core.P2P, error) {
 // Warning: This function should not be considered a stable interface. We may
 // choose to add required services at any time and, by using this function, you
 // opt-out of any defaults we may provide.
-func NewWithoutDefaults(privatekeyPath string, opts ...Option) (core.P2P, error) {
+func NewWithoutDefaults(ctx context.Context, privatekeyPath string, opts ...Option) (core.P2P, error) {
 	var cfg Config
 	if err := cfg.Apply(opts...); err != nil {
 		return nil, err
 	}
-	return cfg.NewNode(privatekeyPath)
+	return cfg.NewNode(ctx, privatekeyPath)
 }

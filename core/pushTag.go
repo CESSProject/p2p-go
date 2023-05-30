@@ -1,4 +1,11 @@
-package protocol
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
+package core
 
 import (
 	"context"
@@ -7,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -17,20 +23,20 @@ import (
 const PushTag_Protocol = "/kldr/tagpush/1"
 
 type PushTagProtocol struct {
-	node *core.Node
+	*Node
 }
 
-func NewPushTagProtocol(node *core.Node) *PushTagProtocol {
-	e := PushTagProtocol{node: node}
-	node.SetStreamHandler(PushTag_Protocol, e.onPushTagRequest)
+func (n *Node) NewPushTagProtocol() *PushTagProtocol {
+	e := PushTagProtocol{Node: n}
+	n.SetStreamHandler(PushTag_Protocol, e.onPushTagRequest)
 	return &e
 }
 
 // remote peer requests handler
-func (e *PushTagProtocol) TagPushReq(peerid peer.ID) (uint32, error) {
+func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
 	log.Printf("Sending TagPushReq req to: %s", peerid)
 
-	s, err := e.node.NewStream(context.Background(), peerid, PushTag_Protocol)
+	s, err := e.PushTagProtocol.NewStream(context.Background(), peerid, PushTag_Protocol)
 	if err != nil {
 		return 0, err
 	}
@@ -71,8 +77,8 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	remotePeer := s.Conn().RemotePeer().String()
 
 	log.Println("receive push tag req: ", remotePeer)
-	if e.node.GetIdleFileTee() != string(remotePeer) &&
-		e.node.GetServiceFileTee() != string(remotePeer) {
+	if e.PushTagProtocol.GetIdleFileTee() != string(remotePeer) &&
+		e.PushTagProtocol.GetServiceFileTee() != string(remotePeer) {
 		s.Reset()
 		log.Println("receive invalid push tag req: ", remotePeer)
 		return
@@ -86,24 +92,24 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	switch reqMsg.GetResult().(type) {
 	case *pb.TagPushRequest_Ctgr:
 		customTag := reqMsg.GetCtgr()
-		tagpath := filepath.Join(e.node.ServiceTagDir, customTag.Tag.T.Name+".tag")
+		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().ServiceTagDir, customTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, customTag.Tag)
 		if err != nil {
 			os.Remove(tagpath)
 		} else {
 			respMsg.Code = 0
-			e.node.PutServiceTagEventCh(tagpath)
+			e.PushTagProtocol.putServiceTagCh(tagpath)
 		}
 	case *pb.TagPushRequest_Itgr:
 		idleTag := reqMsg.GetItgr()
-		tagpath := filepath.Join(e.node.IdleTagDir, idleTag.Tag.T.Name+".tag")
+		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().IdleTagDir, idleTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, idleTag.Tag)
 		if err != nil {
 			log.Println("file req save tag err:", err)
 			os.Remove(tagpath)
 		} else {
 			respMsg.Code = 0
-			e.node.PutIdleTagEventCh(tagpath)
+			e.PushTagProtocol.putIdleTagCh(tagpath)
 		}
 	case *pb.TagPushRequest_Error:
 		log.Println("receive file req err")

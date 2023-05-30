@@ -1,10 +1,16 @@
-package protocol
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
+package core
 
 import (
 	"context"
 	"log"
 
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
@@ -13,15 +19,15 @@ import (
 const CustomDataTag_Protocol = "/kldr/cdtg/1"
 
 type CustomDataTagProtocol struct {
-	node *core.Node
+	*Node
 }
 
-func NewCustomDataTagProtocol(node *core.Node) *CustomDataTagProtocol {
-	e := CustomDataTagProtocol{node: node}
+func (n *Node) NewCustomDataTagProtocol() *CustomDataTagProtocol {
+	e := CustomDataTagProtocol{Node: n}
 	return &e
 }
 
-func (e *CustomDataTagProtocol) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
+func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
 	log.Printf("Sending tag req to: %s", peerId)
 
 	if err := checkFileName(filename); err != nil {
@@ -32,7 +38,7 @@ func (e *CustomDataTagProtocol) TagReq(peerId peer.ID, filename, customdata stri
 		return 0, err
 	}
 
-	s, err := e.node.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
+	s, err := e.CustomDataTagProtocol.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
 	if err != nil {
 		return 0, err
 	}

@@ -1,21 +1,30 @@
+/*
+	Copyright (C) CESS. All rights reserved.
+	Copyright (C) Cumulus Encrypted Storage System. All rights reserved.
+
+	SPDX-License-Identifier: Apache-2.0
+*/
+
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/pb"
-	myprotocol "github.com/CESSProject/p2p-go/protocol"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 func main() {
+	ctx := context.Background()
 	h1, err := p2pgo.New(
+		ctx,
 		".private1",
-		p2pgo.ListenAddrStrings("0.0.0.0", 8080), // regular tcp connections
+		p2pgo.ListenPort(8080), // regular tcp connections
+		p2pgo.Workspace("."),
 	)
 	if err != nil {
 		panic(err)
@@ -23,18 +32,6 @@ func main() {
 	defer h1.Close()
 
 	fmt.Println("node1:", h1.Addrs(), h1.ID())
-	node1, ok := h1.(*core.Node)
-	if !ok {
-		panic(err)
-	}
-
-	protocol := myprotocol.NewProtocol(node1)
-	protocol.WriteFileProtocol = myprotocol.NewWriteFileProtocol(node1)
-	protocol.ReadFileProtocol = myprotocol.NewReadFileProtocol(node1)
-	protocol.CustomDataTagProtocol = myprotocol.NewCustomDataTagProtocol(node1)
-	protocol.IdleDataTagProtocol = myprotocol.NewIdleDataTagProtocol(node1)
-	protocol.AggrProofProtocol = myprotocol.NewAggrProofProtocol(node1)
-	protocol.FileProtocol = myprotocol.NewFileProtocol(node1)
 
 	maddr, err := ma.NewMultiaddr(os.Args[1])
 	if err != nil {
@@ -47,10 +44,11 @@ func main() {
 		fmt.Println("AddrInfoFromP2pAddr err: ", err)
 		os.Exit(1)
 	}
-	protocol.Node.AddAddrToPearstore(info.ID, maddr, 0)
-	protocol.IdleDataTagProtocol.IdleReq(info.ID, 8*1024*1024, 2, nil, []byte("123456"))
-	protocol.CustomDataTagProtocol.TagReq(info.ID, "123456", "", 2)
-	_, err = protocol.FileProtocol.FileReq(info.ID, "123456", pb.FileType_CustomData, "./main.go")
+	h1.Peerstore().AddAddr(info.ID, maddr, 0)
+
+	h1.IdleReq(info.ID, 8*1024*1024, 2, nil, []byte("123456"))
+	h1.TagReq(info.ID, "123456", "", 2)
+	_, err = h1.FileReq(info.ID, "123456", pb.FileType_CustomData, "./main.go")
 	if err != nil {
 		fmt.Println(err)
 	}

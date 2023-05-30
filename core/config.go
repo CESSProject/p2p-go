@@ -13,26 +13,13 @@ const privatekeyFile = ".private"
 const AllIpAddress = "0.0.0.0"
 const LocalAddress = "127.0.0.1"
 
+const Rendezvous = "/rendezvous/1.0.0"
+
 // byte size
 const (
 	SIZE_1KiB = 1024
 	SIZE_1MiB = 1024 * SIZE_1KiB
 	SIZE_1GiB = 1024 * SIZE_1MiB
-)
-
-const (
-	//
-	FileDataDirectionry   = "file"
-	TmpDataDirectionry    = "tmp"
-	IdleDataDirectionry   = "space"
-	IdleTagDirectionry    = "itag"
-	ServiceTagDirectionry = "stag"
-	ProofDirectionry      = "proof"
-	//
-	IdleProofFile    = "iproof"
-	IdleMuFile       = "imu"
-	ServiceProofFile = "sproof"
-	ServiceMuFile    = "smu"
 )
 
 const BufferSize = 64 * SIZE_1KiB

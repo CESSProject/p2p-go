@@ -5,11 +5,14 @@
 	SPDX-License-Identifier: Apache-2.0
 */
 
-package protocol
+package core
 
 import (
 	"fmt"
 	"time"
+
+	"github.com/libp2p/go-libp2p/core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 const P2PWriteReqRespTime = time.Duration(time.Second * 15)
@@ -38,16 +41,44 @@ const (
 	FileType_NamesFile
 )
 
+const (
+	//
+	FileDataDirectionry   = "file"
+	TmpDataDirectionry    = "tmp"
+	IdleDataDirectionry   = "space"
+	IdleTagDirectionry    = "itag"
+	ServiceTagDirectionry = "stag"
+	ProofDirectionry      = "proof"
+	//
+	IdleProofFile    = "iproof"
+	ServiceProofFile = "sproof"
+)
+
 var (
 	FileNameLengthErr   = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
 	FileNameEmptyErr    = fmt.Errorf("filename is empty")
 	CustomDataLengthErr = fmt.Errorf("custom data length exceeds %d", MaxCustomDataLength)
 )
 
-type Names struct {
-	Name []string `json:"name"`
+type DataDirs struct {
+	FileDir       string
+	TmpDir        string
+	IdleDataDir   string
+	IdleTagDir    string
+	ServiceTagDir string
+	ProofDir      string
+	IproofFile    string
+	SproofFile    string
 }
 
-type Us struct {
-	U []string `json:"u"`
+type ProofFileType struct {
+	Names []string `json:"names"`
+	Us    []string `json:"us"`
+	Mus   []string `json:"mus"`
+	Sigma string   `json:"sigma"`
+}
+
+type DiscoveredPeer struct {
+	PeerID peer.ID
+	Addr   ma.Multiaddr
 }
