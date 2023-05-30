@@ -92,7 +92,7 @@ type Node struct {
 	dhtProtocolVersion string
 	discoverStat       atomic.Uint32
 	bootstrap          []string
-	discoveredPeer     chan DiscoveredPeer
+	discoveredPeerCh   chan DiscoveredPeer
 	*protocols
 }
 
@@ -182,7 +182,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		discoveredPeer:     make(chan DiscoveredPeer, 10),
+		discoveredPeerCh:   make(chan DiscoveredPeer, 10),
 		protocols:          NewProtocol(),
 	}
 
@@ -192,8 +192,6 @@ func NewBasicNode(
 
 	return n, nil
 }
-
-// -------------------- Host interface implementation --------------------
 
 // ID returns the (local) peer.ID associated with this Host
 func (n *Node) ID() peer.ID {
@@ -257,7 +255,15 @@ func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (n
 
 // Close shuts down the host, its Network, and services.
 func (n *Node) Close() error {
-	return n.host.Close()
+	err := n.host.Close()
+	if err != nil {
+		return err
+	}
+	close(n.idleDataCh)
+	close(n.idleTagDataCh)
+	close(n.serviceTagDataCh)
+	close(n.discoveredPeerCh)
+	return nil
 }
 
 // ConnManager returns this hosts connection manager
@@ -270,7 +276,6 @@ func (n *Node) EventBus() event.Bus {
 	return n.host.EventBus()
 }
 
-// -------------------- other interface implementation --------------------
 func (n *Node) GetDiscoverSt() bool {
 	return n.discoverStat.Load() > 0
 }
@@ -313,7 +318,7 @@ func (n *Node) Multiaddr() string {
 }
 
 func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
-	return n.discoveredPeer
+	return n.discoveredPeerCh
 }
 
 func (n *Node) GetOwnPublickey() []byte {
@@ -773,7 +778,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 							if checkExternalIpv4(temp) {
 								discoveredpeer.PeerID = v.ID
 								discoveredpeer.Addr = value
-								n.discoveredPeer <- discoveredpeer
+								n.discoveredPeerCh <- discoveredpeer
 								skipFlag = true
 								break
 							}
