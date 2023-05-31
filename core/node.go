@@ -62,7 +62,7 @@ type P2P interface {
 	Multiaddr() string
 	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
 	GetPeerIdFromPubkey(pubkey []byte) (string, error)
-	GetOwnPublickey() []byte
+	GetPeerPublickey() []byte
 	GetProtocolVersion() string
 	GetDhtProtocolVersion() string
 	GetDirs() DataDirs
@@ -321,7 +321,7 @@ func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
 	return n.discoveredPeerCh
 }
 
-func (n *Node) GetOwnPublickey() []byte {
+func (n *Node) GetPeerPublickey() []byte {
 	return n.peerPublickey
 }
 
