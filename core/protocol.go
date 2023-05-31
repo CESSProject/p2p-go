@@ -19,6 +19,7 @@ type Protocol interface {
 	IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error)
 	TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error)
 	FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error)
+	AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error)
 }
 
 type protocols struct {
