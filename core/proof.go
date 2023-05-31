@@ -27,7 +27,7 @@ func (n *Node) NewAggrProofProtocol() *AggrProofProtocol {
 	return &e
 }
 
-func (e *AggrProofProtocol) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
+func (e *protocols) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
 	log.Printf("Sending AggrProof req to: %s", peerId)
 
 	s, err := e.AggrProofProtocol.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
