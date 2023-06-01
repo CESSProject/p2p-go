@@ -77,6 +77,9 @@ type P2P interface {
 // Node type - Implementation of a P2P Host
 type Node struct {
 	ctx                context.Context
+	ctxReg             context.Context
+	cancelFunc         context.CancelFunc
+	discoverEvent      <-chan *routing.QueryEvent
 	host               host.Host
 	dir                DataDirs
 	peerPublickey      []byte
@@ -167,8 +170,14 @@ func NewBasicNode(
 		return nil, err
 	}
 
+	ctx1, cancel := context.WithCancel(ctx)
+	ctx2, events := routing.RegisterForQueryEvents(ctx1)
+
 	n := &Node{
 		ctx:                ctx,
+		ctxReg:             ctx2,
+		cancelFunc:         cancel,
+		discoverEvent:      events,
 		host:               host,
 		workspace:          workspace,
 		privatekeyPath:     privatekeypath,
@@ -188,7 +197,7 @@ func NewBasicNode(
 
 	n.initProtocol()
 
-	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
+	go n.discoverPeers(n.ctxReg, n.host, n.dhtProtocolVersion, n.bootstrap)
 
 	return n, nil
 }
@@ -255,6 +264,7 @@ func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (n
 
 // Close shuts down the host, its Network, and services.
 func (n *Node) Close() error {
+	n.cancelFunc()
 	err := n.host.Close()
 	if err != nil {
 		return err
@@ -281,7 +291,7 @@ func (n *Node) GetDiscoverSt() bool {
 }
 
 func (n *Node) StartDiscover() {
-	go n.discoverPeers(n.ctx, n.host, n.dhtProtocolVersion, n.bootstrap)
+	go n.discoverPeers(n.ctxReg, n.host, n.dhtProtocolVersion, n.bootstrap)
 }
 
 func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error) {
@@ -755,10 +765,6 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	_, events := routing.RegisterForQueryEvents(ctx)
-
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
 
@@ -768,8 +774,9 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 		case <-tick.C:
 			routingDiscovery.FindPeers(ctx, Rendezvous)
 			select {
-			case peer := <-events:
+			case peer := <-n.discoverEvent:
 				for _, v := range peer.Responses {
+					log.Println("Fount:", v.ID.String(), "addr: ", v.Addrs)
 					skipFlag = false
 					var discoveredpeer DiscoveredPeer
 					for _, value := range v.Addrs {
