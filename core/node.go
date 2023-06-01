@@ -41,7 +41,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
-	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -129,7 +128,8 @@ func NewBasicNode(
 		libp2p.Identity(prvKey),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
 		libp2p.ConnectionManager(cmgr),
-		libp2p.Security(noise.ID, noise.New),
+		libp2p.DefaultTransports,
+		libp2p.DefaultSecurity,
 		libp2p.NATPortMap(),
 		libp2p.ProtocolVersion(protocolVersion),
 		libp2p.DefaultMuxers,
@@ -158,12 +158,6 @@ func NewBasicNode(
 			}
 		}
 	}
-
-	// iser, err := identify.NewIDService(host, identify.ProtocolVersion(protocolVersion))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// iser.Start()
 
 	dataDir, err := mkdir(workspace)
 	if err != nil {
@@ -769,30 +763,58 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	defer tick.Stop()
 
 	var skipFlag bool
+	var ok = true
+	var peer peer.AddrInfo
+
 	for {
 		select {
 		case <-tick.C:
-			routingDiscovery.FindPeers(ctx, Rendezvous)
-			select {
-			case peer := <-n.discoverEvent:
-				for _, v := range peer.Responses {
-					log.Println("Fount:", v.ID.String(), "addr: ", v.Addrs)
-					skipFlag = false
-					var discoveredpeer DiscoveredPeer
-					for _, value := range v.Addrs {
-						temps := strings.Split(value.String(), "/")
-						for _, temp := range temps {
-							if checkExternalIpv4(temp) {
-								discoveredpeer.PeerID = v.ID
-								discoveredpeer.Addr = value
-								n.discoveredPeerCh <- discoveredpeer
-								skipFlag = true
-								break
-							}
-						}
-						if skipFlag {
+			peerChan, err := routingDiscovery.FindPeers(ctx, Rendezvous)
+			if err == nil {
+				for ok {
+					select {
+					case peer, ok = <-peerChan:
+						if !ok {
 							break
 						}
+						if peer.ID == h.ID() {
+							continue
+						}
+						log.Println("Found a peer: ", peer.ID.Pretty(), peer.Addrs)
+						err := h.Connect(ctx, peer)
+						if err != nil {
+							log.Println("Failed connecting to ", peer.ID.Pretty(), ", error:", err)
+							continue
+						}
+						for _, addr := range peer.Addrs {
+							var discoveredpeer DiscoveredPeer
+							discoveredpeer.PeerID = peer.ID
+							discoveredpeer.Addr = addr
+							h.Peerstore().AddAddr(peer.ID, addr, peerstore.PermanentAddrTTL)
+							n.discoveredPeerCh <- discoveredpeer
+						}
+					}
+					time.Sleep(time.Second)
+				}
+			}
+		case peer := <-n.discoverEvent:
+			for _, v := range peer.Responses {
+				log.Println("Found a peer:", v.ID.String(), "addr: ", v.Addrs)
+				skipFlag = false
+				var discoveredpeer DiscoveredPeer
+				for _, value := range v.Addrs {
+					temps := strings.Split(value.String(), "/")
+					for _, temp := range temps {
+						if checkExternalIpv4(temp) {
+							discoveredpeer.PeerID = v.ID
+							discoveredpeer.Addr = value
+							n.discoveredPeerCh <- discoveredpeer
+							skipFlag = true
+							break
+						}
+					}
+					if skipFlag {
+						break
 					}
 				}
 			}
