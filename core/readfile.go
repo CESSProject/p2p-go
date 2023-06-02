@@ -126,15 +126,15 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 	for {
 		req.Offset = offset
 		// calc signature
-		req.MessageData.Sign = nil
-		signature, err := e.ReadFileProtocol.SignProtoMessage(&req)
-		if err != nil {
-			log.Println("failed to sign message")
-			return err
-		}
+		// req.MessageData.Sign = nil
+		// signature, err := e.ReadFileProtocol.SignProtoMessage(&req)
+		// if err != nil {
+		// 	log.Println("failed to sign message")
+		// 	return err
+		// }
 
-		// add the signature to the message
-		req.MessageData.Sign = signature
+		// // add the signature to the message
+		// req.MessageData.Sign = signature
 
 		err = e.ReadFileProtocol.SendProtoMessage(id, readFileRequest, &req)
 		if err != nil {
@@ -198,11 +198,11 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 	log.Printf("Received Readfile from %s. Roothash:%s Datahash:%s offset:%d",
 		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Offset)
 
-	valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
-	if !valid {
-		log.Println("Failed to authenticate message")
-		return
-	}
+	// valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
+	// if !valid {
+	// 	log.Println("Failed to authenticate message")
+	// 	return
+	// }
 
 	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 

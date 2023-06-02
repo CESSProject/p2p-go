@@ -12,14 +12,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -58,16 +54,16 @@ type P2P interface {
 	StartDiscover()
 	PrivatekeyPath() string
 	Workspace() string
-	Multiaddr() string
 	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
 	GetPeerIdFromPubkey(pubkey []byte) (string, error)
 	GetPeerPublickey() []byte
 	GetProtocolVersion() string
 	GetDhtProtocolVersion() string
+	GetRootCtx() context.Context
 	GetDirs() DataDirs
 	GetBootstraps() []string
 	SetBootstraps(bootstrap []string)
-	DiscoveredPeer() <-chan DiscoveredPeer
+	DiscoveredPeer() <-chan peer.AddrInfo
 	GetIdleDataCh() <-chan string
 	GetIdleTagCh() <-chan string
 	GetServiceTagCh() <-chan string
@@ -84,7 +80,6 @@ type Node struct {
 	peerPublickey      []byte
 	workspace          string
 	privatekeyPath     string
-	multiaddr          string
 	idleTee            string
 	serviceTee         string
 	idleDataCh         chan string
@@ -94,9 +89,11 @@ type Node struct {
 	dhtProtocolVersion string
 	discoverStat       atomic.Uint32
 	bootstrap          []string
-	discoveredPeerCh   chan DiscoveredPeer
+	discoveredPeerCh   chan peer.AddrInfo
 	*protocols
 }
+
+var _ P2P = (*Node)(nil)
 
 // NewBasicNode constructs a new *Node
 //
@@ -124,7 +121,29 @@ func NewBasicNode(
 		return nil, err
 	}
 
-	host, err := libp2p.New(
+	var opts []libp2p.Option
+	var multiaddrs []ma.Multiaddr
+
+	externalIp, err := GetExternalIp()
+	if err == nil {
+		extMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", externalIp, port))
+		multiaddrs = append(multiaddrs, extMultiAddr)
+	}
+
+	localIp, err := GetLocalIp()
+	if err == nil {
+		for _, v := range localIp {
+			localMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", v, port))
+			multiaddrs = append(multiaddrs, localMultiAddr)
+		}
+	}
+
+	addressFactory := func(addrs []ma.Multiaddr) []ma.Multiaddr {
+		addrs = append(addrs, multiaddrs...)
+		return addrs
+	}
+
+	opts = append(opts,
 		libp2p.Identity(prvKey),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
 		libp2p.ConnectionManager(cmgr),
@@ -133,30 +152,21 @@ func NewBasicNode(
 		libp2p.NATPortMap(),
 		libp2p.ProtocolVersion(protocolVersion),
 		libp2p.DefaultMuxers,
+		libp2p.AddrsFactory(addressFactory),
 	)
+
+	bhost, err := libp2p.New(opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	if !host.ID().MatchesPrivateKey(prvKey) {
+	if !bhost.ID().MatchesPrivateKey(prvKey) {
 		return nil, errors.New("")
 	}
 
-	publickey, err := base58.Decode(host.ID().String())
+	publickey, err := base58.Decode(bhost.ID().String())
 	if err != nil {
 		return nil, err
-	}
-
-	externalIp, err := getExternalIp()
-	if err != nil {
-		for _, v := range host.Addrs() {
-			temp := strings.Split(v.String(), "/")
-			for _, vv := range temp {
-				if isIPv4(vv) && vv != LocalAddress {
-					externalIp = vv
-				}
-			}
-		}
 	}
 
 	dataDir, err := mkdir(workspace)
@@ -172,10 +182,9 @@ func NewBasicNode(
 		ctxReg:             ctx2,
 		cancelFunc:         cancel,
 		discoverEvent:      events,
-		host:               host,
+		host:               bhost,
 		workspace:          workspace,
 		privatekeyPath:     privatekeypath,
-		multiaddr:          fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", externalIp, port, host.ID().Pretty()),
 		dir:                dataDir,
 		peerPublickey:      publickey,
 		idleDataCh:         make(chan string, 1),
@@ -185,7 +194,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		discoveredPeerCh:   make(chan DiscoveredPeer, 10),
+		discoveredPeerCh:   make(chan peer.AddrInfo, 10),
 		protocols:          NewProtocol(),
 	}
 
@@ -317,11 +326,7 @@ func (n *Node) Workspace() string {
 	return n.workspace
 }
 
-func (n *Node) Multiaddr() string {
-	return n.multiaddr
-}
-
-func (n *Node) DiscoveredPeer() <-chan DiscoveredPeer {
+func (n *Node) DiscoveredPeer() <-chan peer.AddrInfo {
 	return n.discoveredPeerCh
 }
 
@@ -355,6 +360,10 @@ func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
 		return "", err
 	}
 	return peerid.Pretty(), nil
+}
+
+func (n *Node) GetRootCtx() context.Context {
+	return n.ctx
 }
 
 func (n *Node) GetDirs() DataDirs {
@@ -636,35 +645,6 @@ func isIPv6(ipAddr string) bool {
 	return ip != nil && strings.Contains(ipAddr, ":")
 }
 
-func checkExternalIpv4(ip string) bool {
-	if isIPv4(ip) {
-		values := strings.Split(ip, ".")
-		if len(values) < 2 {
-			return false
-		}
-		if values[0] == "10" || values[0] == "127" {
-			return false
-		}
-		if values[0] == "192" && values[1] == "168" {
-			return false
-		}
-		if values[0] == "169" && values[1] == "254" {
-			return false
-		}
-		if values[0] == "172" {
-			number, err := strconv.Atoi(values[1])
-			if err != nil {
-				return false
-			}
-			if number >= 16 && number <= 31 {
-				return false
-			}
-		}
-		return true
-	}
-	return false
-}
-
 func verifyWorkspace(ws string) error {
 	if ws == "" {
 		return fmt.Errorf("empty workspace")
@@ -678,61 +658,6 @@ func verifyWorkspace(ws string) error {
 		}
 	}
 	return nil
-}
-
-// Get external network ip
-func getExternalIp() (string, error) {
-	var (
-		err        error
-		externalIp string
-	)
-
-	client := http.Client{
-		Timeout: time.Duration(10 * time.Second),
-	}
-
-	resp, err := client.Get("http://myexternalip.com/raw")
-	if err == nil {
-		defer resp.Body.Close()
-		b, _ := io.ReadAll(resp.Body)
-		externalIp = fmt.Sprintf("%s", string(b))
-		if isIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx1, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	output, err := exec.CommandContext(ctx1, "bash", "-c", "curl ifconfig.co").Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\n", "")
-		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if isIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx2, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	output, err = exec.CommandContext(ctx2, "bash", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\n", "")
-		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if isIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx3, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	output, err = exec.CommandContext(ctx3, "bash", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\"", "")
-		externalIp = strings.ReplaceAll(externalIp, ",", "")
-		externalIp = strings.ReplaceAll(externalIp, "\n", "")
-		if isIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	return "", errors.New("Please check your network status")
 }
 
 func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) {
@@ -759,64 +684,29 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
-	tick := time.NewTicker(time.Minute)
+	tick := time.NewTicker(time.Second * 10)
 	defer tick.Stop()
-
-	var skipFlag bool
-	var ok = true
-	var peer peer.AddrInfo
 
 	for {
 		select {
 		case <-tick.C:
 			peerChan, err := routingDiscovery.FindPeers(ctx, Rendezvous)
 			if err == nil {
-				for ok {
-					select {
-					case peer, ok = <-peerChan:
-						if !ok {
-							break
-						}
-						if peer.ID == h.ID() {
-							continue
-						}
-						log.Println("Found a peer: ", peer.ID.Pretty(), peer.Addrs)
-						err := h.Connect(ctx, peer)
-						if err != nil {
-							log.Println("Failed connecting to ", peer.ID.Pretty(), ", error:", err)
-							continue
-						}
-						for _, addr := range peer.Addrs {
-							var discoveredpeer DiscoveredPeer
-							discoveredpeer.PeerID = peer.ID
-							discoveredpeer.Addr = addr
-							h.Peerstore().AddAddr(peer.ID, addr, peerstore.PermanentAddrTTL)
-							n.discoveredPeerCh <- discoveredpeer
-						}
+				for {
+					peer, ok := <-peerChan
+					if !ok {
+						break
 					}
-					time.Sleep(time.Second)
+					if peer.ID == h.ID() {
+						continue
+					}
+					n.discoveredPeerCh <- peer
 				}
 			}
 		case peer := <-n.discoverEvent:
 			for _, v := range peer.Responses {
-				log.Println("Found a peer:", v.ID.String(), "addr: ", v.Addrs)
-				skipFlag = false
-				var discoveredpeer DiscoveredPeer
-				for _, value := range v.Addrs {
-					temps := strings.Split(value.String(), "/")
-					for _, temp := range temps {
-						if checkExternalIpv4(temp) {
-							discoveredpeer.PeerID = v.ID
-							discoveredpeer.Addr = value
-							n.discoveredPeerCh <- discoveredpeer
-							skipFlag = true
-							break
-						}
-					}
-					if skipFlag {
-						break
-					}
-				}
+				//log.Println("Found a peer:", v.ID.String(), "addr: ", v.Addrs)
+				n.discoveredPeerCh <- *v
 			}
 		}
 	}
@@ -834,12 +724,10 @@ func (n *Node) initProtocol() {
 
 func initDHT(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) (*dht.IpfsDHT, error) {
 	var options []dht.Option
-	options = append(options, dht.V1ProtocolOverride("/kldr/kad/1.0"))
+	options = append(options, dht.V1ProtocolOverride(protocol.ID(dhtProtocolVersion)))
 
 	if len(bootstrap) == 0 {
 		options = append(options, dht.Mode(dht.ModeServer))
-	} else {
-		options = append(options, dht.Mode(dht.ModeClient))
 	}
 
 	// Start a DHT, for use in peer discovery. We can't just make a new DHT
