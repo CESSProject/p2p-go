@@ -99,14 +99,14 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		req.Offset = offset
 		req.MessageData.Timestamp = time.Now().Unix()
 		// calc signature
-		req.MessageData.Sign = nil
-		signature, err := e.WriteFileProtocol.SignProtoMessage(req)
-		if err != nil {
-			return err
-		}
+		// req.MessageData.Sign = nil
+		// signature, err := e.WriteFileProtocol.SignProtoMessage(req)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// add the signature to the message
-		req.MessageData.Sign = signature
+		//req.MessageData.Sign = signature
 
 		err = e.WriteFileProtocol.SendProtoMessage(id, writeFileRequest, req)
 		if err != nil {
@@ -158,11 +158,11 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	log.Printf("Received Writefile from %s. Roothash:%s Datahash:%s length:%d offset:%d",
 		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Length, data.Offset)
 
-	valid := e.AuthenticateMessage(data, data.MessageData)
-	if !valid {
-		log.Println("Failed to authenticate message")
-		return
-	}
+	// valid := e.AuthenticateMessage(data, data.MessageData)
+	// if !valid {
+	// 	log.Println("Failed to authenticate message")
+	// 	return
+	// }
 
 	log.Printf("Sending Writefile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
@@ -205,14 +205,14 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 					resp.Code = P2PResponseFinish
 				}
 			}
-			// sign the data
-			signature, err := e.SignProtoMessage(resp)
-			if err != nil {
-				log.Println("failed to sign response")
-				return
-			}
-			// add the signature to the message
-			resp.MessageData.Sign = signature
+			// // sign the data
+			// signature, err := e.SignProtoMessage(resp)
+			// if err != nil {
+			// 	log.Println("failed to sign response")
+			// 	return
+			// }
+			// // add the signature to the message
+			// resp.MessageData.Sign = signature
 			err = e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
 			if err != nil {
 				log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
