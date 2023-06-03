@@ -133,6 +133,9 @@ func NewBasicNode(
 	localIp, err := GetLocalIp()
 	if err == nil {
 		for _, v := range localIp {
+			if v[len(v)-1] == byte(49) && v[len(v)-3] == byte(48) {
+				continue
+			}
 			localMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", v, port))
 			multiaddrs = append(multiaddrs, localMultiAddr)
 		}
@@ -684,7 +687,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
-	tick := time.NewTicker(time.Second * 10)
+	tick := time.NewTicker(time.Second * 30)
 	defer tick.Stop()
 
 	for {
