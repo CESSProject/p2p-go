@@ -285,12 +285,12 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 	}
 
 	// authenticate message content
-	valid := e.AuthenticateMessage(data, data.MessageData)
+	// valid := e.AuthenticateMessage(data, data.MessageData)
 
-	if !valid {
-		log.Println("Failed to authenticate message")
-		return
-	}
+	// if !valid {
+	// 	log.Println("Failed to authenticate message")
+	// 	return
+	// }
 
 	// locate request data and remove it if found
 	_, ok := e.requests[data.MessageData.Id]
