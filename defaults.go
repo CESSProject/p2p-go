@@ -31,8 +31,7 @@ var DefaultConnectionManager = func(cfg *Config) error {
 
 // DefaultConnectionManager creates a default connection manager
 var DefaultBootPeers = func(cfg *Config) error {
-	defaultBotPeers := []string{}
-
+	defaultBotPeers := []string{"_dnsaddr.bootstrap-kldr.cess.cloud"}
 	return cfg.Apply(BootPeers(defaultBotPeers))
 }
 

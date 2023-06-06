@@ -64,3 +64,11 @@ func DhtProtocolVersion(dhtProtocolVersion string) Option {
 		return nil
 	}
 }
+
+// BootPeers configures bootstrap nodes
+func PrivatekeyFile(privatekey string) Option {
+	return func(cfg *Config) error {
+		cfg.PrivatekeyPath = privatekey
+		return nil
+	}
+}

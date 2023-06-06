@@ -22,7 +22,7 @@ func main() {
 	ctx := context.Background()
 	h1, err := p2pgo.New(
 		ctx,
-		".private1",
+		p2pgo.PrivatekeyFile(".private1"),
 		p2pgo.ListenPort(8080), // regular tcp connections
 		p2pgo.Workspace("."),
 	)

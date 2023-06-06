@@ -27,7 +27,7 @@ func main() {
 	// To construct a simple host with all the default settings, just use `New`
 	h1, err := p2pgo.New(
 		ctx,
-		".private1",
+		p2pgo.PrivatekeyFile(".private1"),
 		p2pgo.ListenPort(*sourcePort1), // regular tcp connections
 		p2pgo.Workspace("."),
 	)
@@ -41,7 +41,7 @@ func main() {
 	// To construct a simple host with all the default settings, just use `New`
 	h2, err := p2pgo.New(
 		ctx,
-		".private2",
+		p2pgo.PrivatekeyFile(".private1"),
 		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
 		p2pgo.Workspace("."),
 	)
