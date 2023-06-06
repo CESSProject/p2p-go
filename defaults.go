@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 )
 
-// DefaultListenAddrs configures libp2p to use default listen address.
+// DefaultListenPort configures libp2p to use default port.
 var DefaultListenPort = func(cfg *Config) error {
 	port := 4001
 	return cfg.Apply(ListenPort(port))
@@ -25,24 +25,16 @@ var DefaultConnectionManager = func(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-
 	return cfg.Apply(ConnectionManager(mgr))
 }
 
-// DefaultConnectionManager creates a default connection manager
-var DefaultBootPeers = func(cfg *Config) error {
-	defaultBotPeers := []string{}
-
-	return cfg.Apply(BootPeers(defaultBotPeers))
-}
-
-// DefaultConnectionManager creates a default connection manager
+// DefaultProtocolVersion configures libp2p to use default ProtocolVersion
 var DefaultProtocolVersion = func(cfg *Config) error {
 	defaultProtocolVersion := "/kldr/1.0"
 	return cfg.Apply(ProtocolVersion(defaultProtocolVersion))
 }
 
-// DefaultConnectionManager creates a default connection manager
+// DefaultDhtProtocolVersion configures libp2p to use default DHT ProtocolVersion
 var DefaultDhtProtocolVersion = func(cfg *Config) error {
 	defaultDhtProtocolVersion := "/kldr/kad/1.0"
 	return cfg.Apply(DhtProtocolVersion(defaultDhtProtocolVersion))
@@ -63,10 +55,6 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.ConnManager == nil },
 		opt:      DefaultConnectionManager,
-	},
-	{
-		fallback: func(cfg *Config) bool { return cfg.BootPeers == nil },
-		opt:      DefaultBootPeers,
 	},
 	{
 		fallback: func(cfg *Config) bool { return cfg.ProtocolVersion == "" },
