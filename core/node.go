@@ -48,24 +48,59 @@ import (
 // may be confusing).
 // It references libp2p: https://github.com/libp2p/go-libp2p
 type P2P interface {
-	host.Host // lib-p2p host
-	Protocol  // protocol
-	GetDiscoverSt() bool
-	StartDiscover()
-	PrivatekeyPath() string
-	Workspace() string
-	AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error)
-	GetPeerIdFromPubkey(pubkey []byte) (string, error)
-	GetPeerPublickey() []byte
-	GetProtocolVersion() string
-	GetDhtProtocolVersion() string
+	// Lib-p2p host
+	host.Host
+
+	// Message protocol
+	Protocol
+
+	// GetRootCtx returns the root context of the host
 	GetRootCtx() context.Context
+
+	// GetDiscoverSt returns whether the discovery service is running
+	GetDiscoverSt() bool
+
+	// StartDiscover starts the node discovery service, If you have
+	// already started the service, calling it again will have no effect.
+	StartDiscover()
+
+	// PrivatekeyPath returns the key file location
+	PrivatekeyPath() string
+
+	// Workspace returns to the working directory
+	Workspace() string
+
+	// AddMultiaddrToPeerstore adds multiaddr to the host's peerstore
+	AddMultiaddrToPeerstore(multiaddr string, t time.Duration) (peer.ID, error)
+
+	// GetPeerPublickey returns the host's public key
+	GetPeerPublickey() []byte
+
+	// GetProtocolVersion returns the ProtocolVersion of the host
+	GetProtocolVersion() string
+
+	// GetDhtProtocolVersion returns the host's DHT ProtocolVersion
+	GetDhtProtocolVersion() string
+
+	// GetDirs returns the data directory structure of the host
 	GetDirs() DataDirs
+
+	// GetBootstraps returns a list of host bootstraps
 	GetBootstraps() []string
+
+	// SetBootstraps updates the host's bootstrap list
 	SetBootstraps(bootstrap []string)
+
+	// DiscoveredPeer returns the node channel discovered by the host
 	DiscoveredPeer() <-chan peer.AddrInfo
+
+	// GetIdleDataCh returns the idle data channel received by the host
 	GetIdleDataCh() <-chan string
+
+	// GetIdleTagCh returns the tag channel of the idle data received by the host
 	GetIdleTagCh() <-chan string
+
+	// GetServiceTagCh returns the tag channel of the service data received by the host
 	GetServiceTagCh() <-chan string
 }
 
@@ -300,7 +335,7 @@ func (n *Node) StartDiscover() {
 	go n.discoverPeers(n.ctxReg, n.host, n.dhtProtocolVersion, n.bootstrap)
 }
 
-func (n *Node) AddMultiaddrToPearstore(multiaddr string, t time.Duration) (peer.ID, error) {
+func (n *Node) AddMultiaddrToPeerstore(multiaddr string, t time.Duration) (peer.ID, error) {
 	time := peerstore.RecentlyConnectedAddrTTL
 	if t.Seconds() > 0 {
 		time = t
@@ -351,18 +386,6 @@ func (n *Node) GetBootstraps() []string {
 
 func (n *Node) SetBootstraps(bootstrap []string) {
 	n.bootstrap = bootstrap
-}
-
-func (n *Node) GetPeerIdFromPubkey(pubkey []byte) (string, error) {
-	pkey, err := crypto.UnmarshalEd25519PublicKey(pubkey)
-	if err != nil {
-		return "", err
-	}
-	peerid, err := peer.IDFromPublicKey(pkey)
-	if err != nil {
-		return "", err
-	}
-	return peerid.Pretty(), nil
 }
 
 func (n *Node) GetRootCtx() context.Context {
