@@ -20,6 +20,7 @@ type Protocol interface {
 	TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error)
 	FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error)
 	AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error)
+	// add other protocols here...
 }
 
 type protocols struct {

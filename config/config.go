@@ -15,9 +15,6 @@ import (
 )
 
 // Config describes a set of settings for a libp2p node
-//
-// This is *not* a stable interface. Use the options defined in the root
-// package.
 type Config struct {
 	ListenPort         int
 	ConnManager        connmgr.ConnManager

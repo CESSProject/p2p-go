@@ -13,8 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/connmgr"
 )
 
-// ListenAddrStrings configures libp2p to listen on the given (unparsed)
-// addresses.
+// ListenPort configuration listening port
 func ListenPort(port int) Option {
 	return func(cfg *Config) error {
 		cfg.ListenPort = port
@@ -30,7 +29,7 @@ func Workspace(workspace string) Option {
 	}
 }
 
-// ConnectionManager configures libp2p to use the given connection manager
+// ConnectionManager configuration connection manager
 func ConnectionManager(connman connmgr.ConnManager) Option {
 	return func(cfg *Config) error {
 		if cfg.ConnManager != nil {
@@ -41,7 +40,7 @@ func ConnectionManager(connman connmgr.ConnManager) Option {
 	}
 }
 
-// BootPeers configures bootstrap nodes
+// BootPeers configuration bootstrap nodes
 func BootPeers(bootpeers []string) Option {
 	return func(cfg *Config) error {
 		cfg.BootPeers = bootpeers
@@ -49,7 +48,7 @@ func BootPeers(bootpeers []string) Option {
 	}
 }
 
-// BootPeers configures bootstrap nodes
+// ProtocolVersion configuration protocol version
 func ProtocolVersion(protocolVersion string) Option {
 	return func(cfg *Config) error {
 		cfg.ProtocolVersion = protocolVersion
@@ -57,7 +56,7 @@ func ProtocolVersion(protocolVersion string) Option {
 	}
 }
 
-// BootPeers configures bootstrap nodes
+// DhtProtocolVersion configuration DHT protocol version
 func DhtProtocolVersion(dhtProtocolVersion string) Option {
 	return func(cfg *Config) error {
 		cfg.DhtProtocolVersion = dhtProtocolVersion
@@ -65,7 +64,7 @@ func DhtProtocolVersion(dhtProtocolVersion string) Option {
 	}
 }
 
-// BootPeers configures bootstrap nodes
+// PrivatekeyFile configuration privatekey file
 func PrivatekeyFile(privatekey string) Option {
 	return func(cfg *Config) error {
 		cfg.PrivatekeyPath = privatekey

@@ -85,29 +85,3 @@ func checkCustomData(customdata string) error {
 	}
 	return nil
 }
-
-// remote peer requests handler
-// func (e *EchoProtocol) onTagRequest(s network.Stream) {
-// 	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
-// 	reqMsg := &pb.TagRequest{}
-// 	err := r.ReadMsg(reqMsg)
-// 	if err != nil {
-// 		s.Reset()
-// 		log.Println(err)
-// 		return
-// 	}
-
-// 	log.Printf("receive tag req: %s", string(reqMsg.FileName))
-
-// 	w := pbio.NewDelimitedWriter(s)
-// 	respMsg := &pb.TagResponse{
-// 		// Message: reqMsg.Message,
-// 		// MessageData: &pb.MessageData{
-// 		// 	Timestamp: time.Now().UnixMilli(),
-// 		// 	Id:        reqMsg.MessageData.Id,
-// 		// },
-// 	}
-// 	w.WriteMsg(respMsg)
-
-// 	log.Printf("%s: Tag response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
-// }
