@@ -165,17 +165,6 @@ func NewBasicNode(
 		multiaddrs = append(multiaddrs, extMultiAddr)
 	}
 
-	localIp, err := GetLocalIp()
-	if err == nil {
-		for _, v := range localIp {
-			if v[len(v)-1] == byte(49) && v[len(v)-3] == byte(48) {
-				continue
-			}
-			localMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", v, port))
-			multiaddrs = append(multiaddrs, localMultiAddr)
-		}
-	}
-
 	addressFactory := func(addrs []ma.Multiaddr) []ma.Multiaddr {
 		addrs = append(addrs, multiaddrs...)
 		return addrs
@@ -232,7 +221,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		discoveredPeerCh:   make(chan peer.AddrInfo, 10),
+		discoveredPeerCh:   make(chan peer.AddrInfo, 30),
 		protocols:          NewProtocol(),
 	}
 
