@@ -8,16 +8,15 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
+	"github.com/pkg/errors"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
@@ -47,8 +46,6 @@ func (n *Node) NewReadFileProtocol() *ReadFileProtocol {
 }
 
 func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error {
-	log.Printf("Will Sending readfileAction to: %s", id)
-
 	var ok bool
 	var err error
 	var hash string
@@ -69,43 +66,43 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 		} else if fstat.Size() == size {
 			hash, err = CalcPathSHA256(path)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "[calc file sha256]")
 			}
 			if hash == datahash {
 				return nil
 			}
-			return fmt.Errorf("datahash does not match file")
+			return fmt.Errorf("fragment hash does not match file")
 		} else {
 			buf, err := os.ReadFile(path)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "[read file]")
 			}
 			hash, err = CalcSHA256(buf[:size])
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "[calc buf sha256]")
 			}
 			if hash == datahash {
 				f, err = os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0)
 				if err != nil {
-					return err
+					return errors.Wrapf(err, "[open file]")
 				}
 				defer f.Close()
 				_, err = f.Write(buf[:size])
 				if err != nil {
-					return err
+					return errors.Wrapf(err, "[write file]")
 				}
 				err = f.Sync()
 				if err != nil {
-					return err
+					return errors.Wrapf(err, "[sync file]")
 				}
 				return nil
 			}
 			os.Remove(path)
 		}
 	}
-	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0)
+	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "[open file]")
 	}
 	defer f.Close()
 
@@ -125,20 +122,10 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 
 	for {
 		req.Offset = offset
-		// calc signature
-		// req.MessageData.Sign = nil
-		// signature, err := e.ReadFileProtocol.SignProtoMessage(&req)
-		// if err != nil {
-		// 	log.Println("failed to sign message")
-		// 	return err
-		// }
-
-		// // add the signature to the message
-		// req.MessageData.Sign = signature
 
 		err = e.ReadFileProtocol.SendProtoMessage(id, readFileRequest, &req)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "[SendProtoMessage]")
 		}
 
 		//
@@ -146,23 +133,21 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 		select {
 		case ok = <-e.ReadFileProtocol.requests[req.MessageData.Id].ch:
 			if !ok {
-				// err, close
-				return errors.New("failed")
+				return errors.Wrapf(err, "[failed]")
 			}
 		case <-timeout.C:
-			// timeout
 			return errors.New("timeout")
 		}
 
 		resp = e.ReadFileProtocol.requests[req.MessageData.Id].ReadfileResponse
 		num, err = f.Write(resp.Data[:resp.Length])
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "[write file]")
 		}
 
 		err = f.Sync()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "[sync file]")
 		}
 
 		if resp.Code == P2PResponseFinish {
@@ -177,34 +162,21 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 
 // remote peer requests handler
 func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
+	defer s.Close()
+
 	var code = P2PResponseOK
 	// get request data
 	data := &pb.ReadfileRequest{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
-		s.Reset()
-		log.Println(err)
 		return
 	}
-	s.Close()
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
 	if err != nil {
-		log.Println(err)
 		return
 	}
-
-	log.Printf("Received Readfile from %s. Roothash:%s Datahash:%s offset:%d",
-		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Offset)
-
-	// valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
-	// if !valid {
-	// 	log.Println("Failed to authenticate message")
-	// 	return
-	// }
-
-	log.Printf("Sending Readfile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
 	fpath := filepath.Join(e.ReadFileProtocol.GetDirs().TmpDir, data.Roothash, data.Datahash)
 
@@ -248,45 +220,23 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 		Data:        readBuf[:num],
 	}
 
-	// sign the data
-	signature, err := e.ReadFileProtocol.SignProtoMessage(resp)
-	if err != nil {
-		log.Println("failed to sign response")
-		return
-	}
-
-	// add the signature to the message
-	resp.MessageData.Sign = signature
-
-	err = e.ReadFileProtocol.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
-	if err != nil {
-		log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
-	}
+	e.ReadFileProtocol.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
 }
 
 // remote peer requests handler
 func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
+	defer s.Close()
 	data := &pb.ReadfileResponse{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
 		s.Reset()
-		log.Println(err)
 		return
 	}
-	s.Close()
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
 	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// authenticate message content
-	valid := e.ReadFileProtocol.AuthenticateMessage(data, data.MessageData)
-
-	if !valid {
-		log.Println("Failed to authenticate message")
+		s.Reset()
 		return
 	}
 
@@ -299,11 +249,5 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 		} else {
 			e.requests[data.MessageData.Id].ch <- false
 		}
-	} else {
-		log.Println("Failed to locate request data boject for response")
-		return
 	}
-
-	log.Printf("Received Readfile response from %s. Message id:%s. Code: %d Offset:%d",
-		s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset)
 }

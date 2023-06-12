@@ -9,7 +9,6 @@ package core
 
 import (
 	"context"
-	"log"
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -28,8 +27,6 @@ func (n *Node) NewAggrProofProtocol() *AggrProofProtocol {
 }
 
 func (e *protocols) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
-	log.Printf("Sending AggrProof req to: %s", peerId)
-
 	s, err := e.AggrProofProtocol.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
 	if err != nil {
 		return 0, err
@@ -58,7 +55,5 @@ func (e *protocols) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*
 		s.Reset()
 		return 0, err
 	}
-
-	log.Printf("AggrProof req resp code: %d", respMsg.Code)
 	return respMsg.Code, nil
 }

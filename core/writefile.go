@@ -45,7 +45,6 @@ func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
 }
 
 func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
-	log.Printf("Will Sending writefileAction to: %s", id)
 	var err error
 	var ok bool
 	var num int
@@ -98,22 +97,11 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		req.Length = uint32(num)
 		req.Offset = offset
 		req.MessageData.Timestamp = time.Now().Unix()
-		// calc signature
-		// req.MessageData.Sign = nil
-		// signature, err := e.WriteFileProtocol.SignProtoMessage(req)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// add the signature to the message
-		//req.MessageData.Sign = signature
 
 		err = e.WriteFileProtocol.SendProtoMessage(id, writeFileRequest, req)
 		if err != nil {
 			return err
 		}
-
-		log.Printf("Writefile to: %s was sent. Msg Id: %s", id, req.MessageData.Id)
 
 		// wait response
 		timeout.Reset(P2PWriteReqRespTime)
@@ -137,7 +125,6 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 // remote peer requests handler
 func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
-	log.Printf("Recv writefileAction from: %s", s.Conn().RemotePeer().Pretty())
 	// get request data
 	data := &pb.WritefileRequest{}
 	buf, err := io.ReadAll(s)
@@ -154,17 +141,6 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		log.Println(err)
 		return
 	}
-
-	log.Printf("Received Writefile from %s. Roothash:%s Datahash:%s length:%d offset:%d",
-		s.Conn().RemotePeer(), data.Roothash, data.Datahash, data.Length, data.Offset)
-
-	// valid := e.AuthenticateMessage(data, data.MessageData)
-	// if !valid {
-	// 	log.Println("Failed to authenticate message")
-	// 	return
-	// }
-
-	log.Printf("Sending Writefile response to %s. Message id: %s", s.Conn().RemotePeer(), data.MessageData.Id)
 
 	resp := &pb.WritefileResponse{
 		MessageData: e.NewMessageData(data.MessageData.Id, false),
@@ -189,7 +165,9 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		}
 	}
 	var size int64
+
 	fpath := filepath.Join(dir, data.Datahash)
+
 	fstat, err = os.Stat(fpath)
 	if err == nil {
 		size = fstat.Size()
@@ -205,25 +183,14 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 					resp.Code = P2PResponseFinish
 				}
 			}
-			// // sign the data
-			// signature, err := e.SignProtoMessage(resp)
-			// if err != nil {
-			// 	log.Println("failed to sign response")
-			// 	return
-			// }
-			// // add the signature to the message
-			// resp.MessageData.Sign = signature
-			err = e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
-			if err != nil {
-				log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
-			}
+
+			e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
 			return
 		}
 	}
 
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
 	if err != nil {
-		log.Println("OpenFile err:", err)
 		return
 	}
 	defer f.Close()
@@ -235,7 +202,6 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 
 	_, err = f.Write(data.Data[:data.Length])
 	if err != nil {
-		log.Println("Write err:", err)
 		return
 	}
 
@@ -249,48 +215,27 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	} else {
 		resp.Offset = size + int64(data.Length)
 	}
-	// sign the data
-	signature, err := e.SignProtoMessage(resp)
-	if err != nil {
-		log.Println("failed to sign response")
-		return
-	}
-
-	// add the signature to the message
-	resp.MessageData.Sign = signature
 
 	// send response to the request using the message string he provided
-	err = e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
-	if err != nil {
-		log.Printf("Writefile response to %s sent failed.", s.Conn().RemotePeer().String())
-	}
+	e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
 }
 
 // remote peer response handler
 func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
+	defer s.Close()
+	defer s.Reset()
+
 	data := &pb.WritefileResponse{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
-		s.Reset()
-		log.Println(err)
 		return
 	}
-	s.Close()
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
 	if err != nil {
-		log.Println(err)
 		return
 	}
-
-	// authenticate message content
-	// valid := e.AuthenticateMessage(data, data.MessageData)
-
-	// if !valid {
-	// 	log.Println("Failed to authenticate message")
-	// 	return
-	// }
 
 	// locate request data and remove it if found
 	_, ok := e.requests[data.MessageData.Id]
@@ -302,10 +247,6 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 			e.requests[data.MessageData.Id].ch <- false
 		}
 	} else {
-		log.Println("Failed to locate request data boject for response")
 		return
 	}
-
-	log.Printf("Received Writefile response from %s. Message id:%s. Code: %d Offset:%d.",
-		s.Conn().RemotePeer(), data.MessageData.Id, data.Code, data.Offset)
 }

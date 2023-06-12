@@ -9,7 +9,6 @@ package core
 
 import (
 	"context"
-	"log"
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -28,8 +27,6 @@ func (n *Node) NewIdleDataTagProtocol() *IdleDataTagProtocol {
 }
 
 func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error) {
-	log.Printf("Sending file req to: %s", peerId)
-
 	reqMsg := &pb.IdleDataTagRequest{
 		FileSize:  filesize,
 		BlockNum:  blocknum,
@@ -60,6 +57,5 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 	if respMsg.Code == 0 {
 		e.IdleDataTagProtocol.SetIdleFileTee(peerId.String())
 	}
-	log.Printf("Idle req suc")
 	return respMsg.Code, nil
 }
