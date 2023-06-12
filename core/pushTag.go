@@ -34,8 +34,6 @@ func (n *Node) NewPushTagProtocol() *PushTagProtocol {
 
 // remote peer requests handler
 func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
-	log.Printf("Sending TagPushReq req to: %s", peerid)
-
 	s, err := e.PushTagProtocol.NewStream(context.Background(), peerid, PushTag_Protocol)
 	if err != nil {
 		return 0, err
@@ -58,8 +56,6 @@ func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
 		s.Reset()
 		return 0, err
 	}
-
-	log.Printf("TagPushReq resp code: %d", respMsg.Code)
 	return respMsg.Code, nil
 }
 
@@ -76,11 +72,9 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	}
 	remotePeer := s.Conn().RemotePeer().String()
 
-	log.Println("receive push tag req: ", remotePeer)
 	if e.PushTagProtocol.GetIdleFileTee() != string(remotePeer) &&
 		e.PushTagProtocol.GetServiceFileTee() != string(remotePeer) {
 		s.Reset()
-		log.Println("receive invalid push tag req: ", remotePeer)
 		return
 	}
 
@@ -105,19 +99,15 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().IdleTagDir, idleTag.Tag.T.Name+".tag")
 		err = saveTagFile(tagpath, idleTag.Tag)
 		if err != nil {
-			log.Println("file req save tag err:", err)
 			os.Remove(tagpath)
 		} else {
 			respMsg.Code = 0
 			e.PushTagProtocol.putIdleTagCh(tagpath)
 		}
 	case *pb.TagPushRequest_Error:
-		log.Println("receive file req err")
 	default:
-		log.Println("receive invalid file req")
 	}
 	w.WriteMsg(respMsg)
-	log.Printf("%s: push tag response to %s sent.", s.Conn().LocalPeer().String(), remotePeer)
 }
 
 func saveTagFile(tagpath string, tag *pb.Tag) error {

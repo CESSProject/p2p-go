@@ -33,8 +33,6 @@ func (n *Node) NewFileProtocol() *FileProtocol {
 }
 
 func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error) {
-	log.Printf("Sending file req to: %s", peerId)
-
 	fstat, err := os.Stat(fpath)
 	if err != nil {
 		return 0, err
@@ -86,14 +84,12 @@ func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileTyp
 		e.FileProtocol.SetServiceFileTee(peerId.String())
 	}
 
-	log.Printf("File req resp suc")
 	return respMsg.Code, nil
 }
 
 // remote peer requests handler
 func (e *FileProtocol) onFileRequest(s network.Stream) {
 	defer s.Close()
-	log.Println("Receiving FileReq from: ", s.Conn().RemotePeer().String())
 	var resp = &pb.Response{}
 	var reqMsg = &pb.Request{}
 
@@ -103,7 +99,6 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 	err := r.ReadMsg(reqMsg)
 	if err != nil {
 		s.Reset()
-		log.Println("[ReadMsg err]", err)
 		return
 	}
 	var putResp = &pb.PutResponse{
@@ -116,7 +111,6 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 
 	switch reqMsg.GetRequest().(type) {
 	case *pb.Request_PutRequest:
-		log.Printf("receive put file req")
 
 		w.WriteMsg(resp)
 
@@ -132,11 +126,9 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 			e.FileProtocol.putIdleDataCh(fpath)
 		default:
 			putResp.Code = 1
-			log.Printf("recv put file req and invalid file type")
 		}
 	default:
 		putResp.Code = 1
-		log.Printf("receive invalid file req")
 	}
 
 	if putResp.Code == 1 {
@@ -148,7 +140,6 @@ func (e *FileProtocol) onFileRequest(s network.Stream) {
 		}
 	}
 
-	log.Printf("%s: File response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
 	return
 }
 
@@ -199,7 +190,6 @@ func saveFileStream(r pbio.ReadCloser, w pbio.WriteCloser, reqMsg *pb.Request, r
 	}
 
 	if uint64(fstat.Size()) != size {
-		log.Printf("recv file size = %d not equal origin size = %d", fstat.Size(), size)
 		return err
 	}
 	return nil

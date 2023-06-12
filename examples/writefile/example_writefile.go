@@ -70,6 +70,7 @@ func main() {
 
 	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	go h1.WriteFileAction(info.ID, "roothash", file)
+	err = h1.WriteFileAction(info.ID, "roothash", file)
+	fmt.Println("err: ", err)
 	select {}
 }

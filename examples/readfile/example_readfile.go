@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -41,7 +42,7 @@ func main() {
 	// To construct a simple host with all the default settings, just use `New`
 	h2, err := p2pgo.New(
 		ctx,
-		p2pgo.PrivatekeyFile(".private1"),
+		p2pgo.PrivatekeyFile(".private2"),
 		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
 		p2pgo.Workspace("."),
 	)
@@ -65,8 +66,9 @@ func main() {
 		fmt.Println("AddrInfoFromP2pAddr err: ", err)
 		os.Exit(1)
 	}
-	h1.Peerstore().AddAddr(info.ID, maddr, 0)
+	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	go h1.ReadFileAction(info.ID, "roothash", "7f0221a07b204d83b743ee58091ddabe9daa2c9b1b7d0900a6dff7c2b0bd418d", file, 8388608)
+	err = h1.ReadFileAction(info.ID, "roothash", "9e579206ed5b82181d8e5e91a7da261c92ee11094be50a2c2f81a0af846220a9", file, 8388608)
+	fmt.Println("err: ", err)
 	select {}
 }

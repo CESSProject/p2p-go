@@ -9,7 +9,6 @@ package core
 
 import (
 	"context"
-	"log"
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -28,8 +27,6 @@ func (n *Node) NewCustomDataTagProtocol() *CustomDataTagProtocol {
 }
 
 func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error) {
-	log.Printf("Sending tag req to: %s", peerId)
-
 	if err := checkFileName(filename); err != nil {
 		return 0, err
 	}
@@ -65,7 +62,6 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 		return 0, err
 	}
 
-	log.Printf("Tag req resp code: %d", respMsg.Code)
 	return respMsg.Code, nil
 }
 
