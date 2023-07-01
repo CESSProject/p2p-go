@@ -699,7 +699,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
-	tick := time.NewTicker(time.Second * 30)
+	tick := time.NewTicker(time.Second * 20)
 	defer tick.Stop()
 
 	for {
@@ -720,7 +720,6 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 			}
 		case peer := <-n.discoverEvent:
 			for _, v := range peer.Responses {
-				//log.Println("Found a peer:", v.ID.String(), "addr: ", v.Addrs)
 				n.discoveredPeerCh <- *v
 			}
 		}
