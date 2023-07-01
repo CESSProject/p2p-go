@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
@@ -34,11 +35,12 @@ type writeMsgResp struct {
 
 type WriteFileProtocol struct { // local host
 	*Node
+	*sync.Mutex
 	requests map[string]*writeMsgResp // determine whether it is your own response
 }
 
 func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
-	e := WriteFileProtocol{Node: n, requests: make(map[string]*writeMsgResp)}
+	e := WriteFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeMsgResp)}
 	n.SetStreamHandler(writeFileRequest, e.onWriteFileRequest)
 	n.SetStreamHandler(writeFileResponse, e.onWriteFileResponse)
 	return &e
@@ -70,11 +72,19 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 	// store request so response handler has access to it
 	respChan := make(chan bool, 1)
+
+	e.WriteFileProtocol.Lock()
 	e.WriteFileProtocol.requests[req.MessageData.Id] = &writeMsgResp{
 		ch: respChan,
 	}
-	defer delete(e.WriteFileProtocol.requests, req.MessageData.Id)
-	defer close(respChan)
+	e.WriteFileProtocol.Unlock()
+
+	defer func() {
+		e.WriteFileProtocol.Lock()
+		delete(e.WriteFileProtocol.requests, req.MessageData.Id)
+		close(respChan)
+		e.WriteFileProtocol.Unlock()
+	}()
 
 	timeout := time.NewTicker(P2PWriteReqRespTime)
 	defer timeout.Stop()
@@ -106,12 +116,12 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		// wait response
 		timeout.Reset(P2PWriteReqRespTime)
 		select {
-		case ok = <-e.WriteFileProtocol.requests[req.MessageData.Id].ch:
+		case ok = <-respChan:
 			if !ok {
-				return errors.New("Peer node response failure")
+				return errors.New(ERR_RespFailure)
 			}
 		case <-timeout.C:
-			return errors.New("Peer node response timed out")
+			return errors.New(ERR_RespTimeOut)
 		}
 
 		if e.WriteFileProtocol.requests[req.MessageData.Id].WritefileResponse.Code == P2PResponseFinish {
@@ -120,7 +130,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 		offset = e.WriteFileProtocol.requests[req.MessageData.Id].WritefileResponse.Offset
 	}
-	return nil
+	return errors.New(ERR_RespInvalidData)
 }
 
 // remote peer requests handler
@@ -238,6 +248,8 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 	}
 
 	// locate request data and remove it if found
+	e.WriteFileProtocol.Lock()
+	defer e.WriteFileProtocol.Unlock()
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {
 		if data.Code == P2PResponseOK || data.Code == P2PResponseFinish {

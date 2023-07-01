@@ -15,8 +15,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-const P2PWriteReqRespTime = time.Duration(time.Second * 15)
-const P2PReadReqRespTime = time.Duration(time.Second * 15)
+const P2PWriteReqRespTime = time.Duration(time.Second * 20)
+const P2PReadReqRespTime = time.Duration(time.Second * 20)
 
 const FileProtocolBufSize = 2 * 1024 * 1024
 
@@ -52,6 +52,12 @@ const (
 	//
 	IdleProofFile    = "iproof"
 	ServiceProofFile = "sproof"
+)
+
+const (
+	ERR_RespTimeOut     = "peer response timeout"
+	ERR_RespFailure     = "peer response failure"
+	ERR_RespInvalidData = "peer response invalid data"
 )
 
 var (

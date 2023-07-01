@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
@@ -34,12 +35,13 @@ type readMsgResp struct {
 }
 
 type ReadFileProtocol struct {
-	*Node                            // local host
+	*Node // local host
+	*sync.Mutex
 	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
 func (n *Node) NewReadFileProtocol() *ReadFileProtocol {
-	e := ReadFileProtocol{Node: n, requests: make(map[string]*readMsgResp)}
+	e := ReadFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*readMsgResp)}
 	n.SetStreamHandler(readFileRequest, e.onReadFileRequest)
 	n.SetStreamHandler(readFileResponse, e.onReadFileResponse)
 	return &e
@@ -112,11 +114,17 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 
 	// store request so response handler has access to it
 	var respChan = make(chan bool, 1)
+	e.ReadFileProtocol.Lock()
 	e.ReadFileProtocol.requests[req.MessageData.Id] = &readMsgResp{
 		ch: respChan,
 	}
-	defer delete(e.ReadFileProtocol.requests, req.MessageData.Id)
-	defer close(respChan)
+	e.ReadFileProtocol.Unlock()
+	defer func() {
+		e.ReadFileProtocol.Lock()
+		delete(e.ReadFileProtocol.requests, req.MessageData.Id)
+		close(respChan)
+		e.ReadFileProtocol.Unlock()
+	}()
 	timeout := time.NewTicker(P2PReadReqRespTime)
 	defer timeout.Stop()
 
@@ -131,12 +139,12 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 		//
 		timeout.Reset(P2PReadReqRespTime)
 		select {
-		case ok = <-e.ReadFileProtocol.requests[req.MessageData.Id].ch:
+		case ok = <-respChan:
 			if !ok {
-				return errors.Wrapf(err, "[failed]")
+				return errors.New(ERR_RespFailure)
 			}
 		case <-timeout.C:
-			return errors.New("timeout")
+			return errors.New(ERR_RespTimeOut)
 		}
 
 		resp = e.ReadFileProtocol.requests[req.MessageData.Id].ReadfileResponse
@@ -145,19 +153,18 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 			return errors.Wrapf(err, "[write file]")
 		}
 
-		err = f.Sync()
-		if err != nil {
-			return errors.Wrapf(err, "[sync file]")
-		}
-
 		if resp.Code == P2PResponseFinish {
-			break
+			err = f.Sync()
+			if err != nil {
+				return errors.Wrapf(err, "[sync file]")
+			}
+			return nil
 		}
 
 		offset = req.Offset + int64(num)
 	}
 
-	return nil
+	return errors.New(ERR_RespInvalidData)
 }
 
 // remote peer requests handler
@@ -240,6 +247,8 @@ func (e *ReadFileProtocol) onReadFileResponse(s network.Stream) {
 		return
 	}
 
+	e.ReadFileProtocol.Lock()
+	defer e.ReadFileProtocol.Unlock()
 	// locate request data and remove it if found
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {
