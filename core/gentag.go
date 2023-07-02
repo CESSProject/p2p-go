@@ -13,6 +13,7 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
+	"github.com/pkg/errors"
 )
 
 const CustomDataTag_Protocol = "/kldr/cdtg/1"
@@ -37,7 +38,7 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 
 	s, err := e.CustomDataTagProtocol.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "[NewStream]")
 	}
 	defer s.Close()
 
@@ -51,7 +52,7 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 	err = w.WriteMsg(reqMsg)
 	if err != nil {
 		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[WriteMsg]")
 	}
 
 	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
@@ -59,7 +60,7 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[ReadMsg]")
 	}
 
 	return respMsg.Code, nil
