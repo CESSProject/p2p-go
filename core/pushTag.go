@@ -10,14 +10,15 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
+	"github.com/pkg/errors"
 )
 
 const PushTag_Protocol = "/kldr/tagpush/1"
@@ -36,25 +37,27 @@ func (n *Node) NewPushTagProtocol() *PushTagProtocol {
 func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
 	s, err := e.PushTagProtocol.NewStream(context.Background(), peerid, PushTag_Protocol)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "[NewStream]")
 	}
-	defer s.Close()
+	defer func() {
+		s.Reset()
+		time.Sleep(time.Millisecond * 10)
+		s.Close()
+	}()
 
 	w := pbio.NewDelimitedWriter(s)
 	reqMsg := &pb.IdleTagGenResult{}
 
 	err = w.WriteMsg(reqMsg)
 	if err != nil {
-		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[WriteMsg]")
 	}
 
 	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
 	respMsg := &pb.AggrProofResponse{}
 	err = r.ReadMsg(respMsg)
 	if err != nil {
-		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[ReadMsg]")
 	}
 	return respMsg.Code, nil
 }
@@ -62,26 +65,26 @@ func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
 // remote peer requests handler
 func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	defer s.Close()
-	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
+
+	respMsg := &pb.TagPushResponse{
+		Code: 1,
+	}
 	reqMsg := &pb.TagPushRequest{}
+	r := pbio.NewDelimitedReader(s, TagProtocolMsgBuf)
+	w := pbio.NewDelimitedWriter(s)
+
 	err := r.ReadMsg(reqMsg)
 	if err != nil {
-		s.Reset()
-		log.Println(err)
+		w.WriteMsg(respMsg)
 		return
 	}
 	remotePeer := s.Conn().RemotePeer().String()
 
 	if e.PushTagProtocol.GetIdleFileTee() != string(remotePeer) &&
 		e.PushTagProtocol.GetServiceFileTee() != string(remotePeer) {
-		s.Reset()
+		w.WriteMsg(respMsg)
 		return
 	}
-
-	respMsg := &pb.TagPushResponse{
-		Code: 1,
-	}
-	w := pbio.NewDelimitedWriter(s)
 
 	switch reqMsg.GetResult().(type) {
 	case *pb.TagPushRequest_Ctgr:
@@ -108,6 +111,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	default:
 	}
 	w.WriteMsg(respMsg)
+	return
 }
 
 func saveTagFile(tagpath string, tag *pb.Tag) error {

@@ -10,7 +10,6 @@ package core
 import (
 	"errors"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -135,20 +134,19 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 
 // remote peer requests handler
 func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
+	defer s.Close()
 	// get request data
 	data := &pb.WritefileRequest{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
 		s.Reset()
-		log.Println(err)
 		return
 	}
-	s.Close()
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
 	if err != nil {
-		log.Println(err)
+		s.Reset()
 		return
 	}
 
@@ -163,6 +161,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	if err != nil {
 		err = os.MkdirAll(dir, DirMode)
 		if err != nil {
+			s.Reset()
 			return
 		}
 	} else {
@@ -170,6 +169,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 			os.Remove(dir)
 			err = os.MkdirAll(dir, DirMode)
 			if err != nil {
+				s.Reset()
 				return
 			}
 		}
@@ -201,17 +201,20 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
 	if err != nil {
+		s.Reset()
 		return
 	}
 	defer f.Close()
 	fstat, err = f.Stat()
 	if err != nil {
+		s.Reset()
 		return
 	}
 	size = fstat.Size()
 
 	_, err = f.Write(data.Data[:data.Length])
 	if err != nil {
+		s.Reset()
 		return
 	}
 
@@ -233,17 +236,18 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 // remote peer response handler
 func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 	defer s.Close()
-	defer s.Reset()
 
 	data := &pb.WritefileResponse{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
+		s.Reset()
 		return
 	}
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
 	if err != nil {
+		s.Reset()
 		return
 	}
 

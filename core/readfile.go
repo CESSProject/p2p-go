@@ -163,8 +163,6 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 
 		offset = req.Offset + int64(num)
 	}
-
-	return errors.New(ERR_RespInvalidData)
 }
 
 // remote peer requests handler

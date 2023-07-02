@@ -13,6 +13,7 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-msgio/pbio"
+	"github.com/pkg/errors"
 )
 
 const IdleDataTag_Protocol = "/kldr/idtg/1"
@@ -36,7 +37,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 
 	s, err := e.IdleDataTagProtocol.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "[NewStream]")
 	}
 	defer s.Close()
 
@@ -44,7 +45,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 	err = w.WriteMsg(reqMsg)
 	if err != nil {
 		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[WriteMsg]")
 	}
 
 	r := pbio.NewDelimitedReader(s, FileProtocolMsgBuf)
@@ -52,7 +53,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 	err = r.ReadMsg(respMsg)
 	if err != nil {
 		s.Reset()
-		return 0, err
+		return 0, errors.Wrapf(err, "[ReadMsg]")
 	}
 	if respMsg.Code == 0 {
 		e.IdleDataTagProtocol.SetIdleFileTee(peerId.String())
