@@ -107,6 +107,7 @@ type P2P interface {
 // Node type - Implementation of a P2P Host
 type Node struct {
 	ctx                context.Context
+	ctxCancel          context.Context
 	ctxReg             context.Context
 	cancelFunc         context.CancelFunc
 	discoverEvent      <-chan *routing.QueryEvent
@@ -201,12 +202,13 @@ func NewBasicNode(
 		return nil, err
 	}
 
-	ctx1, cancel := context.WithCancel(ctx)
-	ctx2, events := routing.RegisterForQueryEvents(ctx1)
+	ctxcancel, cancel := context.WithCancel(ctx)
+	ctxreg, events := routing.RegisterForQueryEvents(ctxcancel)
 
 	n := &Node{
 		ctx:                ctx,
-		ctxReg:             ctx2,
+		ctxCancel:          ctxcancel,
+		ctxReg:             ctxreg,
 		cancelFunc:         cancel,
 		discoverEvent:      events,
 		host:               bhost,
@@ -221,7 +223,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		discoveredPeerCh:   make(chan peer.AddrInfo, 30),
+		discoveredPeerCh:   make(chan peer.AddrInfo, 100),
 		protocols:          NewProtocol(),
 	}
 
@@ -699,7 +701,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
-	tick := time.NewTicker(time.Second * 20)
+	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
 
 	for {
