@@ -96,6 +96,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		} else {
 			respMsg.Code = 0
 			e.PushTagProtocol.putServiceTagCh(tagpath)
+			e.IdleDataTagProtocol.SetIdleFileTee("")
 		}
 	case *pb.TagPushRequest_Itgr:
 		idleTag := reqMsg.GetItgr()
@@ -106,6 +107,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		} else {
 			respMsg.Code = 0
 			e.PushTagProtocol.putIdleTagCh(tagpath)
+			e.IdleDataTagProtocol.SetIdleFileTee("")
 		}
 	case *pb.TagPushRequest_Error:
 	default:

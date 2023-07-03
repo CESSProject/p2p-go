@@ -116,8 +116,8 @@ type Node struct {
 	peerPublickey      []byte
 	workspace          string
 	privatekeyPath     string
-	idleTee            string
-	serviceTee         string
+	idleTee            atomic.Value
+	serviceTee         atomic.Value
 	idleDataCh         chan string
 	idleTagDataCh      chan string
 	serviceTagDataCh   chan string
@@ -421,19 +421,27 @@ func (n *Node) GetServiceTagCh() <-chan string {
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
-	n.idleTee = peerid
+	n.idleTee.Store(peerid)
 }
 
 func (n *Node) GetIdleFileTee() string {
-	return n.idleTee
+	value, ok := n.idleTee.Load().(string)
+	if !ok {
+		return ""
+	}
+	return value
 }
 
 func (n *Node) SetServiceFileTee(peerid string) {
-	n.serviceTee = peerid
+	n.serviceTee.Store(peerid)
 }
 
 func (n *Node) GetServiceFileTee() string {
-	return n.serviceTee
+	value, ok := n.serviceTee.Load().(string)
+	if !ok {
+		return ""
+	}
+	return value
 }
 
 // identify reads or creates the private key file specified by fpath
