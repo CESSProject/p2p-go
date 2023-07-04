@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 )
 
 // pattern: /protocol-name/request-or-response-message/version
@@ -38,10 +39,10 @@ type WriteFileProtocol struct { // local host
 	requests map[string]*writeMsgResp // determine whether it is your own response
 }
 
-func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
+func (n *Node) NewWriteFileProtocol(protocolPrefix string) *WriteFileProtocol {
 	e := WriteFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeMsgResp)}
-	n.SetStreamHandler(writeFileRequest, e.onWriteFileRequest)
-	n.SetStreamHandler(writeFileResponse, e.onWriteFileResponse)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+writeFileRequest), e.onWriteFileRequest)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+writeFileResponse), e.onWriteFileResponse)
 	return &e
 }
 
@@ -51,7 +52,6 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 	var num int
 	var offset int64
 	var f *os.File
-
 	// create message data
 	req := &pb.WritefileRequest{
 		MessageData: e.WriteFileProtocol.NewMessageData(uuid.New().String(), false),
@@ -107,7 +107,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		req.Offset = offset
 		req.MessageData.Timestamp = time.Now().Unix()
 
-		err = e.WriteFileProtocol.SendProtoMessage(id, writeFileRequest, req)
+		err = e.WriteFileProtocol.SendProtoMessage(id, protocol.ID(e.ProtocolPrefix+writeFileRequest), req)
 		if err != nil {
 			return err
 		}
@@ -194,7 +194,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 				}
 			}
 
-			e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
+			e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeFileResponse), resp)
 			return
 		}
 	}
@@ -230,7 +230,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	}
 
 	// send response to the request using the message string he provided
-	e.SendProtoMessage(s.Conn().RemotePeer(), writeFileResponse, resp)
+	e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeFileResponse), resp)
 }
 
 // remote peer response handler

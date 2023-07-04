@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 )
 
 // pattern: /protocol-name/request-or-response-message/version
@@ -40,10 +41,10 @@ type ReadFileProtocol struct {
 	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
-func (n *Node) NewReadFileProtocol() *ReadFileProtocol {
+func (n *Node) NewReadFileProtocol(protocolPrefix string) *ReadFileProtocol {
 	e := ReadFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*readMsgResp)}
-	n.SetStreamHandler(readFileRequest, e.onReadFileRequest)
-	n.SetStreamHandler(readFileResponse, e.onReadFileResponse)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+readFileRequest), e.onReadFileRequest)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+readFileResponse), e.onReadFileResponse)
 	return &e
 }
 
@@ -131,7 +132,7 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 	for {
 		req.Offset = offset
 
-		err = e.ReadFileProtocol.SendProtoMessage(id, readFileRequest, &req)
+		err = e.ReadFileProtocol.SendProtoMessage(id, protocol.ID(e.ProtocolPrefix+readFileRequest), &req)
 		if err != nil {
 			return errors.Wrapf(err, "[SendProtoMessage]")
 		}
@@ -225,7 +226,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 		Data:        readBuf[:num],
 	}
 
-	e.ReadFileProtocol.SendProtoMessage(s.Conn().RemotePeer(), readFileResponse, resp)
+	e.ReadFileProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+readFileResponse), resp)
 }
 
 // remote peer requests handler

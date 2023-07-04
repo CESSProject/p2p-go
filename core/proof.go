@@ -12,11 +12,12 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-msgio/pbio"
 	"github.com/pkg/errors"
 )
 
-const AggrProof_PROTOCOL = "/kldr/apv/1"
+const AggrProof_PROTOCOL = "/apv/1"
 
 type AggrProofProtocol struct {
 	*Node
@@ -28,7 +29,7 @@ func (n *Node) NewAggrProofProtocol() *AggrProofProtocol {
 }
 
 func (e *protocols) AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error) {
-	s, err := e.AggrProofProtocol.NewStream(context.Background(), peerId, AggrProof_PROTOCOL)
+	s, err := e.AggrProofProtocol.NewStream(context.Background(), peerId, protocol.ID(e.ProtocolPrefix+AggrProof_PROTOCOL))
 	if err != nil {
 		return 0, errors.Wrapf(err, "[NewStream]")
 	}

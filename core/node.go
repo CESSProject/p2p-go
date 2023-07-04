@@ -83,6 +83,9 @@ type P2P interface {
 	// GetDhtProtocolVersion returns the host's DHT ProtocolVersion
 	GetDhtProtocolVersion() string
 
+	// GetProtocolPrefix returns protocols prefix
+	GetProtocolPrefix() string
+
 	// GetDirs returns the data directory structure of the host
 	GetDirs() DataDirs
 
@@ -124,6 +127,7 @@ type Node struct {
 	serviceTagDataCh   chan string
 	protocolVersion    string
 	dhtProtocolVersion string
+	protocolPrefix     string
 	discoverStat       atomic.Uint32
 	bootstrap          []string
 	discoveredPeerCh   chan peer.AddrInfo
@@ -143,12 +147,25 @@ func NewBasicNode(
 	ctx context.Context,
 	port int,
 	workspace string,
-	protocolVersion string,
-	dhtProtocolVersion string,
 	privatekeypath string,
 	bootstrap []string,
 	cmgr connmgr.ConnManager,
+	protocolPrefix string,
 ) (P2P, error) {
+
+	if protocolPrefix == "" {
+		protocolPrefix = "/kldr"
+	}
+
+	var boots = make([]string, 0)
+	for _, b := range bootstrap {
+		bootnodes, err := ParseMultiaddrs(b)
+		if err != nil {
+			continue
+		}
+		boots = append(boots, bootnodes...)
+	}
+
 	if err := verifyWorkspace(workspace); err != nil {
 		return nil, err
 	}
@@ -179,7 +196,7 @@ func NewBasicNode(
 		libp2p.DefaultTransports,
 		libp2p.DefaultSecurity,
 		libp2p.NATPortMap(),
-		libp2p.ProtocolVersion(protocolVersion),
+		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
 		libp2p.DefaultMuxers,
 		libp2p.AddrsFactory(addressFactory),
 	)
@@ -220,17 +237,18 @@ func NewBasicNode(
 		idleDataCh:         make(chan string, 1),
 		idleTagDataCh:      make(chan string, 1),
 		serviceTagDataCh:   make(chan string, 1),
-		protocolVersion:    protocolVersion,
-		dhtProtocolVersion: dhtProtocolVersion,
+		protocolVersion:    protocolPrefix + p2pProtocolVer,
+		dhtProtocolVersion: protocolPrefix + dhtProtocolVer,
+		protocolPrefix:     protocolPrefix,
 		discoverStat:       atomic.Uint32{},
-		bootstrap:          bootstrap,
+		bootstrap:          boots,
 		discoveredPeerCh:   make(chan peer.AddrInfo, 600),
 		protocols:          NewProtocol(),
 	}
 
-	n.initProtocol()
+	n.initProtocol(protocolPrefix)
 
-	go n.discoverPeers(n.ctxReg, n.host, n.dhtProtocolVersion, n.bootstrap)
+	go n.discoverPeers(n.ctxReg, n.host, n.protocolPrefix, n.dhtProtocolVersion, n.bootstrap)
 
 	return n, nil
 }
@@ -323,8 +341,12 @@ func (n *Node) GetDiscoverSt() bool {
 	return n.discoverStat.Load() > 0
 }
 
+func (n *Node) GetProtocolPrefix() string {
+	return n.protocolPrefix
+}
+
 func (n *Node) StartDiscover() {
-	go n.discoverPeers(n.ctxReg, n.host, n.dhtProtocolVersion, n.bootstrap)
+	go n.discoverPeers(n.ctxReg, n.host, n.protocolPrefix, n.dhtProtocolVersion, n.bootstrap)
 }
 
 func (n *Node) AddMultiaddrToPeerstore(multiaddr string, t time.Duration) (peer.ID, error) {
@@ -526,88 +548,6 @@ func mkdir(workspace string) (DataDirs, error) {
 	return dataDir, nil
 }
 
-// Authenticate incoming p2p message
-// message: a protobufs go data object
-// data: common p2p message data
-// func (n *Node) AuthenticateMessage(message proto.Message, data *pb.MessageData) bool {
-// 	// store a temp ref to signature and remove it from message data
-// 	// sign is a string to allow easy reset to zero-value (empty string)
-// 	sign := data.Sign
-// 	data.Sign = nil
-
-// 	// marshall data without the signature to protobufs3 binary format
-// 	bin, err := proto.Marshal(message)
-// 	if err != nil {
-// 		log.Println(err, "failed to marshal pb message")
-// 		return false
-// 	}
-
-// 	// restore sig in message data (for possible future use)
-// 	data.Sign = sign
-
-// 	// restore peer id binary format from base58 encoded node id data
-// 	peerId, err := peer.Decode(data.NodeId)
-// 	if err != nil {
-// 		log.Println(err, "Failed to decode node id from base58")
-// 		return false
-// 	}
-
-// 	// verify the data was authored by the signing peer identified by the public key
-// 	// and signature included in the message
-// 	return n.verifyData(bin, sign, peerId, data.NodePubKey)
-// }
-
-// // sign an outgoing p2p message payload
-// func (n *Node) SignProtoMessage(message proto.Message) ([]byte, error) {
-// 	data, err := proto.Marshal(message)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return n.signData(data)
-// }
-
-// // sign binary data using the local node's private key
-// func (n *Node) signData(data []byte) ([]byte, error) {
-// 	key := n.host.Peerstore().PrivKey(n.host.ID())
-// 	res, err := key.Sign(data)
-// 	return res, err
-// }
-
-// // Verify incoming p2p message data integrity
-// // data: data to verify
-// // signature: author signature provided in the message payload
-// // peerId: author peer id from the message payload
-// // pubKeyData: author public key from the message payload
-// func (n *Node) verifyData(data []byte, signature []byte, peerId peer.ID, pubKeyData []byte) bool {
-// 	key, err := crypto.UnmarshalPublicKey(pubKeyData)
-// 	if err != nil {
-// 		log.Println(err, "Failed to extract key from message key data")
-// 		return false
-// 	}
-
-// 	// extract node id from the provided public key
-// 	idFromKey, err := peer.IDFromPublicKey(key)
-
-// 	if err != nil {
-// 		log.Println(err, "Failed to extract peer id from public key")
-// 		return false
-// 	}
-
-// 	// verify that message author node id matches the provided node public key
-// 	if idFromKey != peerId {
-// 		log.Println(err, "Node id and provided public key mismatch")
-// 		return false
-// 	}
-
-// 	res, err := key.Verify(data, signature)
-// 	if err != nil {
-// 		log.Println(err, "Error authenticating data")
-// 		return false
-// 	}
-
-// 	return res
-// }
-
 // helper method - generate message data shared between all node's p2p protocols
 // messageId: unique for requests, copied from request for responses
 func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
@@ -686,7 +626,7 @@ func verifyWorkspace(ws string) error {
 	return nil
 }
 
-func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) {
+func (n *Node) discoverPeers(ctx context.Context, h host.Host, protocolPrefix, dhtProtocolVersion string, bootstrap []string) {
 	if n.discoverStat.Load() > 0 {
 		return
 	}
@@ -709,9 +649,9 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	}
 
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
-	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
+	dutil.Advertise(ctx, routingDiscovery, protocolPrefix+Rendezvous)
 
-	go findPeers(ctxCancel, routingDiscovery)
+	go findPeers(ctxCancel, routingDiscovery, protocolPrefix+Rendezvous)
 
 	for {
 		select {
@@ -723,7 +663,7 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	}
 }
 
-func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery) {
+func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery, rendezvous string) {
 	var ok bool
 
 	tick := time.NewTicker(time.Minute)
@@ -734,7 +674,7 @@ func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery)
 		case <-ctx.Done():
 			return
 		case <-tick.C:
-			peerChan, err := routingDiscovery.FindPeers(ctx, Rendezvous, discovery.Limit(300))
+			peerChan, err := routingDiscovery.FindPeers(ctx, rendezvous, discovery.Limit(300))
 			if err == nil {
 				for {
 					_, ok = <-peerChan
@@ -747,14 +687,15 @@ func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery)
 	}
 }
 
-func (n *Node) initProtocol() {
-	n.WriteFileProtocol = n.NewWriteFileProtocol()
-	n.ReadFileProtocol = n.NewReadFileProtocol()
+func (n *Node) initProtocol(protocolPrefix string) {
+	n.SetProtocolPrefix(protocolPrefix)
+	n.WriteFileProtocol = n.NewWriteFileProtocol(protocolPrefix)
+	n.ReadFileProtocol = n.NewReadFileProtocol(protocolPrefix)
 	n.CustomDataTagProtocol = n.NewCustomDataTagProtocol()
 	n.IdleDataTagProtocol = n.NewIdleDataTagProtocol()
-	n.FileProtocol = n.NewFileProtocol()
+	n.FileProtocol = n.NewFileProtocol(protocolPrefix)
 	n.AggrProofProtocol = n.NewAggrProofProtocol()
-	n.PushTagProtocol = n.NewPushTagProtocol()
+	n.PushTagProtocol = n.NewPushTagProtocol(protocolPrefix)
 }
 
 func initDHT(ctx context.Context, h host.Host, dhtProtocolVersion string, bootstrap []string) (*dht.IpfsDHT, error) {

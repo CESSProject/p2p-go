@@ -24,6 +24,7 @@ type Protocol interface {
 }
 
 type protocols struct {
+	ProtocolPrefix string
 	*WriteFileProtocol
 	*ReadFileProtocol
 	*CustomDataTagProtocol
@@ -36,4 +37,8 @@ type protocols struct {
 
 func NewProtocol() *protocols {
 	return &protocols{}
+}
+
+func (p *protocols) SetProtocolPrefix(protocolPrefix string) {
+	p.ProtocolPrefix = protocolPrefix
 }

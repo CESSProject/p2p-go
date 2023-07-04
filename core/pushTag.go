@@ -17,25 +17,26 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-msgio/pbio"
 	"github.com/pkg/errors"
 )
 
-const PushTag_Protocol = "/kldr/tagpush/1"
+const PushTag_Protocol = "/tagpush/1"
 
 type PushTagProtocol struct {
 	*Node
 }
 
-func (n *Node) NewPushTagProtocol() *PushTagProtocol {
+func (n *Node) NewPushTagProtocol(protocolPrefix string) *PushTagProtocol {
 	e := PushTagProtocol{Node: n}
-	n.SetStreamHandler(PushTag_Protocol, e.onPushTagRequest)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+PushTag_Protocol), e.onPushTagRequest)
 	return &e
 }
 
 // remote peer requests handler
 func (e *protocols) TagPushReq(peerid peer.ID) (uint32, error) {
-	s, err := e.PushTagProtocol.NewStream(context.Background(), peerid, PushTag_Protocol)
+	s, err := e.PushTagProtocol.NewStream(context.Background(), peerid, protocol.ID(e.ProtocolPrefix+PushTag_Protocol))
 	if err != nil {
 		return 0, errors.Wrapf(err, "[NewStream]")
 	}
