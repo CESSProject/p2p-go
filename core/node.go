@@ -28,6 +28,7 @@ import (
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/discovery"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -223,7 +224,7 @@ func NewBasicNode(
 		dhtProtocolVersion: dhtProtocolVersion,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          bootstrap,
-		discoveredPeerCh:   make(chan peer.AddrInfo, 100),
+		discoveredPeerCh:   make(chan peer.AddrInfo, 600),
 		protocols:          NewProtocol(),
 	}
 
@@ -689,9 +690,10 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	if n.discoverStat.Load() > 0 {
 		return
 	}
-
+	ctxCancel, cancel := context.WithCancel(ctx)
 	defer func() {
 		recover()
+		cancel()
 		n.discoverStat.Store(0)
 	}()
 
@@ -709,28 +711,37 @@ func (n *Node) discoverPeers(ctx context.Context, h host.Host, dhtProtocolVersio
 	routingDiscovery := drouting.NewRoutingDiscovery(kademliaDHT)
 	dutil.Advertise(ctx, routingDiscovery, Rendezvous)
 
+	go findPeers(ctxCancel, routingDiscovery)
+
+	for {
+		select {
+		case peer := <-n.discoverEvent:
+			for _, v := range peer.Responses {
+				n.discoveredPeerCh <- *v
+			}
+		}
+	}
+}
+
+func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery) {
+	var ok bool
+
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-tick.C:
-			peerChan, err := routingDiscovery.FindPeers(ctx, Rendezvous)
+			peerChan, err := routingDiscovery.FindPeers(ctx, Rendezvous, discovery.Limit(300))
 			if err == nil {
 				for {
-					peer, ok := <-peerChan
+					_, ok = <-peerChan
 					if !ok {
 						break
 					}
-					if peer.ID == h.ID() {
-						continue
-					}
-					n.discoveredPeerCh <- peer
 				}
-			}
-		case peer := <-n.discoverEvent:
-			for _, v := range peer.Responses {
-				n.discoveredPeerCh <- *v
 			}
 		}
 	}
