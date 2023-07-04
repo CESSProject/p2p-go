@@ -28,18 +28,6 @@ var DefaultConnectionManager = func(cfg *Config) error {
 	return cfg.Apply(ConnectionManager(mgr))
 }
 
-// DefaultProtocolVersion configures libp2p to use default ProtocolVersion
-var DefaultProtocolVersion = func(cfg *Config) error {
-	defaultProtocolVersion := "/kldr/1.0"
-	return cfg.Apply(ProtocolVersion(defaultProtocolVersion))
-}
-
-// DefaultDhtProtocolVersion configures libp2p to use default DHT ProtocolVersion
-var DefaultDhtProtocolVersion = func(cfg *Config) error {
-	defaultDhtProtocolVersion := "/kldr/kad/1.0"
-	return cfg.Apply(DhtProtocolVersion(defaultDhtProtocolVersion))
-}
-
 // Complete list of default options and when to fallback on them.
 //
 // Please *DON'T* specify default options any other way. Putting this all here
@@ -55,14 +43,6 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.ConnManager == nil },
 		opt:      DefaultConnectionManager,
-	},
-	{
-		fallback: func(cfg *Config) bool { return cfg.ProtocolVersion == "" },
-		opt:      DefaultProtocolVersion,
-	},
-	{
-		fallback: func(cfg *Config) bool { return cfg.DhtProtocolVersion == "" },
-		opt:      DefaultDhtProtocolVersion,
 	},
 }
 

@@ -12,11 +12,12 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-msgio/pbio"
 	"github.com/pkg/errors"
 )
 
-const CustomDataTag_Protocol = "/kldr/cdtg/1"
+const CustomDataTag_Protocol = "/cdtg/1"
 
 type CustomDataTagProtocol struct {
 	*Node
@@ -36,7 +37,7 @@ func (e *protocols) TagReq(peerId peer.ID, filename, customdata string, blocknum
 		return 0, err
 	}
 
-	s, err := e.CustomDataTagProtocol.NewStream(context.Background(), peerId, CustomDataTag_Protocol)
+	s, err := e.CustomDataTagProtocol.NewStream(context.Background(), peerId, protocol.ID(e.ProtocolPrefix+CustomDataTag_Protocol))
 	if err != nil {
 		return 0, errors.Wrapf(err, "[NewStream]")
 	}

@@ -16,19 +16,20 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-msgio/pbio"
 	"github.com/pkg/errors"
 )
 
-const FILE_PROTOCOL = "/kldr/kft/1"
+const FILE_PROTOCOL = "/kft/1"
 
 type FileProtocol struct {
 	*Node
 }
 
-func (n *Node) NewFileProtocol() *FileProtocol {
+func (n *Node) NewFileProtocol(protocolPrefix string) *FileProtocol {
 	e := FileProtocol{Node: n}
-	n.SetStreamHandler(FILE_PROTOCOL, e.onFileRequest)
+	n.SetStreamHandler(protocol.ID(protocolPrefix+FILE_PROTOCOL), e.onFileRequest)
 	return &e
 }
 
@@ -44,7 +45,7 @@ func (e *protocols) FileReq(peerId peer.ID, filehash string, filetype pb.FileTyp
 		Size: uint64(fstat.Size()),
 	}
 
-	s, err := e.FileProtocol.NewStream(context.Background(), peerId, FILE_PROTOCOL)
+	s, err := e.FileProtocol.NewStream(context.Background(), peerId, protocol.ID(e.ProtocolPrefix+FILE_PROTOCOL))
 	if err != nil {
 		return 0, errors.Wrapf(err, "[NewStream]")
 	}

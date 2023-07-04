@@ -12,11 +12,12 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-msgio/pbio"
 	"github.com/pkg/errors"
 )
 
-const IdleDataTag_Protocol = "/kldr/idtg/1"
+const IdleDataTag_Protocol = "/idtg/1"
 
 type IdleDataTagProtocol struct {
 	*Node
@@ -35,7 +36,7 @@ func (e *protocols) IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, s
 		Sign:      sign,
 	}
 
-	s, err := e.IdleDataTagProtocol.NewStream(context.Background(), peerId, IdleDataTag_Protocol)
+	s, err := e.IdleDataTagProtocol.NewStream(context.Background(), peerId, protocol.ID(e.ProtocolPrefix+IdleDataTag_Protocol))
 	if err != nil {
 		return 0, errors.Wrapf(err, "[NewStream]")
 	}

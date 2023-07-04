@@ -60,6 +60,11 @@ const (
 	ERR_RespInvalidData = "peer response invalid data"
 )
 
+const (
+	p2pProtocolVer = "/1.0"
+	dhtProtocolVer = "/kad/1.0"
+)
+
 var (
 	FileNameLengthErr   = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
 	FileNameEmptyErr    = fmt.Errorf("filename is empty")

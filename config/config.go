@@ -16,24 +16,29 @@ import (
 
 // Config describes a set of settings for a libp2p node
 type Config struct {
-	ListenPort         int
-	ConnManager        connmgr.ConnManager
-	BootPeers          []string
-	Workspace          string
-	ProtocolVersion    string
-	DhtProtocolVersion string
-	PrivatekeyPath     string
+	ListenPort     int
+	ConnManager    connmgr.ConnManager
+	BootPeers      []string
+	Workspace      string
+	PrivatekeyPath string
+	ProtocolPrefix string
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor
 // (`libp2p.New`).
 type Option func(cfg *Config) error
 
+const (
+	DevnetProtocolPrefix  = "/kldr-devnet"
+	TestnetProtocolPrefix = "/kldr-testnet"
+	MainnetProtocolPrefix = "/kldr-mainnet"
+)
+
 // NewNode constructs a new libp2p Host from the Config.
 //
 // This function consumes the config. Do not reuse it (really!).
 func (cfg *Config) NewNode(ctx context.Context) (core.P2P, error) {
-	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.ProtocolVersion, cfg.DhtProtocolVersion, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager)
+	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager, cfg.ProtocolPrefix)
 }
 
 // Apply applies the given options to the config, returning the first error

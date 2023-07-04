@@ -48,26 +48,18 @@ func BootPeers(bootpeers []string) Option {
 	}
 }
 
-// ProtocolVersion configuration protocol version
-func ProtocolVersion(protocolVersion string) Option {
+// PrivatekeyFile configuration privatekey file
+func PrivatekeyFile(privatekey string) Option {
 	return func(cfg *Config) error {
-		cfg.ProtocolVersion = protocolVersion
-		return nil
-	}
-}
-
-// DhtProtocolVersion configuration DHT protocol version
-func DhtProtocolVersion(dhtProtocolVersion string) Option {
-	return func(cfg *Config) error {
-		cfg.DhtProtocolVersion = dhtProtocolVersion
+		cfg.PrivatekeyPath = privatekey
 		return nil
 	}
 }
 
 // PrivatekeyFile configuration privatekey file
-func PrivatekeyFile(privatekey string) Option {
+func ProtocolPrefix(protocolPrefix string) Option {
 	return func(cfg *Config) error {
-		cfg.PrivatekeyPath = privatekey
+		cfg.ProtocolPrefix = protocolPrefix
 		return nil
 	}
 }
