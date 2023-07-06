@@ -63,3 +63,11 @@ func ProtocolPrefix(protocolPrefix string) Option {
 		return nil
 	}
 }
+
+// PrivatekeyFile configuration privatekey file
+func PublicIpv4(ip string) Option {
+	return func(cfg *Config) error {
+		cfg.PublicIpv4 = ip
+		return nil
+	}
+}

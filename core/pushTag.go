@@ -28,9 +28,9 @@ type PushTagProtocol struct {
 	*Node
 }
 
-func (n *Node) NewPushTagProtocol(protocolPrefix string) *PushTagProtocol {
+func (n *Node) NewPushTagProtocol() *PushTagProtocol {
 	e := PushTagProtocol{Node: n}
-	n.SetStreamHandler(protocol.ID(protocolPrefix+PushTag_Protocol), e.onPushTagRequest)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+PushTag_Protocol), e.onPushTagRequest)
 	return &e
 }
 

@@ -13,8 +13,6 @@ const privatekeyFile = ".private"
 const AllIpAddress = "0.0.0.0"
 const LocalAddress = "127.0.0.1"
 
-const Rendezvous = "/rendezvous/1.0.0"
-
 // byte size
 const (
 	SIZE_1KiB = 1024
