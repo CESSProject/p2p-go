@@ -265,7 +265,7 @@ func NewBasicNode(
 		protocolPrefix:     protocolPrefix,
 		discoverStat:       atomic.Uint32{},
 		bootstrap:          boots,
-		discoveredPeerCh:   make(chan peer.AddrInfo, 600),
+		discoveredPeerCh:   make(chan peer.AddrInfo, 1000),
 		protocols:          NewProtocol(),
 	}
 
