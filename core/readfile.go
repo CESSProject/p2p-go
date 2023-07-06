@@ -41,10 +41,10 @@ type ReadFileProtocol struct {
 	requests map[string]*readMsgResp // determine whether it is your own response
 }
 
-func (n *Node) NewReadFileProtocol(protocolPrefix string) *ReadFileProtocol {
+func (n *Node) NewReadFileProtocol() *ReadFileProtocol {
 	e := ReadFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*readMsgResp)}
-	n.SetStreamHandler(protocol.ID(protocolPrefix+readFileRequest), e.onReadFileRequest)
-	n.SetStreamHandler(protocol.ID(protocolPrefix+readFileResponse), e.onReadFileResponse)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readFileRequest), e.onReadFileRequest)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readFileResponse), e.onReadFileResponse)
 	return &e
 }
 

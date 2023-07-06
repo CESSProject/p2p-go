@@ -39,10 +39,10 @@ type WriteFileProtocol struct { // local host
 	requests map[string]*writeMsgResp // determine whether it is your own response
 }
 
-func (n *Node) NewWriteFileProtocol(protocolPrefix string) *WriteFileProtocol {
+func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
 	e := WriteFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeMsgResp)}
-	n.SetStreamHandler(protocol.ID(protocolPrefix+writeFileRequest), e.onWriteFileRequest)
-	n.SetStreamHandler(protocol.ID(protocolPrefix+writeFileResponse), e.onWriteFileResponse)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeFileRequest), e.onWriteFileRequest)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeFileResponse), e.onWriteFileResponse)
 	return &e
 }
 

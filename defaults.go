@@ -21,7 +21,7 @@ var DefaultListenPort = func(cfg *Config) error {
 
 // DefaultConnectionManager creates a default connection manager
 var DefaultConnectionManager = func(cfg *Config) error {
-	mgr, err := connmgr.NewConnManager(100, 1000, connmgr.WithGracePeriod(time.Minute))
+	mgr, err := connmgr.NewConnManager(100, 2000, connmgr.WithGracePeriod(time.Minute))
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -37,8 +38,9 @@ func main() {
 		p2pgo.ListenPort(port),
 		p2pgo.Workspace("."),
 		p2pgo.BootPeers([]string{
-			"_dnsaddr.boot-kldr-devnet.cess.cloud",
+			"_dnsaddr.boot-kldr-testnet.cess.cloud",
 		}),
+		p2pgo.ProtocolPrefix("/kldr-testnet"),
 	)
 	if err != nil {
 		panic(err)
@@ -55,8 +57,7 @@ func main() {
 	for {
 		select {
 		case peer := <-nnode.DiscoveredPeer():
-			fmt.Println("found: ", peer.ID.Pretty())
-			fmt.Println("found: ", peer.Addrs)
+			log.Println("found: ", peer.ID.Pretty())
 		}
 	}
 

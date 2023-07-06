@@ -27,9 +27,9 @@ type FileProtocol struct {
 	*Node
 }
 
-func (n *Node) NewFileProtocol(protocolPrefix string) *FileProtocol {
+func (n *Node) NewFileProtocol() *FileProtocol {
 	e := FileProtocol{Node: n}
-	n.SetStreamHandler(protocol.ID(protocolPrefix+FILE_PROTOCOL), e.onFileRequest)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+FILE_PROTOCOL), e.onFileRequest)
 	return &e
 }
 
