@@ -12,7 +12,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -284,6 +283,7 @@ func (n *Node) DHTFindPeer(peerid string) (peer.AddrInfo, error) {
 
 // RouteTableFindPeers
 func (n *Node) RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error) {
+	dutil.Advertise(n.ctxQueryFromCtxCancel, n.RoutingDiscovery, n.rendezvousVersion)
 	if limit <= 0 {
 		return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion)
 	}
@@ -667,22 +667,6 @@ func verifyWorkspace(ws string) error {
 	return nil
 }
 
-func findPeers(ctx context.Context, routingDiscovery *drouting.RoutingDiscovery, rendezvous string) {
-	log.Println("Start discover service")
-
-	tick := time.NewTicker(time.Minute)
-	defer tick.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-tick.C:
-			routingDiscovery.FindPeers(ctx, rendezvous, discovery.Limit(300))
-		}
-	}
-}
-
 func (n *Node) initProtocol(protocolPrefix string) {
 	n.SetProtocolPrefix(protocolPrefix)
 	n.WriteFileProtocol = n.NewWriteFileProtocol()
@@ -747,6 +731,6 @@ func (n *Node) initDHT() error {
 
 	n.IpfsDHT = kademliaDHT
 	n.RoutingDiscovery = drouting.NewRoutingDiscovery(n.IpfsDHT)
-	dutil.Advertise(n.ctxQueryFromCtxCancel, n.RoutingDiscovery, n.rendezvousVersion)
+
 	return nil
 }
