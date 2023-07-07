@@ -13,9 +13,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/CESSProject/p2p-go/core"
+	"github.com/CESSProject/p2p-go/out"
 )
 
 type Nnode struct {
@@ -54,11 +56,30 @@ func main() {
 
 	fmt.Println(nnode.Addrs(), nnode.ID())
 
+	nnode.RouteTableFindPeers(0)
+
+	tick := time.NewTicker(time.Second * 18)
+	defer tick.Stop()
+
+	tickdht := time.NewTicker(time.Minute)
+	defer tickdht.Stop()
+
 	for {
 		select {
-		case peer := <-nnode.DiscoveredPeer():
-			log.Println("found: ", peer.ID.Pretty())
+		case peer := <-nnode.GetDiscoveredPeers():
+			tick.Reset(time.Second * 18)
+			for _, v := range peer.Responses {
+				log.Println("found: ", v.ID.Pretty(), v.Addrs)
+			}
+		case <-tick.C:
+			out.Tip("-------------------------RouteTableFindPeers----------------------")
+			nnode.RouteTableFindPeers(0)
+		case <-tickdht.C:
+			if _, err := nnode.DHTFindPeer(os.Args[2]); err == nil {
+				out.Tip(fmt.Sprintf("++++++++++++++++++++++++++++++++++++dht found: %s", os.Args[2]))
+			} else {
+				out.Tip(fmt.Sprintf("++++++++++++++++++++++++++++++++++++dht not found: %s", os.Args[2]))
+			}
 		}
 	}
-
 }
