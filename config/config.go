@@ -30,6 +30,7 @@ type Config struct {
 type Option func(cfg *Config) error
 
 const (
+	DefaultProtocolPrefix = "/kldr"
 	DevnetProtocolPrefix  = "/kldr-devnet"
 	TestnetProtocolPrefix = "/kldr-testnet"
 	MainnetProtocolPrefix = "/kldr-mainnet"
@@ -39,6 +40,9 @@ const (
 //
 // This function consumes the config. Do not reuse it (really!).
 func (cfg *Config) NewNode(ctx context.Context) (core.P2P, error) {
+	if cfg.ProtocolPrefix == "" {
+		cfg.ProtocolPrefix = DefaultProtocolPrefix
+	}
 	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager, cfg.ProtocolPrefix, cfg.PublicIpv4)
 }
 

@@ -82,6 +82,10 @@ func GetLocalIp() ([]string, error) {
 	for _, address := range addrs {
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
+				ip := ipnet.IP.String()
+				if ip[len(ip)-1] == byte(49) && ip[len(ip)-3] == byte(48) {
+					continue
+				}
 				result = append(result, ipnet.IP.String())
 			}
 		}
