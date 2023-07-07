@@ -18,6 +18,7 @@ import (
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/CESSProject/p2p-go/out"
+	"golang.org/x/time/rate"
 )
 
 type Nnode struct {
@@ -58,27 +59,36 @@ func main() {
 
 	nnode.RouteTableFindPeers(0)
 
-	tick := time.NewTicker(time.Second * 18)
+	tick := time.NewTicker(time.Second * 30)
 	defer tick.Stop()
 
-	tickdht := time.NewTicker(time.Minute)
-	defer tickdht.Stop()
+	var r = rate.Every(time.Second * 3)
+	var limit = rate.NewLimiter(r, 1)
 
 	for {
 		select {
-		case peer := <-nnode.GetDiscoveredPeers():
-			tick.Reset(time.Second * 18)
+		case peer, ok := <-nnode.GetDiscoveredPeers():
+			if !ok {
+				out.Err("-------------------------Closed DiscoveredPeers chan----------------------")
+				break
+			}
+			if limit.Allow() {
+				out.Tip("-------------------------Reset----------------------")
+				tick.Reset(time.Second * 30)
+			}
+			if len(peer.Responses) == 0 {
+				out.Err("-------------------------response is nil----------------------")
+				break
+			}
 			for _, v := range peer.Responses {
 				log.Println("found: ", v.ID.Pretty(), v.Addrs)
 			}
 		case <-tick.C:
 			out.Tip("-------------------------RouteTableFindPeers----------------------")
-			nnode.RouteTableFindPeers(0)
-		case <-tickdht.C:
-			if _, err := nnode.DHTFindPeer(os.Args[2]); err == nil {
-				out.Tip(fmt.Sprintf("++++++++++++++++++++++++++++++++++++dht found: %s", os.Args[2]))
-			} else {
-				out.Tip(fmt.Sprintf("++++++++++++++++++++++++++++++++++++dht not found: %s", os.Args[2]))
+			_, err = nnode.RouteTableFindPeers(0)
+			if err != nil {
+				out.Tip("-------------------------RouteTableFindPeers err----------------------")
+				out.Err(err.Error())
 			}
 		}
 	}
