@@ -21,7 +21,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	file := "./example_writefile.go"
+	file := "./00e5b0a7c4c1d2f89b6347b2c0ea90720e5eb01aa1cf0e9052794383c6afd305"
 
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
 	sourcePort2 := flag.Int("p2", 15001, "Source port number")
@@ -70,7 +70,6 @@ func main() {
 
 	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	err = h1.WriteFileAction(info.ID, "roothash", file)
+	err = h1.WriteFileAction(info.ID, "00e5b0a7c4c1d2f89b6347b2c0ea90720e5eb01aa1cf0e9052794383c6afd305", file)
 	fmt.Println("err: ", err)
-	select {}
 }
