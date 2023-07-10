@@ -58,6 +58,15 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 		Roothash:    roothash,
 	}
 
+	fstat, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if fstat.Size() != FragmentSize {
+		return errors.New("invalid fragment size")
+	}
+
 	req.Datahash, err = CalcPathSHA256(path)
 	if err != nil {
 		return err
@@ -73,8 +82,15 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 	respChan := make(chan bool, 1)
 
 	e.WriteFileProtocol.Lock()
-	e.WriteFileProtocol.requests[req.MessageData.Id] = &writeMsgResp{
-		ch: respChan,
+	for {
+		if _, ok := e.WriteFileProtocol.requests[req.MessageData.Id]; ok {
+			req.MessageData.Id = uuid.New().String()
+			continue
+		}
+		e.WriteFileProtocol.requests[req.MessageData.Id] = &writeMsgResp{
+			ch: respChan,
+		}
+		break
 	}
 	e.WriteFileProtocol.Unlock()
 
@@ -123,11 +139,27 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 			return errors.New(ERR_RespTimeOut)
 		}
 
-		if e.WriteFileProtocol.requests[req.MessageData.Id].WritefileResponse.Code == P2PResponseFinish {
+		e.WriteFileProtocol.Lock()
+		resp, ok := e.WriteFileProtocol.requests[req.MessageData.Id]
+		if !ok {
+			e.WriteFileProtocol.Unlock()
+			return errors.New(ERR_RespFailure)
+		}
+		e.WriteFileProtocol.Unlock()
+
+		if resp.WritefileResponse == nil {
+			return errors.New(ERR_RespFailure)
+		}
+
+		if resp.WritefileResponse.Code == P2PResponseFinish {
 			return nil
 		}
 
-		offset = e.WriteFileProtocol.requests[req.MessageData.Id].WritefileResponse.Offset
+		if resp.WritefileResponse.Code == P2PResponseOK {
+			offset = resp.Offset
+		} else {
+			return errors.New(ERR_RespFailure)
+		}
 	}
 	return errors.New(ERR_RespInvalidData)
 }
@@ -228,7 +260,6 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	} else {
 		resp.Offset = size + int64(data.Length)
 	}
-
 	// send response to the request using the message string he provided
 	e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeFileResponse), resp)
 }
@@ -262,7 +293,5 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 		} else {
 			e.requests[data.MessageData.Id].ch <- false
 		}
-	} else {
-		return
 	}
 }
