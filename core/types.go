@@ -15,8 +15,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-const P2PWriteReqRespTime = time.Duration(time.Second * 20)
-const P2PReadReqRespTime = time.Duration(time.Second * 20)
+const P2PWriteReqRespTime = time.Duration(time.Second * 30)
+const P2PReadReqRespTime = time.Duration(time.Second * 30)
 
 const FileProtocolBufSize = 2 * 1024 * 1024
 

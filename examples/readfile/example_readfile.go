@@ -68,7 +68,6 @@ func main() {
 	}
 	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	err = h1.ReadFileAction(info.ID, "roothash", "9e579206ed5b82181d8e5e91a7da261c92ee11094be50a2c2f81a0af846220a9", file, 8388608)
+	err = h1.ReadFileAction(info.ID, "00e5b0a7c4c1d2f89b6347b2c0ea90720e5eb01aa1cf0e9052794383c6afd305", "00e5b0a7c4c1d2f89b6347b2c0ea90720e5eb01aa1cf0e9052794383c6afd305", file, 8388608)
 	fmt.Println("err: ", err)
-	select {}
 }

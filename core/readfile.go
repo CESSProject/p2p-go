@@ -57,7 +57,10 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 	var fstat fs.FileInfo
 	var f *os.File
 	var req pb.ReadfileRequest
-	var resp *pb.ReadfileResponse
+
+	if size != FragmentSize {
+		return errors.New("invalid size")
+	}
 
 	fstat, err = os.Stat(path)
 	if err == nil {
@@ -116,8 +119,15 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 	// store request so response handler has access to it
 	var respChan = make(chan bool, 1)
 	e.ReadFileProtocol.Lock()
-	e.ReadFileProtocol.requests[req.MessageData.Id] = &readMsgResp{
-		ch: respChan,
+	for {
+		if _, ok := e.ReadFileProtocol.requests[req.MessageData.Id]; ok {
+			req.MessageData.Id = uuid.New().String()
+			continue
+		}
+		e.ReadFileProtocol.requests[req.MessageData.Id] = &readMsgResp{
+			ch: respChan,
+		}
+		break
 	}
 	e.ReadFileProtocol.Unlock()
 	defer func() {
@@ -148,7 +158,22 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 			return errors.New(ERR_RespTimeOut)
 		}
 
-		resp = e.ReadFileProtocol.requests[req.MessageData.Id].ReadfileResponse
+		e.ReadFileProtocol.Lock()
+		resp, ok := e.ReadFileProtocol.requests[req.MessageData.Id]
+		if !ok {
+			e.ReadFileProtocol.Unlock()
+			return errors.New(ERR_RespFailure)
+		}
+		e.ReadFileProtocol.Unlock()
+
+		if resp.ReadfileResponse == nil {
+			return errors.New(ERR_RespFailure)
+		}
+
+		if len(resp.ReadfileResponse.Data) == 0 || resp.Length == 0 {
+			return errors.New(ERR_RespFailure)
+		}
+
 		num, err = f.Write(resp.Data[:resp.Length])
 		if err != nil {
 			return errors.Wrapf(err, "[write file]")
