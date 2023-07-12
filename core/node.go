@@ -96,8 +96,17 @@ type P2P interface {
 	// SetBootstraps updates the host's bootstrap list
 	SetBootstraps(bootstrap []string)
 
-	// FindPeer searches for a peer with given ID.
+	// DHTFindPeer searches for a peer with given ID
 	DHTFindPeer(peerid string) (peer.AddrInfo, error)
+
+	// PeerID returns your own peerid
+	PeerID() peer.ID
+
+	// TryAddPeerToRoutingTable tries to add a peer to the Routing table
+	TryAddPeerToRoutingTable(peerid peer.ID) (bool, error)
+
+	// RemovePeerFromRoutingTable remove peer from routing table
+	RemovePeerFromRoutingTable(peerid peer.ID)
 
 	// Close p2p
 	Close() error
@@ -288,6 +297,21 @@ func (n *Node) RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error) {
 		return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion)
 	}
 	return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion, discovery.Limit(limit))
+}
+
+// PeerID returns for own peerid
+func (n *Node) PeerID() peer.ID {
+	return n.IpfsDHT.PeerID()
+}
+
+// TryAddPeerToRoutingTable tries to add a peer to the routing table
+func (n *Node) TryAddPeerToRoutingTable(peerid peer.ID) (bool, error) {
+	return n.IpfsDHT.RoutingTable().TryAddPeer(peerid, true, false)
+}
+
+// RemovePeerFromRoutingTable remove peer from routing table
+func (n *Node) RemovePeerFromRoutingTable(peerid peer.ID) {
+	n.IpfsDHT.RoutingTable().RemovePeer(peerid)
 }
 
 // GetDiscoveredPeers
