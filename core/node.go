@@ -173,6 +173,10 @@ func NewBasicNode(
 	protocolPrefix string,
 	publicip string,
 ) (P2P, error) {
+	if !FreeLocalPort(uint32(port)) {
+		return nil, errors.New("port is in use")
+	}
+
 	var boots = make([]string, 0)
 	for _, b := range bootstrap {
 		bootnodes, err := ParseMultiaddrs(b)
