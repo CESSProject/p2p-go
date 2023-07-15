@@ -11,6 +11,18 @@ The go p2p library implementation of the CESS distributed storage network, which
 ## 📝 Reporting a Vulnerability
 If you find out any system bugs or you have a better suggestions, please send an email to frode@cess.one or join [CESS discord](https://discord.gg/mYHTMfBwNS) to communicate with us.
 
+## 📢 Announcement
+**CESS test network rpc endpoints**
+```
+wss://testnet-rpc0.cess.cloud/ws/
+wss://testnet-rpc1.cess.cloud/ws/
+wss://testnet-rpc2.cess.cloud/ws/
+```
+**CESS test network bootstrap node**
+```
+_dnsaddr.boot-kldr-testnet.cess.cloud
+```
+
 ## 🏗 Usage
 To get the package use the standard:
 ```
