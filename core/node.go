@@ -10,7 +10,6 @@ package core
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -37,8 +36,12 @@ import (
 	"github.com/libp2p/go-libp2p/core/routing"
 	drouting "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	dutil "github.com/libp2p/go-libp2p/p2p/discovery/util"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pbnjay/memory"
+	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 // P2P is an object participating in a p2p network, which
@@ -218,6 +221,11 @@ func NewBasicNode(
 		return addrs
 	}
 
+	rm, err := buildResourceManager()
+	if err != nil {
+		return nil, err
+	}
+
 	opts = append(opts,
 		libp2p.Identity(prvKey),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
@@ -229,6 +237,8 @@ func NewBasicNode(
 		libp2p.DefaultMuxers,
 		libp2p.AddrsFactory(addressFactory),
 		libp2p.DefaultEnableRelay,
+		libp2p.DisableMetrics(),
+		libp2p.ResourceManager(rm),
 	)
 
 	bhost, err := libp2p.New(opts...)
@@ -761,4 +771,51 @@ func (n *Node) initDHT() error {
 	n.RoutingDiscovery = drouting.NewRoutingDiscovery(n.IpfsDHT)
 
 	return nil
+}
+
+func getNumFDs() int {
+	var l unix.Rlimit
+	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &l); err != nil {
+		out.Warn(fmt.Sprintf("failed to get fd limit: %v", err))
+		return DefaultFDount
+	}
+	return int(l.Cur)
+}
+
+func buildResourceManager() (network.ResourceManager, error) {
+	// Start with the default scaling limits.
+	scalingLimits := rcmgr.DefaultLimits
+
+	// Add limits around included libp2p protocols
+	libp2p.SetDefaultServiceLimits(&scalingLimits)
+
+	// Turn the scaling limits into a concrete set of limits using `.AutoScale`. This
+	// scales the limits proportional to your system memory.
+	//scaledDefaultLimits := scalingLimits.AutoScale()
+
+	scaledDefaultLimits := scalingLimits.Scale(int64(memory.TotalMemory()/10*8), int(getNumFDs()/10*8))
+
+	// Tweak certain settings
+	cfg := rcmgr.PartialLimitConfig{
+		System: rcmgr.ResourceLimits{
+			// Allow unlimited outbound streams
+			StreamsOutbound: rcmgr.Unlimited,
+		},
+		// Everything else is default. The exact values will come from `scaledDefaultLimits` above.
+	}
+
+	// Create our limits by using our cfg and replacing the default values with values from `scaledDefaultLimits`
+	limits := cfg.Build(scaledDefaultLimits)
+
+	// The resource manager expects a limiter, se we create one from our limits.
+	limiter := rcmgr.NewFixedLimiter(limits)
+
+	// Metrics are enabled by default. If you want to disable metrics, use the
+	// WithMetricsDisabled option
+	// Initialize the resource manager
+	rm, err := rcmgr.NewResourceManager(limiter)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewResourceManager]")
+	}
+	return rm, nil
 }
