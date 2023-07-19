@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -209,4 +210,23 @@ func FreeLocalPort(port uint32) bool {
 	}
 	conn.Close()
 	return false
+}
+
+func FindFile(dir, name string) string {
+	var result string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Name() == name {
+			result = path
+			return nil
+		}
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return result
 }

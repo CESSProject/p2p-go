@@ -714,6 +714,7 @@ func (n *Node) initProtocol(protocolPrefix string) {
 	n.FileProtocol = n.NewFileProtocol()
 	n.AggrProofProtocol = n.NewAggrProofProtocol()
 	n.PushTagProtocol = n.NewPushTagProtocol()
+	n.ReadDataProtocol = n.NewReadDataProtocol()
 }
 
 func (n *Node) initDHT() error {
