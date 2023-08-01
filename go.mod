@@ -14,6 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.6.0
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	google.golang.org/grpc v1.33.2
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -112,6 +113,7 @@ require (
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/tools v0.3.0 // indirect
 	gonum.org/v1/gonum v0.11.0 // indirect
+	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )

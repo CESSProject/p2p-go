@@ -128,6 +128,35 @@ type P2P interface {
 
 	// GetServiceTagCh returns the tag channel of the service data received by the host
 	GetServiceTagCh() <-chan string
+
+	// PoisNewClient
+	PoisNewClient(addr string) (pb.PoisApiClient, error)
+
+	// PoisGetMinerInitParam
+	PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte) (*pb.ResponseMinerInitParam, error)
+
+	// PoisMinerRegister
+	PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte) (*pb.ResponseMinerRegister, error)
+
+	// PoisMinerCommitGenChall
+	PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, commit *pb.Commits) (*pb.Challenge, error)
+
+	// PoisVerifyCommitProof
+	PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof) (*pb.ResponseVerifyCommitAndAccProof, error)
+
+	// PoisSpaceProofVerifySingleBlock
+	PoisSpaceProofVerifySingleBlock(
+		cli pb.PoisApiClient,
+		accountKey []byte,
+		spaceChals []int64,
+		keyN []byte,
+		keyG []byte,
+		acc []byte,
+		front int64,
+		rear int64,
+		proof *pb.SpaceProof,
+		spaceProofHashPolkadotSig []byte,
+	) (*pb.ResponseSpaceProofVerify, error)
 }
 
 // Node type - Implementation of a P2P Host
