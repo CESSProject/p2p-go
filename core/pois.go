@@ -78,14 +78,31 @@ func (n *Node) PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, co
 	return result, nil
 }
 
-func (n *Node) PoisSpaceProofVerifySingleBlock(cli pb.PoisApiClient, accountKey []byte, spaceChals []int64, keyN []byte) (*pb.ResponseSpaceProofVerify, error) {
+func (n *Node) PoisSpaceProofVerifySingleBlock(
+	cli pb.PoisApiClient,
+	accountKey []byte,
+	spaceChals []int64,
+	keyN []byte,
+	keyG []byte,
+	acc []byte,
+	front int64,
+	rear int64,
+	proof *pb.SpaceProof,
+	spaceProofHashPolkadotSig []byte,
+) (*pb.ResponseSpaceProofVerify, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
 	result, err := cli.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
-		SpaceChals: spaceChals,
-		MinerId:    accountKey,
-		KeyN:       keyN,
+		SpaceChals:                     spaceChals,
+		MinerId:                        accountKey,
+		KeyN:                           keyN,
+		KeyG:                           keyG,
+		Acc:                            acc,
+		Front:                          front,
+		Rear:                           rear,
+		Proof:                          proof,
+		MinerSpaceProofHashPolkadotSig: spaceProofHashPolkadotSig,
 	})
 	if err != nil {
 		return nil, err
