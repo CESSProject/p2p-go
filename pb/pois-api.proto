@@ -1,7 +1,7 @@
 syntax = "proto3";
 
+package pois.api;
 option go_package = "./;pb";
-
 
 service PoisApi {
   rpc request_miner_get_new_key(RequestMinerInitParam)
@@ -11,11 +11,13 @@ service PoisApi {
   rpc request_miner_commit_gen_chall(RequestMinerCommitGenChall)
       returns (Challenge) {}
   rpc request_verify_commit_proof(RequestVerifyCommitAndAccProof)
-      returns (ResponseVerifyCommitAndAccProof) {}
+      returns (ResponseVerifyCommitOrDeletionProof) {}
   rpc request_space_proof_verify_single_block(RequestSpaceProofVerify)
       returns (ResponseSpaceProofVerify) {}
   rpc request_verify_space_total(RequestSpaceProofVerifyTotal)
       returns (ResponseSpaceProofVerifyTotal) {}
+  rpc request_verify_deletion_proof(RequestVerifyDeletionProof)
+      returns (ResponseVerifyCommitOrDeletionProof) {}
 }
 
 message ResponseMinerRegister{
@@ -57,6 +59,8 @@ message RequestVerifyCommitAndAccProof {
   CommitProofGroup commit_proof_group = 1;
   AccProof acc_proof = 2;
   bytes miner_id = 3;
+  bytes key_n = 4;
+  bytes key_g = 5;
 }
 message CommitProofGroup {
   repeated CommitProofGroupInner commit_proof_group_inner = 1;
@@ -87,11 +91,15 @@ message AccWitnessNode {
   AccWitnessNode acc = 3;
 }
 
-message ResponseVerifyCommitAndAccProof{
+message ResponseVerifyCommitOrDeletionProof{
+  PoisStatus pois_status = 1;
+  bytes signature_above = 2;
+}
+
+message PoisStatus{
   bytes acc = 1;
   int64 front = 2;
   int64 rear = 3;
-  bytes signature_above = 4;
 }
 
 message RequestSpaceProofVerify{
@@ -142,8 +150,26 @@ message BlocksProof {
   bytes signature = 3;
 }
 
+message ResponseSpaceProofVerifyTotalSignatureMember {
+  bytes miner_id = 1;
+  bytes total_proof_hash = 2;
+  int64 front = 3;
+  int64 rear = 4;
+  bytes acc = 5;
+  repeated int64 space_chals =6;
+}
+
 message ResponseSpaceProofVerifyTotal{
   bytes miner_id = 1;
   bool idle_result = 2;
   bytes signature = 3;
+}
+
+message RequestVerifyDeletionProof {
+  repeated bytes roots = 1;
+  AccWitnessNode wit_chain = 2;
+  repeated bytes acc_path = 3;
+  bytes miner_id = 4;
+  bytes key_n = 5;
+  bytes key_g = 6;
 }
