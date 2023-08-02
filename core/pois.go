@@ -84,7 +84,7 @@ func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *p
 	return result, nil
 }
 
-func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error) {
+func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err

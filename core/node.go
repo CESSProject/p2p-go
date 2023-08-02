@@ -142,7 +142,7 @@ type P2P interface {
 	PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
-	PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error)
+	PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
 	// PoisSpaceProofVerifySingleBlock
 	PoisSpaceProofVerifySingleBlock(
