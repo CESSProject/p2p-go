@@ -26,8 +26,8 @@ func (n *Node) PoisNewClient(addr string, timeout time.Duration) (pb.PoisApiClie
 	return pb.NewPoisApiClient(conn), nil
 }
 
-func (n *Node) PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte) (*pb.ResponseMinerInitParam, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+func (n *Node) PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	result, err := cli.RequestMinerGetNewKey(ctx, &pb.RequestMinerInitParam{
@@ -39,8 +39,8 @@ func (n *Node) PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte) (*
 	return result, nil
 }
 
-func (n *Node) PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte) (*pb.ResponseMinerRegister, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+func (n *Node) PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	result, err := cli.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
@@ -52,8 +52,8 @@ func (n *Node) PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte) (*pb.R
 	return result, nil
 }
 
-func (n *Node) PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, commit *pb.Commits) (*pb.Challenge, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+func (n *Node) PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	result, err := cli.RequestMinerCommitGenChall(ctx, &pb.RequestMinerCommitGenChall{
@@ -66,8 +66,8 @@ func (n *Node) PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, 
 	return result, nil
 }
 
-func (n *Node) PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof) (*pb.ResponseVerifyCommitAndAccProof, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+func (n *Node) PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	result, err := cli.RequestVerifyCommitProof(ctx, &pb.RequestVerifyCommitAndAccProof{
@@ -92,8 +92,9 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	rear int64,
 	proof *pb.SpaceProof,
 	spaceProofHashPolkadotSig []byte,
+	timeout time.Duration,
 ) (*pb.ResponseSpaceProofVerify, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	result, err := cli.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
