@@ -16,10 +16,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func (n *Node) PoisNewClient(addr string, timeout time.Duration) (pb.PoisApiClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func (n *Node) PoisNewClient(addr string) (pb.PoisApiClient, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
