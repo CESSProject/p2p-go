@@ -133,20 +133,20 @@ type P2P interface {
 	PoisNewClient(addr string) (pb.PoisApiClient, error)
 
 	// PoisGetMinerInitParam
-	PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
+	PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
 
 	// PoisMinerRegister
-	PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error)
+	PoisMinerRegister(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error)
 
 	// PoisMinerCommitGenChall
-	PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
+	PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
-	PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error)
+	PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error)
 
 	// PoisSpaceProofVerifySingleBlock
 	PoisSpaceProofVerifySingleBlock(
-		cli pb.PoisApiClient,
+		addr string,
 		accountKey []byte,
 		spaceChals []int64,
 		keyN []byte,

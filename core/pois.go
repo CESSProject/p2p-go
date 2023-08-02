@@ -24,11 +24,17 @@ func (n *Node) PoisNewClient(addr string) (pb.PoisApiClient, error) {
 	return pb.NewPoisApiClient(conn), nil
 }
 
-func (n *Node) PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error) {
+func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisApiClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := cli.RequestMinerGetNewKey(ctx, &pb.RequestMinerInitParam{
+	result, err := c.RequestMinerGetNewKey(ctx, &pb.RequestMinerInitParam{
 		MinerId: accountKey,
 	})
 	if err != nil {
@@ -37,11 +43,18 @@ func (n *Node) PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte, ti
 	return result, nil
 }
 
-func (n *Node) PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
+func (n *Node) PoisMinerRegister(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisApiClient(conn)
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := cli.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
+	result, err := c.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
 		MinerId: accountKey,
 	})
 	if err != nil {
@@ -50,11 +63,18 @@ func (n *Node) PoisMinerRegister(cli pb.PoisApiClient, accountKey []byte, timeou
 	return result, nil
 }
 
-func (n *Node) PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
+func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisApiClient(conn)
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := cli.RequestMinerCommitGenChall(ctx, &pb.RequestMinerCommitGenChall{
+	result, err := c.RequestMinerCommitGenChall(ctx, &pb.RequestMinerCommitGenChall{
 		MinerId: accountKey,
 		Commit:  commit,
 	})
@@ -64,11 +84,18 @@ func (n *Node) PoisMinerCommitGenChall(cli pb.PoisApiClient, accountKey []byte, 
 	return result, nil
 }
 
-func (n *Node) PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error) {
+func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitAndAccProof, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisApiClient(conn)
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := cli.RequestVerifyCommitProof(ctx, &pb.RequestVerifyCommitAndAccProof{
+	result, err := c.RequestVerifyCommitProof(ctx, &pb.RequestVerifyCommitAndAccProof{
 		CommitProofGroup: commitProofGroup,
 		AccProof:         accProof,
 		MinerId:          accountKey,
@@ -80,7 +107,7 @@ func (n *Node) PoisVerifyCommitProof(cli pb.PoisApiClient, accountKey []byte, co
 }
 
 func (n *Node) PoisSpaceProofVerifySingleBlock(
-	cli pb.PoisApiClient,
+	addr string,
 	accountKey []byte,
 	spaceChals []int64,
 	keyN []byte,
@@ -92,10 +119,17 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	spaceProofHashPolkadotSig []byte,
 	timeout time.Duration,
 ) (*pb.ResponseSpaceProofVerify, error) {
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisApiClient(conn)
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := cli.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
+	result, err := c.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
 		SpaceChals:                     spaceChals,
 		MinerId:                        accountKey,
 		KeyN:                           keyN,
