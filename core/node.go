@@ -130,7 +130,7 @@ type P2P interface {
 	GetServiceTagCh() <-chan string
 
 	// PoisNewClient
-	PoisNewClient(addr string) (pb.PoisApiClient, error)
+	PoisNewClient(addr string, timeout time.Duration) (pb.PoisApiClient, error)
 
 	// PoisGetMinerInitParam
 	PoisGetMinerInitParam(cli pb.PoisApiClient, accountKey []byte) (*pb.ResponseMinerInitParam, error)
