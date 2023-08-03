@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             (unknown)
-// source: pb/pois-api.proto
+// source: pois-api.proto
 
 package pb
 
@@ -25,9 +25,10 @@ type PoisApiClient interface {
 	RequestMinerGetNewKey(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerInitParam, error)
 	RequestMinerRegister(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerRegister, error)
 	RequestMinerCommitGenChall(ctx context.Context, in *RequestMinerCommitGenChall, opts ...grpc.CallOption) (*Challenge, error)
-	RequestVerifyCommitProof(ctx context.Context, in *RequestVerifyCommitAndAccProof, opts ...grpc.CallOption) (*ResponseVerifyCommitAndAccProof, error)
+	RequestVerifyCommitProof(ctx context.Context, in *RequestVerifyCommitAndAccProof, opts ...grpc.CallOption) (*ResponseVerifyCommitOrDeletionProof, error)
 	RequestSpaceProofVerifySingleBlock(ctx context.Context, in *RequestSpaceProofVerify, opts ...grpc.CallOption) (*ResponseSpaceProofVerify, error)
 	RequestVerifySpaceTotal(ctx context.Context, in *RequestSpaceProofVerifyTotal, opts ...grpc.CallOption) (*ResponseSpaceProofVerifyTotal, error)
+	RequestVerifyDeletionProof(ctx context.Context, in *RequestVerifyDeletionProof, opts ...grpc.CallOption) (*ResponseVerifyCommitOrDeletionProof, error)
 }
 
 type poisApiClient struct {
@@ -40,7 +41,7 @@ func NewPoisApiClient(cc grpc.ClientConnInterface) PoisApiClient {
 
 func (c *poisApiClient) RequestMinerGetNewKey(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerInitParam, error) {
 	out := new(ResponseMinerInitParam)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_miner_get_new_key", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_miner_get_new_key", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (c *poisApiClient) RequestMinerGetNewKey(ctx context.Context, in *RequestMi
 
 func (c *poisApiClient) RequestMinerRegister(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerRegister, error) {
 	out := new(ResponseMinerRegister)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_miner_register", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_miner_register", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -58,16 +59,16 @@ func (c *poisApiClient) RequestMinerRegister(ctx context.Context, in *RequestMin
 
 func (c *poisApiClient) RequestMinerCommitGenChall(ctx context.Context, in *RequestMinerCommitGenChall, opts ...grpc.CallOption) (*Challenge, error) {
 	out := new(Challenge)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_miner_commit_gen_chall", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_miner_commit_gen_chall", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *poisApiClient) RequestVerifyCommitProof(ctx context.Context, in *RequestVerifyCommitAndAccProof, opts ...grpc.CallOption) (*ResponseVerifyCommitAndAccProof, error) {
-	out := new(ResponseVerifyCommitAndAccProof)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_verify_commit_proof", in, out, opts...)
+func (c *poisApiClient) RequestVerifyCommitProof(ctx context.Context, in *RequestVerifyCommitAndAccProof, opts ...grpc.CallOption) (*ResponseVerifyCommitOrDeletionProof, error) {
+	out := new(ResponseVerifyCommitOrDeletionProof)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_verify_commit_proof", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (c *poisApiClient) RequestVerifyCommitProof(ctx context.Context, in *Reques
 
 func (c *poisApiClient) RequestSpaceProofVerifySingleBlock(ctx context.Context, in *RequestSpaceProofVerify, opts ...grpc.CallOption) (*ResponseSpaceProofVerify, error) {
 	out := new(ResponseSpaceProofVerify)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_space_proof_verify_single_block", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_space_proof_verify_single_block", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,16 @@ func (c *poisApiClient) RequestSpaceProofVerifySingleBlock(ctx context.Context, 
 
 func (c *poisApiClient) RequestVerifySpaceTotal(ctx context.Context, in *RequestSpaceProofVerifyTotal, opts ...grpc.CallOption) (*ResponseSpaceProofVerifyTotal, error) {
 	out := new(ResponseSpaceProofVerifyTotal)
-	err := c.cc.Invoke(ctx, "/PoisApi/request_verify_space_total", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_verify_space_total", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *poisApiClient) RequestVerifyDeletionProof(ctx context.Context, in *RequestVerifyDeletionProof, opts ...grpc.CallOption) (*ResponseVerifyCommitOrDeletionProof, error) {
+	out := new(ResponseVerifyCommitOrDeletionProof)
+	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_verify_deletion_proof", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +109,10 @@ type PoisApiServer interface {
 	RequestMinerGetNewKey(context.Context, *RequestMinerInitParam) (*ResponseMinerInitParam, error)
 	RequestMinerRegister(context.Context, *RequestMinerInitParam) (*ResponseMinerRegister, error)
 	RequestMinerCommitGenChall(context.Context, *RequestMinerCommitGenChall) (*Challenge, error)
-	RequestVerifyCommitProof(context.Context, *RequestVerifyCommitAndAccProof) (*ResponseVerifyCommitAndAccProof, error)
+	RequestVerifyCommitProof(context.Context, *RequestVerifyCommitAndAccProof) (*ResponseVerifyCommitOrDeletionProof, error)
 	RequestSpaceProofVerifySingleBlock(context.Context, *RequestSpaceProofVerify) (*ResponseSpaceProofVerify, error)
 	RequestVerifySpaceTotal(context.Context, *RequestSpaceProofVerifyTotal) (*ResponseSpaceProofVerifyTotal, error)
+	RequestVerifyDeletionProof(context.Context, *RequestVerifyDeletionProof) (*ResponseVerifyCommitOrDeletionProof, error)
 	mustEmbedUnimplementedPoisApiServer()
 }
 
@@ -118,7 +129,7 @@ func (UnimplementedPoisApiServer) RequestMinerRegister(context.Context, *Request
 func (UnimplementedPoisApiServer) RequestMinerCommitGenChall(context.Context, *RequestMinerCommitGenChall) (*Challenge, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestMinerCommitGenChall not implemented")
 }
-func (UnimplementedPoisApiServer) RequestVerifyCommitProof(context.Context, *RequestVerifyCommitAndAccProof) (*ResponseVerifyCommitAndAccProof, error) {
+func (UnimplementedPoisApiServer) RequestVerifyCommitProof(context.Context, *RequestVerifyCommitAndAccProof) (*ResponseVerifyCommitOrDeletionProof, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestVerifyCommitProof not implemented")
 }
 func (UnimplementedPoisApiServer) RequestSpaceProofVerifySingleBlock(context.Context, *RequestSpaceProofVerify) (*ResponseSpaceProofVerify, error) {
@@ -126,6 +137,9 @@ func (UnimplementedPoisApiServer) RequestSpaceProofVerifySingleBlock(context.Con
 }
 func (UnimplementedPoisApiServer) RequestVerifySpaceTotal(context.Context, *RequestSpaceProofVerifyTotal) (*ResponseSpaceProofVerifyTotal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestVerifySpaceTotal not implemented")
+}
+func (UnimplementedPoisApiServer) RequestVerifyDeletionProof(context.Context, *RequestVerifyDeletionProof) (*ResponseVerifyCommitOrDeletionProof, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestVerifyDeletionProof not implemented")
 }
 func (UnimplementedPoisApiServer) mustEmbedUnimplementedPoisApiServer() {}
 
@@ -150,7 +164,7 @@ func _PoisApi_RequestMinerGetNewKey_Handler(srv interface{}, ctx context.Context
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_miner_get_new_key",
+		FullMethod: "/pois.api.PoisApi/request_miner_get_new_key",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestMinerGetNewKey(ctx, req.(*RequestMinerInitParam))
@@ -168,7 +182,7 @@ func _PoisApi_RequestMinerRegister_Handler(srv interface{}, ctx context.Context,
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_miner_register",
+		FullMethod: "/pois.api.PoisApi/request_miner_register",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestMinerRegister(ctx, req.(*RequestMinerInitParam))
@@ -186,7 +200,7 @@ func _PoisApi_RequestMinerCommitGenChall_Handler(srv interface{}, ctx context.Co
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_miner_commit_gen_chall",
+		FullMethod: "/pois.api.PoisApi/request_miner_commit_gen_chall",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestMinerCommitGenChall(ctx, req.(*RequestMinerCommitGenChall))
@@ -204,7 +218,7 @@ func _PoisApi_RequestVerifyCommitProof_Handler(srv interface{}, ctx context.Cont
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_verify_commit_proof",
+		FullMethod: "/pois.api.PoisApi/request_verify_commit_proof",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestVerifyCommitProof(ctx, req.(*RequestVerifyCommitAndAccProof))
@@ -222,7 +236,7 @@ func _PoisApi_RequestSpaceProofVerifySingleBlock_Handler(srv interface{}, ctx co
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_space_proof_verify_single_block",
+		FullMethod: "/pois.api.PoisApi/request_space_proof_verify_single_block",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestSpaceProofVerifySingleBlock(ctx, req.(*RequestSpaceProofVerify))
@@ -240,10 +254,28 @@ func _PoisApi_RequestVerifySpaceTotal_Handler(srv interface{}, ctx context.Conte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/PoisApi/request_verify_space_total",
+		FullMethod: "/pois.api.PoisApi/request_verify_space_total",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestVerifySpaceTotal(ctx, req.(*RequestSpaceProofVerifyTotal))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PoisApi_RequestVerifyDeletionProof_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestVerifyDeletionProof)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PoisApiServer).RequestVerifyDeletionProof(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pois.api.PoisApi/request_verify_deletion_proof",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PoisApiServer).RequestVerifyDeletionProof(ctx, req.(*RequestVerifyDeletionProof))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -252,7 +284,7 @@ func _PoisApi_RequestVerifySpaceTotal_Handler(srv interface{}, ctx context.Conte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PoisApi_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "PoisApi",
+	ServiceName: "pois.api.PoisApi",
 	HandlerType: (*PoisApiServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -279,7 +311,11 @@ var PoisApi_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "request_verify_space_total",
 			Handler:    _PoisApi_RequestVerifySpaceTotal_Handler,
 		},
+		{
+			MethodName: "request_verify_deletion_proof",
+			Handler:    _PoisApi_RequestVerifyDeletionProof_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pb/pois-api.proto",
+	Metadata: "pois-api.proto",
 }
