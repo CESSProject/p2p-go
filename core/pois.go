@@ -25,7 +25,14 @@ func (n *Node) PoisNewClient(addr string) (pb.PoisApiClient, error) {
 }
 
 func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error) {
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(128*1024*1024),
+			grpc.MaxCallSendMsgSize(128*1024*1024),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +91,7 @@ func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *p
 	return result, nil
 }
 
-func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
+func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -99,6 +106,8 @@ func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProof
 		CommitProofGroup: commitProofGroup,
 		AccProof:         accProof,
 		MinerId:          accountKey,
+		KeyN:             key_n,
+		KeyG:             key_g,
 	})
 	if err != nil {
 		return nil, err
