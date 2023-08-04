@@ -158,6 +158,30 @@ type P2P interface {
 		spaceProofHashPolkadotSig []byte,
 		timeout time.Duration,
 	) (*pb.ResponseSpaceProofVerify, error)
+
+	//
+	PoisRequestVerifySpaceTotal(
+		addr string,
+		accountKey []byte,
+		proofList []*pb.BlocksProof,
+		front int64,
+		rear int64,
+		acc []byte,
+		spaceChals []int64,
+		timeout time.Duration,
+	) (*pb.ResponseSpaceProofVerifyTotal, error)
+
+	//
+	PoisRequestVerifyDeletionProof(
+		addr string,
+		roots [][]byte,
+		witChain *pb.AccWitnessNode,
+		accPath [][]byte,
+		minerId []byte,
+		keyN []byte,
+		keyG []byte,
+		timeout time.Duration,
+	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 }
 
 // Node type - Implementation of a P2P Host
