@@ -16,8 +16,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func (n *Node) PoisNewClient(addr string) (pb.PoisApiClient, error) {
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func (n *Node) PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiClient, error) {
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -28,10 +28,6 @@ func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout tim
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -54,10 +50,6 @@ func (n *Node) PoisMinerRegister(addr string, accountKey []byte, timeout time.Du
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err

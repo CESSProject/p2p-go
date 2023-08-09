@@ -42,6 +42,7 @@ import (
 	"github.com/pbnjay/memory"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
 )
 
 // P2P is an object participating in a p2p network, which
@@ -130,7 +131,10 @@ type P2P interface {
 	GetServiceTagCh() <-chan string
 
 	// PoisNewClient
-	PoisNewClient(addr string) (pb.PoisApiClient, error)
+	PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiClient, error)
+
+	//
+	PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error)
 
 	// PoisGetMinerInitParam
 	PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
@@ -142,7 +146,15 @@ type P2P interface {
 	PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
-	PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+	PoisVerifyCommitProof(
+		addr string,
+		accountKey []byte,
+		commitProofGroup *pb.CommitProofGroup,
+		accProof *pb.AccProof,
+		key_n []byte,
+		key_g []byte,
+		timeout time.Duration,
+	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
 	// PoisSpaceProofVerifySingleBlock
 	PoisSpaceProofVerifySingleBlock(
@@ -182,6 +194,30 @@ type P2P interface {
 		keyG []byte,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+
+	//
+	PoisServiceRequestGenTag(
+		addr string,
+		fileData []byte,
+		blockNum uint64,
+		filehash string,
+		customData string,
+		timeout time.Duration,
+	) (*pb.ResponseGenTag, error)
+
+	//
+	PoisServiceRequestBatchVerify(
+		addr string,
+		names []string,
+		us []string,
+		mus []string,
+		sigma string,
+		peerid []byte,
+		minerPbk []byte,
+		minerPeerIdSign []byte,
+		qslices *pb.RequestBatchVerify_Qslice,
+		timeout time.Duration,
+	) (*pb.ResponseBatchVerify, error)
 }
 
 // Node type - Implementation of a P2P Host
