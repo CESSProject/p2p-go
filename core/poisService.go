@@ -35,10 +35,6 @@ func (n *Node) PoisServiceRequestGenTag(
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -55,11 +51,7 @@ func (n *Node) PoisServiceRequestGenTag(
 		Name:       filehash,
 		CustomData: customData,
 	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisServiceRequestBatchVerify(
@@ -104,9 +96,5 @@ func (n *Node) PoisServiceRequestBatchVerify(
 		MinerPeerIdSign: minerPeerIdSign,
 		Qslices:         qslices,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result, err
 }

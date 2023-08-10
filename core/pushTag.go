@@ -117,7 +117,7 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 	return
 }
 
-func saveTagFile(tagpath string, tag *pb.Tag) error {
+func saveTagFile(tagpath string, tag *pb.Tag2) error {
 	f, err := os.OpenFile(tagpath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
