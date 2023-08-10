@@ -3,12 +3,7 @@ syntax = "proto3";
 option go_package = "./;pb";
 
 service Podr2Api {
-  rpc request_gen_node_login_info(RequestNodeLogin)
-      returns (ResponseNodeLogin) {}
-
-  rpc request_gen_tag(RequestGenTag)
-      returns (ResponseGenTag) {}
-
+  rpc request_gen_tag(RequestGenTag) returns (ResponseGenTag) {}
   rpc request_batch_verify(RequestBatchVerify) returns (ResponseBatchVerify) {}
 }
 

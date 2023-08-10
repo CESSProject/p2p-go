@@ -22,7 +22,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type Podr2ApiClient interface {
-	RequestGenNodeLoginInfo(ctx context.Context, in *RequestNodeLogin, opts ...grpc.CallOption) (*ResponseNodeLogin, error)
 	RequestGenTag(ctx context.Context, in *RequestGenTag, opts ...grpc.CallOption) (*ResponseGenTag, error)
 	RequestBatchVerify(ctx context.Context, in *RequestBatchVerify, opts ...grpc.CallOption) (*ResponseBatchVerify, error)
 }
@@ -33,15 +32,6 @@ type podr2ApiClient struct {
 
 func NewPodr2ApiClient(cc grpc.ClientConnInterface) Podr2ApiClient {
 	return &podr2ApiClient{cc}
-}
-
-func (c *podr2ApiClient) RequestGenNodeLoginInfo(ctx context.Context, in *RequestNodeLogin, opts ...grpc.CallOption) (*ResponseNodeLogin, error) {
-	out := new(ResponseNodeLogin)
-	err := c.cc.Invoke(ctx, "/Podr2Api/request_gen_node_login_info", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *podr2ApiClient) RequestGenTag(ctx context.Context, in *RequestGenTag, opts ...grpc.CallOption) (*ResponseGenTag, error) {
@@ -66,7 +56,6 @@ func (c *podr2ApiClient) RequestBatchVerify(ctx context.Context, in *RequestBatc
 // All implementations must embed UnimplementedPodr2ApiServer
 // for forward compatibility
 type Podr2ApiServer interface {
-	RequestGenNodeLoginInfo(context.Context, *RequestNodeLogin) (*ResponseNodeLogin, error)
 	RequestGenTag(context.Context, *RequestGenTag) (*ResponseGenTag, error)
 	RequestBatchVerify(context.Context, *RequestBatchVerify) (*ResponseBatchVerify, error)
 	mustEmbedUnimplementedPodr2ApiServer()
@@ -76,9 +65,6 @@ type Podr2ApiServer interface {
 type UnimplementedPodr2ApiServer struct {
 }
 
-func (UnimplementedPodr2ApiServer) RequestGenNodeLoginInfo(context.Context, *RequestNodeLogin) (*ResponseNodeLogin, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestGenNodeLoginInfo not implemented")
-}
 func (UnimplementedPodr2ApiServer) RequestGenTag(context.Context, *RequestGenTag) (*ResponseGenTag, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestGenTag not implemented")
 }
@@ -96,24 +82,6 @@ type UnsafePodr2ApiServer interface {
 
 func RegisterPodr2ApiServer(s grpc.ServiceRegistrar, srv Podr2ApiServer) {
 	s.RegisterService(&Podr2Api_ServiceDesc, srv)
-}
-
-func _Podr2Api_RequestGenNodeLoginInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestNodeLogin)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(Podr2ApiServer).RequestGenNodeLoginInfo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Podr2Api/request_gen_node_login_info",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(Podr2ApiServer).RequestGenNodeLoginInfo(ctx, req.(*RequestNodeLogin))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Podr2Api_RequestGenTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -159,10 +127,6 @@ var Podr2Api_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Podr2Api",
 	HandlerType: (*Podr2ApiServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "request_gen_node_login_info",
-			Handler:    _Podr2Api_RequestGenNodeLoginInfo_Handler,
-		},
 		{
 			MethodName: "request_gen_tag",
 			Handler:    _Podr2Api_RequestGenTag_Handler,
