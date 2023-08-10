@@ -36,7 +36,7 @@ func NewPodr2ApiClient(cc grpc.ClientConnInterface) Podr2ApiClient {
 
 func (c *podr2ApiClient) RequestGenTag(ctx context.Context, in *RequestGenTag, opts ...grpc.CallOption) (*ResponseGenTag, error) {
 	out := new(ResponseGenTag)
-	err := c.cc.Invoke(ctx, "/Podr2Api/request_gen_tag", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/podr2.api.Podr2Api/request_gen_tag", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (c *podr2ApiClient) RequestGenTag(ctx context.Context, in *RequestGenTag, o
 
 func (c *podr2ApiClient) RequestBatchVerify(ctx context.Context, in *RequestBatchVerify, opts ...grpc.CallOption) (*ResponseBatchVerify, error) {
 	out := new(ResponseBatchVerify)
-	err := c.cc.Invoke(ctx, "/Podr2Api/request_batch_verify", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/podr2.api.Podr2Api/request_batch_verify", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func _Podr2Api_RequestGenTag_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Podr2Api/request_gen_tag",
+		FullMethod: "/podr2.api.Podr2Api/request_gen_tag",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(Podr2ApiServer).RequestGenTag(ctx, req.(*RequestGenTag))
@@ -112,7 +112,7 @@ func _Podr2Api_RequestBatchVerify_Handler(srv interface{}, ctx context.Context, 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Podr2Api/request_batch_verify",
+		FullMethod: "/podr2.api.Podr2Api/request_batch_verify",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(Podr2ApiServer).RequestBatchVerify(ctx, req.(*RequestBatchVerify))
@@ -124,7 +124,7 @@ func _Podr2Api_RequestBatchVerify_Handler(srv interface{}, ctx context.Context, 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Podr2Api_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Podr2Api",
+	ServiceName: "podr2.api.Podr2Api",
 	HandlerType: (*Podr2ApiServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

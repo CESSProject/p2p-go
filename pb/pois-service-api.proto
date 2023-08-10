@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+package podr2.api;
 option go_package = "./;pb";
 
 service Podr2Api {
