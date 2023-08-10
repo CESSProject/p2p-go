@@ -55,11 +55,7 @@ func (n *Node) PoisServiceRequestGenTag(
 		Name:       filehash,
 		CustomData: customData,
 	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisServiceRequestBatchVerify(
@@ -104,9 +100,5 @@ func (n *Node) PoisServiceRequestBatchVerify(
 		MinerPeerIdSign: minerPeerIdSign,
 		Qslices:         qslices,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return result, err
 }

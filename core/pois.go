@@ -40,10 +40,7 @@ func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout tim
 	result, err := c.RequestMinerGetNewKey(ctx, &pb.RequestMinerInitParam{
 		MinerId: accountKey,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisMinerRegister(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
@@ -63,10 +60,7 @@ func (n *Node) PoisMinerRegister(addr string, accountKey []byte, timeout time.Du
 	result, err := c.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
 		MinerId: accountKey,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
@@ -91,10 +85,7 @@ func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *p
 		MinerId: accountKey,
 		Commit:  commit,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
@@ -122,10 +113,7 @@ func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProof
 		KeyN:             key_n,
 		KeyG:             key_g,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisSpaceProofVerifySingleBlock(
@@ -169,10 +157,7 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 		Proof:                          proof,
 		MinerSpaceProofHashPolkadotSig: spaceProofHashPolkadotSig,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisRequestVerifySpaceTotal(
@@ -210,10 +195,7 @@ func (n *Node) PoisRequestVerifySpaceTotal(
 		Acc:        acc,
 		SpaceChals: spaceChals,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (n *Node) PoisRequestVerifyDeletionProof(
@@ -251,8 +233,5 @@ func (n *Node) PoisRequestVerifyDeletionProof(
 		KeyN:     keyN,
 		KeyG:     keyG,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }

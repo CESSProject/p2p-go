@@ -4,6 +4,7 @@ option go_package = "./;pb";
 
 service Podr2Api {
   rpc request_gen_tag(RequestGenTag) returns (ResponseGenTag) {}
+
   rpc request_batch_verify(RequestBatchVerify) returns (ResponseBatchVerify) {}
 }
 
@@ -16,16 +17,6 @@ message Tag {
   T t = 1;
   string phi_hash = 2;
   string attest = 3;
-}
-
-message RequestNodeLogin {}
-
-message ResponseNodeLogin {
-  bytes report = 1;
-  bytes sig = 2;
-  bytes cert = 3;
-  bytes peer_id = 4;
-  bytes podr2_pbk = 5;
 }
 
 message RequestGenTag {
@@ -76,31 +67,4 @@ enum StatusCode {
   OutOfMemory = 10004;
   AlgorithmError = 10005;
   UnknownError = 10006;
-}
-
-// push tag
-message CustomTagGenResult {
-  Tag tag = 1;
-}
-
-message IdleTagGenResult {
-  Tag tag = 1;
-  bytes sign = 2;
-}
-
-message GenErrorResult {
-  uint32 code = 1;
-  string msg = 2;
-}
-
-message TagPushRequest {
-  oneof result {
-      CustomTagGenResult ctgr = 1;
-      IdleTagGenResult itgr = 2;
-      GenErrorResult error = 3;
-  }
-}
-
-message TagPushResponse {
-  uint32 code = 1;
 }
