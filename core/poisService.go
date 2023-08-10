@@ -35,10 +35,6 @@ func (n *Node) PoisServiceRequestGenTag(
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
