@@ -64,6 +64,7 @@ const (
 	p2pProtocolVer = "/1.0"
 	dhtProtocolVer = "/kad/1.0"
 	rendezvous     = "/rendezvous/1.0.0"
+	grpcProtocolID = "/grpc/1.0"
 )
 
 var (

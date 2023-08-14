@@ -89,6 +89,9 @@ type P2P interface {
 	// GetRendezvousVersion returns the rendezvous protocol
 	GetRendezvousVersion() string
 
+	// GetGrpcProtocolVersion returns the grpc protocol
+	GetGrpcProtocolVersion() string
+
 	// GetProtocolPrefix returns protocols prefix
 	GetProtocolPrefix() string
 
@@ -311,6 +314,7 @@ type Node struct {
 	protocolVersion       string
 	dhtProtocolVersion    string
 	rendezvousVersion     string
+	grpcProtocolVersion   string
 	protocolPrefix        string
 	bootstrap             []string
 	*dht.IpfsDHT
@@ -431,7 +435,6 @@ func NewBasicNode(
 		ctxCancelFuncFromRoot: cancel,
 		discoveredPeerCh:      events,
 		host:                  bhost,
-		libp2pgrpcCli:         libp2pgrpc.NewClient(bhost, protocol.ID(protocolPrefix+"/grpc/1.0")),
 		workspace:             workspace,
 		privatekeyPath:        privatekeypath,
 		dir:                   dataDir,
@@ -442,10 +445,13 @@ func NewBasicNode(
 		protocolVersion:       protocolPrefix + p2pProtocolVer,
 		dhtProtocolVersion:    protocolPrefix + dhtProtocolVer,
 		rendezvousVersion:     protocolPrefix + rendezvous,
+		grpcProtocolVersion:   protocolPrefix + grpcProtocolID,
 		protocolPrefix:        protocolPrefix,
 		bootstrap:             boots,
 		protocols:             NewProtocol(),
 	}
+	libp2pgrpc.ProtocolID = protocol.ID(n.grpcProtocolVersion)
+	n.libp2pgrpcCli = libp2pgrpc.NewClient(n.host, libp2pgrpc.ProtocolID)
 
 	err = n.initDHT()
 	if err != nil {
@@ -625,6 +631,10 @@ func (n *Node) GetDhtProtocolVersion() string {
 
 func (n *Node) GetRendezvousVersion() string {
 	return n.rendezvousVersion
+}
+
+func (n *Node) GetGrpcProtocolVersion() string {
+	return n.grpcProtocolVersion
 }
 
 func (n *Node) GetBootstraps() []string {
