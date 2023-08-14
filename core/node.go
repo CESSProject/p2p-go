@@ -20,6 +20,7 @@ import (
 
 	"github.com/CESSProject/p2p-go/out"
 	"github.com/CESSProject/p2p-go/pb"
+	libp2pgrpc "github.com/drgomesp/go-libp2p-grpc"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
@@ -218,6 +219,52 @@ type P2P interface {
 		qslices *pb.RequestBatchVerify_Qslice,
 		timeout time.Duration,
 	) (*pb.ResponseBatchVerify, error)
+
+	//-------------------------p2p version
+
+	PoisGetMinerInitParamP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
+
+	PoisMinerRegisterP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error)
+
+	PoisMinerCommitGenChallP2P(peerid peer.ID, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
+
+	PoisVerifyCommitProofP2P(peerid peer.ID, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+
+	PoisSpaceProofVerifySingleBlockP2P(
+		peerid peer.ID,
+		accountKey []byte,
+		spaceChals []int64,
+		keyN []byte,
+		keyG []byte,
+		acc []byte,
+		front int64,
+		rear int64,
+		proof *pb.SpaceProof,
+		spaceProofHashPolkadotSig []byte,
+		timeout time.Duration,
+	) (*pb.ResponseSpaceProofVerify, error)
+
+	PoisRequestVerifySpaceTotalP2P(
+		peerid peer.ID,
+		accountKey []byte,
+		proofList []*pb.BlocksProof,
+		front int64,
+		rear int64,
+		acc []byte,
+		spaceChals []int64,
+		timeout time.Duration,
+	) (*pb.ResponseSpaceProofVerifyTotal, error)
+
+	PoisRequestVerifyDeletionProofP2P(
+		peerid peer.ID,
+		roots [][]byte,
+		witChain *pb.AccWitnessNode,
+		accPath [][]byte,
+		minerId []byte,
+		keyN []byte,
+		keyG []byte,
+		timeout time.Duration,
+	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 }
 
 // Node type - Implementation of a P2P Host
@@ -228,6 +275,7 @@ type Node struct {
 	ctxCancelFuncFromRoot context.CancelFunc
 	discoveredPeerCh      <-chan *routing.QueryEvent
 	host                  host.Host
+	libp2pgrpcCli         *libp2pgrpc.Client
 	dir                   DataDirs
 	peerPublickey         []byte
 	workspace             string
@@ -360,6 +408,7 @@ func NewBasicNode(
 		ctxCancelFuncFromRoot: cancel,
 		discoveredPeerCh:      events,
 		host:                  bhost,
+		libp2pgrpcCli:         libp2pgrpc.NewClient(bhost, protocol.ID(protocolPrefix)+libp2pgrpc.ProtocolID),
 		workspace:             workspace,
 		privatekeyPath:        privatekeypath,
 		dir:                   dataDir,
