@@ -431,7 +431,7 @@ func NewBasicNode(
 		ctxCancelFuncFromRoot: cancel,
 		discoveredPeerCh:      events,
 		host:                  bhost,
-		libp2pgrpcCli:         libp2pgrpc.NewClient(bhost, protocol.ID(protocolPrefix)+libp2pgrpc.ProtocolID),
+		libp2pgrpcCli:         libp2pgrpc.NewClient(bhost, protocol.ID(protocolPrefix+"/grpc/1.0")),
 		workspace:             workspace,
 		privatekeyPath:        privatekeypath,
 		dir:                   dataDir,
