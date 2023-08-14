@@ -265,6 +265,29 @@ type P2P interface {
 		keyG []byte,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+
+	// service p2p
+	PoisServiceRequestGenTagP2P(
+		peerid peer.ID,
+		fileData []byte,
+		blockNum uint64,
+		filehash string,
+		customData string,
+		timeout time.Duration,
+	) (*pb.ResponseGenTag, error)
+
+	PoisServiceRequestBatchVerifyP2P(
+		peerid peer.ID,
+		names []string,
+		us []string,
+		mus []string,
+		sigma string,
+		minerPeerid []byte,
+		minerPbk []byte,
+		minerPeerIdSign []byte,
+		qslices *pb.RequestBatchVerify_Qslice,
+		timeout time.Duration,
+	) (*pb.ResponseBatchVerify, error)
 }
 
 // Node type - Implementation of a P2P Host
