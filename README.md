@@ -47,7 +47,9 @@ import (
 	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
+	"github.com/CESSProject/p2p-go/config"
 	"github.com/CESSProject/p2p-go/core"
+	"github.com/CESSProject/p2p-go/out"
 	"golang.org/x/time/rate"
 )
 
@@ -69,7 +71,7 @@ func main() {
 		p2pgo.BootPeers([]string{
 			"_dnsaddr.boot-kldr-testnet.cess.cloud",
 		}),
-		p2pgo.ProtocolPrefix("/kldr-testnet"),
+		p2pgo.ProtocolPrefix(config.TestnetProtocolPrefix),
 	)
 	if err != nil {
 		panic(err)
