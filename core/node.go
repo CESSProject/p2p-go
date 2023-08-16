@@ -950,7 +950,7 @@ func getNumFDs() int {
 	var l unix.Rlimit
 	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &l); err != nil {
 		out.Warn(fmt.Sprintf("failed to get fd limit: %v", err))
-		return DefaultFDount
+		return DefaultFDCount
 	}
 	return int(l.Cur)
 }

@@ -13,7 +13,7 @@ const privatekeyFile = ".private"
 const AllIpAddress = "0.0.0.0"
 const LocalAddress = "127.0.0.1"
 
-const DefaultFDount = 65535
+const DefaultFDCount = 65535
 
 // byte size
 const (
@@ -31,3 +31,9 @@ const FragmentSize = 8 * SIZE_1MiB
 
 const DataShards = 2
 const ParShards = 1
+
+const SegmentSizeTest = 64 * SIZE_1MiB
+const FragmentSizeTest = 16 * SIZE_1MiB
+
+const DataShardsTest = 4
+const ParShardsTest = 4
