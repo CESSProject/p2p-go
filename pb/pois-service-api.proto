@@ -54,7 +54,7 @@ message RequestBatchVerify {
 
 message ResponseBatchVerify {
   bool batch_verify_result = 1;
-  bytes tee_peer_id = 2;
+  bytes tee_account_id = 2;
   repeated uint64 service_bloom_filter = 3;
   bytes signature = 4;
 }
