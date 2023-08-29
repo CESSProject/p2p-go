@@ -17,7 +17,6 @@ type Protocol interface {
 	ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error
 	ReadDataAction(id peer.ID, roothash, datahash, path string, size int64) error
 	TagPushReq(peerid peer.ID) (uint32, error)
-	IdleReq(peerId peer.ID, filesize, blocknum uint64, pubkey, sign []byte) (uint32, error)
 	TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error)
 	FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error)
 	AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error)
@@ -28,7 +27,6 @@ type protocols struct {
 	*WriteFileProtocol
 	*ReadFileProtocol
 	*CustomDataTagProtocol
-	*IdleDataTagProtocol
 	*FileProtocol
 	*AggrProofProtocol
 	*PushTagProtocol

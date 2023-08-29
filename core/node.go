@@ -125,12 +125,6 @@ type P2P interface {
 	// RouteTableFindPeers
 	RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error)
 
-	// GetIdleDataCh returns the idle data channel received by the host
-	GetIdleDataCh() <-chan string
-
-	// GetIdleTagCh returns the tag channel of the idle data received by the host
-	GetIdleTagCh() <-chan string
-
 	// GetServiceTagCh returns the tag channel of the service data received by the host
 	GetServiceTagCh() <-chan string
 
@@ -308,8 +302,6 @@ type Node struct {
 	privatekeyPath        string
 	idleTee               atomic.Value
 	serviceTee            atomic.Value
-	idleDataCh            chan string
-	idleTagDataCh         chan string
 	serviceTagDataCh      chan string
 	protocolVersion       string
 	dhtProtocolVersion    string
@@ -439,8 +431,6 @@ func NewBasicNode(
 		privatekeyPath:        privatekeypath,
 		dir:                   dataDir,
 		peerPublickey:         publickey,
-		idleDataCh:            make(chan string, 1),
-		idleTagDataCh:         make(chan string, 1),
 		serviceTagDataCh:      make(chan string, 1),
 		protocolVersion:       protocolPrefix + p2pProtocolVer,
 		dhtProtocolVersion:    protocolPrefix + dhtProtocolVer,
@@ -568,8 +558,6 @@ func (n *Node) Close() error {
 		return err
 	}
 	n.ctxCancelFuncFromRoot()
-	close(n.idleDataCh)
-	close(n.idleTagDataCh)
 	close(n.serviceTagDataCh)
 	return nil
 }
@@ -661,28 +649,6 @@ func (n *Node) GetDirs() DataDirs {
 	return n.dir
 }
 
-func (n *Node) putIdleDataCh(path string) {
-	if len(n.idleDataCh) > 0 {
-		_ = <-n.idleDataCh
-	}
-	n.idleDataCh <- path
-}
-
-func (n *Node) GetIdleDataCh() <-chan string {
-	return n.idleDataCh
-}
-
-func (n *Node) putIdleTagCh(path string) {
-	if len(n.idleTagDataCh) > 0 {
-		_ = <-n.idleTagDataCh
-	}
-	n.idleTagDataCh <- path
-}
-
-func (n *Node) GetIdleTagCh() <-chan string {
-	return n.idleTagDataCh
-}
-
 func (n *Node) putServiceTagCh(path string) {
 	if len(n.serviceTagDataCh) > 0 {
 		_ = <-n.serviceTagDataCh
@@ -769,14 +735,14 @@ func identification(workspace, fpath string) (crypto.PrivKey, error) {
 
 func mkdir(workspace string) (DataDirs, error) {
 	dataDir := DataDirs{
-		FileDir:       filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:        filepath.Join(workspace, TmpDataDirectionry),
-		IdleDataDir:   filepath.Join(workspace, IdleDataDirectionry),
-		IdleTagDir:    filepath.Join(workspace, IdleTagDirectionry),
+		FileDir: filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:  filepath.Join(workspace, TmpDataDirectionry),
+		//IdleDataDir:   filepath.Join(workspace, IdleDataDirectionry),
+		//IdleTagDir:    filepath.Join(workspace, IdleTagDirectionry),
 		ServiceTagDir: filepath.Join(workspace, ServiceTagDirectionry),
-		ProofDir:      filepath.Join(workspace, ProofDirectionry),
-		IproofFile:    filepath.Join(workspace, ProofDirectionry, IdleProofFile),
-		SproofFile:    filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
+		//ProofDir:      filepath.Join(workspace, ProofDirectionry),
+		//IproofFile:    filepath.Join(workspace, ProofDirectionry, IdleProofFile),
+		//SproofFile:    filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 	}
 	if err := os.MkdirAll(dataDir.FileDir, DirMode); err != nil {
 		return dataDir, err
@@ -784,16 +750,7 @@ func mkdir(workspace string) (DataDirs, error) {
 	if err := os.MkdirAll(dataDir.TmpDir, DirMode); err != nil {
 		return dataDir, err
 	}
-	if err := os.MkdirAll(dataDir.IdleDataDir, DirMode); err != nil {
-		return dataDir, err
-	}
-	if err := os.MkdirAll(dataDir.IdleTagDir, DirMode); err != nil {
-		return dataDir, err
-	}
 	if err := os.MkdirAll(dataDir.ServiceTagDir, DirMode); err != nil {
-		return dataDir, err
-	}
-	if err := os.MkdirAll(dataDir.ProofDir, DirMode); err != nil {
 		return dataDir, err
 	}
 	return dataDir, nil
@@ -882,7 +839,6 @@ func (n *Node) initProtocol(protocolPrefix string) {
 	n.WriteFileProtocol = n.NewWriteFileProtocol()
 	n.ReadFileProtocol = n.NewReadFileProtocol()
 	n.CustomDataTagProtocol = n.NewCustomDataTagProtocol()
-	n.IdleDataTagProtocol = n.NewIdleDataTagProtocol()
 	n.FileProtocol = n.NewFileProtocol()
 	n.AggrProofProtocol = n.NewAggrProofProtocol()
 	n.PushTagProtocol = n.NewPushTagProtocol()

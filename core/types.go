@@ -42,16 +42,9 @@ const (
 )
 
 const (
-	//
 	FileDataDirectionry   = "file"
 	TmpDataDirectionry    = "tmp"
-	IdleDataDirectionry   = "space"
-	IdleTagDirectionry    = "itag"
 	ServiceTagDirectionry = "stag"
-	ProofDirectionry      = "proof"
-	//
-	IdleProofFile    = "iproof"
-	ServiceProofFile = "sproof"
 )
 
 const (
@@ -76,12 +69,7 @@ var (
 type DataDirs struct {
 	FileDir       string
 	TmpDir        string
-	IdleDataDir   string
-	IdleTagDir    string
 	ServiceTagDir string
-	ProofDir      string
-	IproofFile    string
-	SproofFile    string
 }
 
 type ProofFileType struct {
