@@ -97,18 +97,6 @@ func (e *PushTagProtocol) onPushTagRequest(s network.Stream) {
 		} else {
 			respMsg.Code = 0
 			e.PushTagProtocol.putServiceTagCh(tagpath)
-			e.IdleDataTagProtocol.SetIdleFileTee("")
-		}
-	case *pb.TagPushRequest_Itgr:
-		idleTag := reqMsg.GetItgr()
-		tagpath := filepath.Join(e.PushTagProtocol.GetDirs().IdleTagDir, idleTag.Tag.T.Name+".tag")
-		err = saveTagFile(tagpath, idleTag.Tag)
-		if err != nil {
-			os.Remove(tagpath)
-		} else {
-			respMsg.Code = 0
-			e.PushTagProtocol.putIdleTagCh(tagpath)
-			e.IdleDataTagProtocol.SetIdleFileTee("")
 		}
 	case *pb.TagPushRequest_Error:
 	default:
