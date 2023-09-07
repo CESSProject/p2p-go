@@ -105,6 +105,9 @@ type P2P interface {
 	//
 	GetDht() *dht.IpfsDHT
 
+	//
+	GetRoutingTable() *drouting.RoutingDiscovery
+
 	// DHTFindPeer searches for a peer with given ID
 	DHTFindPeer(peerid string) (peer.AddrInfo, error)
 
