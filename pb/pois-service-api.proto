@@ -4,7 +4,9 @@ package podr2.api;
 option go_package = "./;pb";
 
 service Podr2Api {
-  rpc request_gen_tag(RequestGenTag) returns (ResponseGenTag) {}
+
+  rpc request_gen_tag(RequestGenTag)
+      returns (ResponseGenTag) {}
 
   rpc request_batch_verify(RequestBatchVerify) returns (ResponseBatchVerify) {}
 }
@@ -22,9 +24,8 @@ message Tag {
 
 message RequestGenTag {
   bytes file_data = 1;
-  uint64 block_num = 2;
-  string name = 3;
-  string custom_data = 4;
+  string name = 2;
+  string custom_data = 3;
 }
 
 message ResponseGenTag {

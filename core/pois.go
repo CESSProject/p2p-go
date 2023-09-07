@@ -43,34 +43,17 @@ func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout tim
 	return result, err
 }
 
-func (n *Node) PoisMinerRegister(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
+func (n *Node) PoisMinerCommitGenChall(
+	addr string,
+	accountKey []byte,
+	commit *pb.Commits,
+	minerPoisInfo *pb.MinerPoisInfo,
+	minerSign []byte,
+	timeout time.Duration,
+) (*pb.Challenge, error) {
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	result, err := c.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
-		MinerId: accountKey,
-	})
-	return result, err
-}
-
-func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -82,20 +65,25 @@ func (n *Node) PoisMinerCommitGenChall(addr string, accountKey []byte, commit *p
 	defer cancel()
 
 	result, err := c.RequestMinerCommitGenChall(ctx, &pb.RequestMinerCommitGenChall{
-		MinerId: accountKey,
-		Commit:  commit,
+		MinerId:   accountKey,
+		Commit:    commit,
+		PoisInfo:  minerPoisInfo,
+		MinerSign: minerSign,
 	})
 	return result, err
 }
 
-func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
+func (n *Node) PoisVerifyCommitProof(
+	addr string,
+	accountKey []byte,
+	commitProofGroup *pb.CommitProofGroup,
+	accProof *pb.AccProof,
+	minerSign []byte,
+	timeout time.Duration,
+) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -110,8 +98,7 @@ func (n *Node) PoisVerifyCommitProof(addr string, accountKey []byte, commitProof
 		CommitProofGroup: commitProofGroup,
 		AccProof:         accProof,
 		MinerId:          accountKey,
-		KeyN:             key_n,
-		KeyG:             key_g,
+		MinerSign:        minerSign,
 	})
 	return result, err
 }
@@ -120,11 +107,7 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	addr string,
 	accountKey []byte,
 	spaceChals []int64,
-	keyN []byte,
-	keyG []byte,
-	acc []byte,
-	front int64,
-	rear int64,
+	minerPoisInfo *pb.MinerPoisInfo,
 	proof *pb.SpaceProof,
 	spaceProofHashPolkadotSig []byte,
 	timeout time.Duration,
@@ -132,10 +115,6 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -149,11 +128,7 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	result, err := c.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
 		SpaceChals:                     spaceChals,
 		MinerId:                        accountKey,
-		KeyN:                           keyN,
-		KeyG:                           keyG,
-		Acc:                            acc,
-		Front:                          front,
-		Rear:                           rear,
+		PoisInfo:                       minerPoisInfo,
 		Proof:                          proof,
 		MinerSpaceProofHashPolkadotSig: spaceProofHashPolkadotSig,
 	})
@@ -173,10 +148,6 @@ func (n *Node) PoisRequestVerifySpaceTotal(
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -204,17 +175,13 @@ func (n *Node) PoisRequestVerifyDeletionProof(
 	witChain *pb.AccWitnessNode,
 	accPath [][]byte,
 	minerId []byte,
-	keyN []byte,
-	keyG []byte,
+	minerPoisInfo *pb.MinerPoisInfo,
+	minerSign []byte,
 	timeout time.Duration,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err
@@ -226,12 +193,12 @@ func (n *Node) PoisRequestVerifyDeletionProof(
 	defer cancel()
 
 	result, err := c.RequestVerifyDeletionProof(ctx, &pb.RequestVerifyDeletionProof{
-		Roots:    roots,
-		WitChain: witChain,
-		AccPath:  accPath,
-		MinerId:  minerId,
-		KeyN:     keyN,
-		KeyG:     keyG,
+		Roots:     roots,
+		WitChain:  witChain,
+		AccPath:   accPath,
+		MinerId:   minerId,
+		PoisInfo:  minerPoisInfo,
+		MinerSign: minerSign,
 	})
 	return result, err
 }

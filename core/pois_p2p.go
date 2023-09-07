@@ -27,23 +27,6 @@ func (n *Node) PoisGetMinerInitParamP2P(peerid peer.ID, accountKey []byte, timeo
 	return result, err
 }
 
-func (n *Node) PoisMinerRegisterP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error) {
-	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	conn, err := n.libp2pgrpcCli.Dial(ctx, peerid, opts...)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
-
-	result, err := c.RequestMinerRegister(ctx, &pb.RequestMinerInitParam{
-		MinerId: accountKey,
-	})
-	return result, err
-}
-
 func (n *Node) PoisMinerCommitGenChallP2P(peerid peer.ID, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error) {
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -62,7 +45,14 @@ func (n *Node) PoisMinerCommitGenChallP2P(peerid peer.ID, accountKey []byte, com
 	return result, err
 }
 
-func (n *Node) PoisVerifyCommitProofP2P(peerid peer.ID, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
+func (n *Node) PoisVerifyCommitProofP2P(
+	peerid peer.ID,
+	accountKey []byte,
+	commitProofGroup *pb.CommitProofGroup,
+	accProof *pb.AccProof,
+	minerSign []byte,
+	timeout time.Duration,
+) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -77,8 +67,7 @@ func (n *Node) PoisVerifyCommitProofP2P(peerid peer.ID, accountKey []byte, commi
 		CommitProofGroup: commitProofGroup,
 		AccProof:         accProof,
 		MinerId:          accountKey,
-		KeyN:             key_n,
-		KeyG:             key_g,
+		MinerSign:        minerSign,
 	})
 	return result, err
 }
@@ -87,11 +76,7 @@ func (n *Node) PoisSpaceProofVerifySingleBlockP2P(
 	peerid peer.ID,
 	accountKey []byte,
 	spaceChals []int64,
-	keyN []byte,
-	keyG []byte,
-	acc []byte,
-	front int64,
-	rear int64,
+	minerPoisInfo *pb.MinerPoisInfo,
 	proof *pb.SpaceProof,
 	spaceProofHashPolkadotSig []byte,
 	timeout time.Duration,
@@ -109,11 +94,7 @@ func (n *Node) PoisSpaceProofVerifySingleBlockP2P(
 	result, err := c.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
 		SpaceChals:                     spaceChals,
 		MinerId:                        accountKey,
-		KeyN:                           keyN,
-		KeyG:                           keyG,
-		Acc:                            acc,
-		Front:                          front,
-		Rear:                           rear,
+		PoisInfo:                       minerPoisInfo,
 		Proof:                          proof,
 		MinerSpaceProofHashPolkadotSig: spaceProofHashPolkadotSig,
 	})
@@ -157,8 +138,8 @@ func (n *Node) PoisRequestVerifyDeletionProofP2P(
 	witChain *pb.AccWitnessNode,
 	accPath [][]byte,
 	minerId []byte,
-	keyN []byte,
-	keyG []byte,
+	minerPoisInfo *pb.MinerPoisInfo,
+	minerSign []byte,
 	timeout time.Duration,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())}
@@ -172,12 +153,12 @@ func (n *Node) PoisRequestVerifyDeletionProofP2P(
 	c := pb.NewPoisApiClient(conn)
 
 	result, err := c.RequestVerifyDeletionProof(ctx, &pb.RequestVerifyDeletionProof{
-		Roots:    roots,
-		WitChain: witChain,
-		AccPath:  accPath,
-		MinerId:  minerId,
-		KeyN:     keyN,
-		KeyG:     keyG,
+		Roots:     roots,
+		WitChain:  witChain,
+		AccPath:   accPath,
+		MinerId:   minerId,
+		PoisInfo:  minerPoisInfo,
+		MinerSign: minerSign,
 	})
 	return result, err
 }

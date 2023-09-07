@@ -20,7 +20,6 @@ import (
 func (n *Node) PoisServiceRequestGenTagP2P(
 	peerid peer.ID,
 	fileData []byte,
-	blockNum uint64,
 	filehash string,
 	customData string,
 	timeout time.Duration,
@@ -36,7 +35,6 @@ func (n *Node) PoisServiceRequestGenTagP2P(
 	c := pb.NewPodr2ApiClient(conn)
 	result, err := c.RequestGenTag(ctx, &pb.RequestGenTag{
 		FileData:   fileData,
-		BlockNum:   blockNum,
 		Name:       filehash,
 		CustomData: customData,
 	})
