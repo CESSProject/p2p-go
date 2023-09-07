@@ -27,7 +27,6 @@ func (n *Node) PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Po
 func (n *Node) PoisServiceRequestGenTag(
 	addr string,
 	fileData []byte,
-	blockNum uint64,
 	filehash string,
 	customData string,
 	timeout time.Duration,
@@ -47,7 +46,6 @@ func (n *Node) PoisServiceRequestGenTag(
 
 	result, err := c.RequestGenTag(ctx, &pb.RequestGenTag{
 		FileData:   fileData,
-		BlockNum:   blockNum,
 		Name:       filehash,
 		CustomData: customData,
 	})
@@ -69,10 +67,6 @@ func (n *Node) PoisServiceRequestBatchVerify(
 	conn, err := grpc.Dial(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(128*1024*1024),
-			grpc.MaxCallSendMsgSize(128*1024*1024),
-		),
 	)
 	if err != nil {
 		return nil, err

@@ -137,11 +137,15 @@ type P2P interface {
 	// PoisGetMinerInitParam
 	PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
 
-	// PoisMinerRegister
-	PoisMinerRegister(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error)
-
 	// PoisMinerCommitGenChall
-	PoisMinerCommitGenChall(addr string, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
+	PoisMinerCommitGenChall(
+		addr string,
+		accountKey []byte,
+		commit *pb.Commits,
+		minerPoisInfo *pb.MinerPoisInfo,
+		minerSign []byte,
+		timeout time.Duration,
+	) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
 	PoisVerifyCommitProof(
@@ -149,8 +153,7 @@ type P2P interface {
 		accountKey []byte,
 		commitProofGroup *pb.CommitProofGroup,
 		accProof *pb.AccProof,
-		key_n []byte,
-		key_g []byte,
+		minerSign []byte,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -159,11 +162,7 @@ type P2P interface {
 		addr string,
 		accountKey []byte,
 		spaceChals []int64,
-		keyN []byte,
-		keyG []byte,
-		acc []byte,
-		front int64,
-		rear int64,
+		minerPoisInfo *pb.MinerPoisInfo,
 		proof *pb.SpaceProof,
 		spaceProofHashPolkadotSig []byte,
 		timeout time.Duration,
@@ -188,8 +187,8 @@ type P2P interface {
 		witChain *pb.AccWitnessNode,
 		accPath [][]byte,
 		minerId []byte,
-		keyN []byte,
-		keyG []byte,
+		minerPoisInfo *pb.MinerPoisInfo,
+		minerSign []byte,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -197,7 +196,6 @@ type P2P interface {
 	PoisServiceRequestGenTag(
 		addr string,
 		fileData []byte,
-		blockNum uint64,
 		filehash string,
 		customData string,
 		timeout time.Duration,
@@ -221,21 +219,27 @@ type P2P interface {
 
 	PoisGetMinerInitParamP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
 
-	PoisMinerRegisterP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerRegister, error)
+	PoisMinerCommitGenChallP2P(
+		peerid peer.ID,
+		accountKey []byte,
+		commit *pb.Commits,
+		timeout time.Duration,
+	) (*pb.Challenge, error)
 
-	PoisMinerCommitGenChallP2P(peerid peer.ID, accountKey []byte, commit *pb.Commits, timeout time.Duration) (*pb.Challenge, error)
-
-	PoisVerifyCommitProofP2P(peerid peer.ID, accountKey []byte, commitProofGroup *pb.CommitProofGroup, accProof *pb.AccProof, key_n, key_g []byte, timeout time.Duration) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+	PoisVerifyCommitProofP2P(
+		peerid peer.ID,
+		accountKey []byte,
+		commitProofGroup *pb.CommitProofGroup,
+		accProof *pb.AccProof,
+		minerSign []byte,
+		timeout time.Duration,
+	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
 	PoisSpaceProofVerifySingleBlockP2P(
 		peerid peer.ID,
 		accountKey []byte,
 		spaceChals []int64,
-		keyN []byte,
-		keyG []byte,
-		acc []byte,
-		front int64,
-		rear int64,
+		minerPoisInfo *pb.MinerPoisInfo,
 		proof *pb.SpaceProof,
 		spaceProofHashPolkadotSig []byte,
 		timeout time.Duration,
@@ -258,8 +262,8 @@ type P2P interface {
 		witChain *pb.AccWitnessNode,
 		accPath [][]byte,
 		minerId []byte,
-		keyN []byte,
-		keyG []byte,
+		minerPoisInfo *pb.MinerPoisInfo,
+		minerSign []byte,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -267,7 +271,6 @@ type P2P interface {
 	PoisServiceRequestGenTagP2P(
 		peerid peer.ID,
 		fileData []byte,
-		blockNum uint64,
 		filehash string,
 		customData string,
 		timeout time.Duration,

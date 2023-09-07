@@ -23,7 +23,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PoisApiClient interface {
 	RequestMinerGetNewKey(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerInitParam, error)
-	RequestMinerRegister(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerRegister, error)
 	RequestMinerCommitGenChall(ctx context.Context, in *RequestMinerCommitGenChall, opts ...grpc.CallOption) (*Challenge, error)
 	RequestVerifyCommitProof(ctx context.Context, in *RequestVerifyCommitAndAccProof, opts ...grpc.CallOption) (*ResponseVerifyCommitOrDeletionProof, error)
 	RequestSpaceProofVerifySingleBlock(ctx context.Context, in *RequestSpaceProofVerify, opts ...grpc.CallOption) (*ResponseSpaceProofVerify, error)
@@ -42,15 +41,6 @@ func NewPoisApiClient(cc grpc.ClientConnInterface) PoisApiClient {
 func (c *poisApiClient) RequestMinerGetNewKey(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerInitParam, error) {
 	out := new(ResponseMinerInitParam)
 	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_miner_get_new_key", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *poisApiClient) RequestMinerRegister(ctx context.Context, in *RequestMinerInitParam, opts ...grpc.CallOption) (*ResponseMinerRegister, error) {
-	out := new(ResponseMinerRegister)
-	err := c.cc.Invoke(ctx, "/pois.api.PoisApi/request_miner_register", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +97,6 @@ func (c *poisApiClient) RequestVerifyDeletionProof(ctx context.Context, in *Requ
 // for forward compatibility
 type PoisApiServer interface {
 	RequestMinerGetNewKey(context.Context, *RequestMinerInitParam) (*ResponseMinerInitParam, error)
-	RequestMinerRegister(context.Context, *RequestMinerInitParam) (*ResponseMinerRegister, error)
 	RequestMinerCommitGenChall(context.Context, *RequestMinerCommitGenChall) (*Challenge, error)
 	RequestVerifyCommitProof(context.Context, *RequestVerifyCommitAndAccProof) (*ResponseVerifyCommitOrDeletionProof, error)
 	RequestSpaceProofVerifySingleBlock(context.Context, *RequestSpaceProofVerify) (*ResponseSpaceProofVerify, error)
@@ -122,9 +111,6 @@ type UnimplementedPoisApiServer struct {
 
 func (UnimplementedPoisApiServer) RequestMinerGetNewKey(context.Context, *RequestMinerInitParam) (*ResponseMinerInitParam, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestMinerGetNewKey not implemented")
-}
-func (UnimplementedPoisApiServer) RequestMinerRegister(context.Context, *RequestMinerInitParam) (*ResponseMinerRegister, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestMinerRegister not implemented")
 }
 func (UnimplementedPoisApiServer) RequestMinerCommitGenChall(context.Context, *RequestMinerCommitGenChall) (*Challenge, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestMinerCommitGenChall not implemented")
@@ -168,24 +154,6 @@ func _PoisApi_RequestMinerGetNewKey_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PoisApiServer).RequestMinerGetNewKey(ctx, req.(*RequestMinerInitParam))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _PoisApi_RequestMinerRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestMinerInitParam)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PoisApiServer).RequestMinerRegister(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pois.api.PoisApi/request_miner_register",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PoisApiServer).RequestMinerRegister(ctx, req.(*RequestMinerInitParam))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -290,10 +258,6 @@ var PoisApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "request_miner_get_new_key",
 			Handler:    _PoisApi_RequestMinerGetNewKey_Handler,
-		},
-		{
-			MethodName: "request_miner_register",
-			Handler:    _PoisApi_RequestMinerRegister_Handler,
 		},
 		{
 			MethodName: "request_miner_commit_gen_chall",
