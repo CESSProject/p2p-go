@@ -110,7 +110,7 @@ func GetExternalIp() (string, error) {
 		defer resp.Body.Close()
 		b, _ := io.ReadAll(resp.Body)
 		externalIp = fmt.Sprintf("%s", string(b))
-		if isIPv4(externalIp) {
+		if IsIPv4(externalIp) {
 			return externalIp, nil
 		}
 	}
@@ -121,7 +121,7 @@ func GetExternalIp() (string, error) {
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if isIPv4(externalIp) {
+		if IsIPv4(externalIp) {
 			return externalIp, nil
 		}
 	}
@@ -132,7 +132,7 @@ func GetExternalIp() (string, error) {
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if isIPv4(externalIp) {
+		if IsIPv4(externalIp) {
 			return externalIp, nil
 		}
 	}
@@ -144,7 +144,7 @@ func GetExternalIp() (string, error) {
 		externalIp = strings.ReplaceAll(string(output), "\"", "")
 		externalIp = strings.ReplaceAll(externalIp, ",", "")
 		externalIp = strings.ReplaceAll(externalIp, "\n", "")
-		if isIPv4(externalIp) {
+		if IsIPv4(externalIp) {
 			return externalIp, nil
 		}
 	}

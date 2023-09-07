@@ -11,10 +11,8 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -104,17 +102,14 @@ type P2P interface {
 	// SetBootstraps updates the host's bootstrap list
 	SetBootstraps(bootstrap []string)
 
+	//
+	GetDht() *dht.IpfsDHT
+
 	// DHTFindPeer searches for a peer with given ID
 	DHTFindPeer(peerid string) (peer.AddrInfo, error)
 
 	// PeerID returns your own peerid
 	PeerID() peer.ID
-
-	// TryAddPeerToRoutingTable tries to add a peer to the Routing table
-	TryAddPeerToRoutingTable(peerid peer.ID) (bool, error)
-
-	// RemovePeerFromRoutingTable remove peer from routing table
-	RemovePeerFromRoutingTable(peerid peer.ID)
 
 	// Close p2p
 	Close() error
@@ -479,16 +474,6 @@ func (n *Node) PeerID() peer.ID {
 	return n.IpfsDHT.PeerID()
 }
 
-// TryAddPeerToRoutingTable tries to add a peer to the routing table
-func (n *Node) TryAddPeerToRoutingTable(peerid peer.ID) (bool, error) {
-	return n.IpfsDHT.RoutingTable().TryAddPeer(peerid, true, false)
-}
-
-// RemovePeerFromRoutingTable remove peer from routing table
-func (n *Node) RemovePeerFromRoutingTable(peerid peer.ID) {
-	n.IpfsDHT.RoutingTable().RemovePeer(peerid)
-}
-
 // GetDiscoveredPeers
 func (n *Node) GetDiscoveredPeers() <-chan *routing.QueryEvent {
 	return n.discoveredPeerCh
@@ -636,6 +621,14 @@ func (n *Node) SetBootstraps(bootstrap []string) {
 	n.bootstrap = bootstrap
 }
 
+func (n *Node) GetDht() *dht.IpfsDHT {
+	return n.IpfsDHT
+}
+
+func (n *Node) GetRoutingTable() *drouting.RoutingDiscovery {
+	return n.RoutingDiscovery
+}
+
 func (n *Node) GetCtxRoot() context.Context {
 	return n.ctxRoot
 }
@@ -738,14 +731,9 @@ func identification(workspace, fpath string) (crypto.PrivKey, error) {
 
 func mkdir(workspace string) (DataDirs, error) {
 	dataDir := DataDirs{
-		FileDir: filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:  filepath.Join(workspace, TmpDataDirectionry),
-		//IdleDataDir:   filepath.Join(workspace, IdleDataDirectionry),
-		//IdleTagDir:    filepath.Join(workspace, IdleTagDirectionry),
+		FileDir:       filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:        filepath.Join(workspace, TmpDataDirectionry),
 		ServiceTagDir: filepath.Join(workspace, ServiceTagDirectionry),
-		//ProofDir:      filepath.Join(workspace, ProofDirectionry),
-		//IproofFile:    filepath.Join(workspace, ProofDirectionry, IdleProofFile),
-		//SproofFile:    filepath.Join(workspace, ProofDirectionry, ServiceProofFile),
 	}
 	if err := os.MkdirAll(dataDir.FileDir, DirMode); err != nil {
 		return dataDir, err
@@ -808,18 +796,6 @@ func (n *Node) NewPeerStream(id peer.ID, p protocol.ID) (network.Stream, error) 
 func (n *Node) SendMsgToStream(s network.Stream, msg []byte) error {
 	_, err := s.Write(msg)
 	return err
-}
-
-// IsIPv4 is used to determine whether ipAddr is an ipv4 address
-func isIPv4(ipAddr string) bool {
-	ip := net.ParseIP(ipAddr)
-	return ip != nil && strings.Contains(ipAddr, ".")
-}
-
-// IsIPv6 is used to determine whether ipAddr is an ipv6 address
-func isIPv6(ipAddr string) bool {
-	ip := net.ParseIP(ipAddr)
-	return ip != nil && strings.Contains(ipAddr, ":")
 }
 
 func verifyWorkspace(ws string) error {
@@ -889,8 +865,12 @@ func (n *Node) initDHT() error {
 		if err != nil {
 			continue
 		}
-		peerinfo, _ := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+		peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+		if err != nil {
+			continue
+		}
 		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
+		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
 		err = n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
 		if err != nil {
 			out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
