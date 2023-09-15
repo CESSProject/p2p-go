@@ -197,12 +197,7 @@ type P2P interface {
 	//
 	PoisRequestVerifyDeletionProof(
 		addr string,
-		roots [][]byte,
-		witChain *pb.AccWitnessNode,
-		accPath [][]byte,
-		minerId []byte,
-		minerPoisInfo *pb.MinerPoisInfo,
-		minerSign []byte,
+		RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -268,12 +263,7 @@ type P2P interface {
 
 	PoisRequestVerifyDeletionProofP2P(
 		peerid peer.ID,
-		roots [][]byte,
-		witChain *pb.AccWitnessNode,
-		accPath [][]byte,
-		minerId []byte,
-		minerPoisInfo *pb.MinerPoisInfo,
-		minerSign []byte,
+		requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 

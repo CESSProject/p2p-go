@@ -127,12 +127,7 @@ func (n *Node) PoisRequestVerifySpaceTotalP2P(
 
 func (n *Node) PoisRequestVerifyDeletionProofP2P(
 	peerid peer.ID,
-	roots [][]byte,
-	witChain *pb.AccWitnessNode,
-	accPath [][]byte,
-	minerId []byte,
-	minerPoisInfo *pb.MinerPoisInfo,
-	minerSign []byte,
+	requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 	timeout time.Duration,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials())}
@@ -145,13 +140,6 @@ func (n *Node) PoisRequestVerifyDeletionProofP2P(
 	defer conn.Close()
 	c := pb.NewPoisApiClient(conn)
 
-	result, err := c.RequestVerifyDeletionProof(ctx, &pb.RequestVerifyDeletionProof{
-		Roots:     roots,
-		WitChain:  witChain,
-		AccPath:   accPath,
-		MinerId:   minerId,
-		PoisInfo:  minerPoisInfo,
-		MinerSign: minerSign,
-	})
+	result, err := c.RequestVerifyDeletionProof(ctx, requestVerifyDeletionProof)
 	return result, err
 }
