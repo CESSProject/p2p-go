@@ -76,6 +76,7 @@ message CommitProofGroupInner {
 message CommitProof {
   MhtProof node = 1;
   repeated MhtProof parents = 2;
+  repeated MhtProof elders = 3;
 }
 message MhtProof {
   int32 index = 1;
