@@ -21,6 +21,13 @@ import (
 	libp2pgrpc "github.com/drgomesp/go-libp2p-grpc"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
+	bitswap "github.com/ipfs/boxo/bitswap"
+	bsnet "github.com/ipfs/boxo/bitswap/network"
+	"github.com/ipfs/go-cid"
+	ds "github.com/ipfs/go-datastore"
+	ds_sync "github.com/ipfs/go-datastore/sync"
+	blockstore "github.com/ipfs/go-ipfs-blockstore"
+	"github.com/ipfs/go-libipfs/blocks"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -116,6 +123,21 @@ type P2P interface {
 
 	// Close p2p
 	Close() error
+
+	// NewBitSwapBlock creates block data of data
+	NewBitSwapBlock(data []byte) (cid.Cid, error)
+
+	// SaveDataToBlock saves data to block data
+	SaveDataToBlock(data []byte) (cid.Cid, error)
+
+	// GetDataFromBlock get data from block
+	GetDataFromBlock(wantCid string) ([]byte, error)
+
+	// NewBitSwapBlockWithCid creates block data of data and cidstr
+	NewBitSwapBlockWithCid(data []byte, cidstr cid.Cid) (*blocks.BasicBlock, error)
+
+	// SaveAndNotifyBlock save and notify block
+	SaveAndNotifyBlock(block *blocks.BasicBlock) error
 
 	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
@@ -287,6 +309,8 @@ type Node struct {
 	discoveredPeerCh      <-chan *routing.QueryEvent
 	host                  host.Host
 	libp2pgrpcCli         *libp2pgrpc.Client
+	bstore                blockstore.Blockstore
+	bswap                 *bitswap.Bitswap
 	dir                   DataDirs
 	peerPublickey         []byte
 	workspace             string
@@ -380,13 +404,17 @@ func NewBasicNode(
 		libp2p.ConnectionManager(cmgr),
 		libp2p.DefaultTransports,
 		libp2p.DefaultSecurity,
-		libp2p.NATPortMap(),
 		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
 		libp2p.DefaultMuxers,
 		libp2p.AddrsFactory(addressFactory),
 		libp2p.DefaultEnableRelay,
 		libp2p.DisableMetrics(),
 		libp2p.ResourceManager(rm),
+		libp2p.NATPortMap(),
+		libp2p.EnableNATService(),
+		libp2p.EnableRelay(),
+		libp2p.EnableRelayService(),
+		libp2p.EnableHolePunching(),
 	)
 
 	bhost, err := libp2p.New(opts...)
@@ -439,9 +467,66 @@ func NewBasicNode(
 		return nil, err
 	}
 
+	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
+	// blockData := blocks.NewBlock([]byte("123456"))
+	// fmt.Println("Generate a cid: ", blockData.Cid().String())
+	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	n.bswap = bitswap.New(n.ctxQueryFromCtxCancel, network, n.bstore)
+
 	n.initProtocol(protocolPrefix)
 
 	return n, nil
+}
+
+// NewBitSwapBlock creates block data of data
+func (n *Node) NewBitSwapBlock(data []byte) (cid.Cid, error) {
+	if len(data) <= 0 {
+		return cid.Cid{}, errors.New("[NewBitSwapBlock] empty data")
+	}
+	blockData := blocks.NewBlock(data)
+	return blockData.Cid(), nil
+}
+
+// NewBitSwapBlockWithCid creates block data of data and cidstr
+func (n *Node) NewBitSwapBlockWithCid(data []byte, cidstr cid.Cid) (*blocks.BasicBlock, error) {
+	if len(data) <= 0 {
+		return nil, errors.New("[NewBitSwapBlockWithCid] empty data")
+	}
+	return blocks.NewBlockWithCid(data, cidstr)
+}
+
+// SaveAndNotifyBlock save and notify block
+func (n *Node) SaveAndNotifyBlock(block *blocks.BasicBlock) error {
+	err := n.bstore.Put(n.ctxQueryFromCtxCancel, block)
+	if err != nil {
+		return err
+	}
+	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, block)
+	n.bswap.GetWantHaves()
+	return err
+}
+
+// SaveDataToBlock saves data to block data
+func (n *Node) SaveDataToBlock(data []byte) (cid.Cid, error) {
+	if len(data) <= 0 {
+		return cid.Cid{}, errors.New("[SaveDataToBlock] empty data")
+	}
+	blockData := blocks.NewBlock(data)
+	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
+	return blockData.Cid(), err
+}
+
+// GetDataFromBlock get data from block
+func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
+	wantcid, err := cid.Decode(wantCid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	if err != nil {
+		return nil, err
+	}
+	return block.RawData(), err
 }
 
 // DHTFindPeer searches for a peer with given ID.
