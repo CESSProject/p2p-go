@@ -138,20 +138,14 @@ type P2P interface {
 	// PoisMinerCommitGenChall
 	PoisMinerCommitGenChall(
 		addr string,
-		accountKey []byte,
-		commit *pb.Commits,
-		minerPoisInfo *pb.MinerPoisInfo,
-		minerSign []byte,
+		commitGenChall *pb.RequestMinerCommitGenChall,
 		timeout time.Duration,
 	) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
 	PoisVerifyCommitProof(
 		addr string,
-		accountKey []byte,
-		commitProofGroup *pb.CommitProofGroup,
-		accProof *pb.AccProof,
-		minerSign []byte,
+		verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -219,17 +213,13 @@ type P2P interface {
 
 	PoisMinerCommitGenChallP2P(
 		peerid peer.ID,
-		accountKey []byte,
-		commit *pb.Commits,
+		commitGenChall *pb.RequestMinerCommitGenChall,
 		timeout time.Duration,
 	) (*pb.Challenge, error)
 
 	PoisVerifyCommitProofP2P(
 		peerid peer.ID,
-		accountKey []byte,
-		commitProofGroup *pb.CommitProofGroup,
-		accProof *pb.AccProof,
-		minerSign []byte,
+		verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 

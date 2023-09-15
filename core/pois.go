@@ -45,10 +45,7 @@ func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout tim
 
 func (n *Node) PoisMinerCommitGenChall(
 	addr string,
-	accountKey []byte,
-	commit *pb.Commits,
-	minerPoisInfo *pb.MinerPoisInfo,
-	minerSign []byte,
+	commitGenChall *pb.RequestMinerCommitGenChall,
 	timeout time.Duration,
 ) (*pb.Challenge, error) {
 	conn, err := grpc.Dial(
@@ -64,21 +61,13 @@ func (n *Node) PoisMinerCommitGenChall(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestMinerCommitGenChall(ctx, &pb.RequestMinerCommitGenChall{
-		MinerId:   accountKey,
-		Commit:    commit,
-		PoisInfo:  minerPoisInfo,
-		MinerSign: minerSign,
-	})
+	result, err := c.RequestMinerCommitGenChall(ctx, commitGenChall)
 	return result, err
 }
 
 func (n *Node) PoisVerifyCommitProof(
 	addr string,
-	accountKey []byte,
-	commitProofGroup *pb.CommitProofGroup,
-	accProof *pb.AccProof,
-	minerSign []byte,
+	verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 	timeout time.Duration,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(
@@ -94,12 +83,7 @@ func (n *Node) PoisVerifyCommitProof(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestVerifyCommitProof(ctx, &pb.RequestVerifyCommitAndAccProof{
-		CommitProofGroup: commitProofGroup,
-		AccProof:         accProof,
-		MinerId:          accountKey,
-		MinerSign:        minerSign,
-	})
+	result, err := c.RequestVerifyCommitProof(ctx, verifyCommitAndAccProof)
 	return result, err
 }
 
