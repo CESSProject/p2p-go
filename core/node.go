@@ -23,11 +23,11 @@ import (
 	"github.com/gogo/protobuf/proto"
 	bitswap "github.com/ipfs/boxo/bitswap"
 	bsnet "github.com/ipfs/boxo/bitswap/network"
+	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
 	ds_sync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	"github.com/ipfs/go-libipfs/blocks"
+	u "github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -124,20 +124,17 @@ type P2P interface {
 	// Close p2p
 	Close() error
 
-	// NewBitSwapBlock creates block data of data
-	NewBitSwapBlock(data []byte) (cid.Cid, error)
+	//
+	NewCidFromFid(fid string) (cid.Cid, error)
 
-	// SaveDataToBlock saves data to block data
-	SaveDataToBlock(data []byte) (cid.Cid, error)
+	//
+	SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
+
+	//
+	NotifyData(buf []byte) error
 
 	// GetDataFromBlock get data from block
 	GetDataFromBlock(wantCid string) ([]byte, error)
-
-	// NewBitSwapBlockWithCid creates block data of data and cidstr
-	NewBitSwapBlockWithCid(data []byte, cidstr cid.Cid) (*blocks.BasicBlock, error)
-
-	// SaveAndNotifyBlock save and notify block
-	SaveAndNotifyBlock(block *blocks.BasicBlock) error
 
 	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
@@ -197,12 +194,7 @@ type P2P interface {
 	//
 	PoisRequestVerifyDeletionProof(
 		addr string,
-		roots [][]byte,
-		witChain *pb.AccWitnessNode,
-		accPath [][]byte,
-		minerId []byte,
-		minerPoisInfo *pb.MinerPoisInfo,
-		minerSign []byte,
+		RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -268,12 +260,7 @@ type P2P interface {
 
 	PoisRequestVerifyDeletionProofP2P(
 		peerid peer.ID,
-		roots [][]byte,
-		witChain *pb.AccWitnessNode,
-		accPath [][]byte,
-		minerId []byte,
-		minerPoisInfo *pb.MinerPoisInfo,
-		minerSign []byte,
+		requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
@@ -468,9 +455,12 @@ func NewBasicNode(
 	}
 
 	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-	// blockData := blocks.NewBlock([]byte("123456"))
-	// fmt.Println("Generate a cid: ", blockData.Cid().String())
-	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(ds.NewMapDatastore()))
+	fsdatastore, err := NewDatastore(n.workspace)
+	if err != nil {
+		return nil, err
+	}
+
+	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
 	n.bswap = bitswap.New(n.ctxQueryFromCtxCancel, network, n.bstore)
 
 	n.initProtocol(protocolPrefix)
@@ -478,42 +468,30 @@ func NewBasicNode(
 	return n, nil
 }
 
-// NewBitSwapBlock creates block data of data
-func (n *Node) NewBitSwapBlock(data []byte) (cid.Cid, error) {
-	if len(data) <= 0 {
-		return cid.Cid{}, errors.New("[NewBitSwapBlock] empty data")
+// NewCidFromFid creates block data of data
+func (n *Node) NewCidFromFid(fid string) (cid.Cid, error) {
+	if fid == "" {
+		return cid.Cid{}, errors.New("empty fid")
 	}
-	blockData := blocks.NewBlock(data)
-	return blockData.Cid(), nil
+	newCid := cid.NewCidV0(u.Hash([]byte(fid)))
+	return newCid, nil
 }
 
-// NewBitSwapBlockWithCid creates block data of data and cidstr
-func (n *Node) NewBitSwapBlockWithCid(data []byte, cidstr cid.Cid) (*blocks.BasicBlock, error) {
-	if len(data) <= 0 {
-		return nil, errors.New("[NewBitSwapBlockWithCid] empty data")
-	}
-	return blocks.NewBlockWithCid(data, cidstr)
-}
-
-// SaveAndNotifyBlock save and notify block
-func (n *Node) SaveAndNotifyBlock(block *blocks.BasicBlock) error {
-	err := n.bstore.Put(n.ctxQueryFromCtxCancel, block)
-	if err != nil {
-		return err
-	}
-	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, block)
-	n.bswap.GetWantHaves()
-	return err
-}
-
-// SaveDataToBlock saves data to block data
-func (n *Node) SaveDataToBlock(data []byte) (cid.Cid, error) {
-	if len(data) <= 0 {
-		return cid.Cid{}, errors.New("[SaveDataToBlock] empty data")
-	}
-	blockData := blocks.NewBlock(data)
+// SaveAndNotifyDataBlock
+func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
+	blockData := blocks.NewBlock(buf)
 	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
+	if err != nil {
+		return blockData.Cid(), err
+	}
+	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
 	return blockData.Cid(), err
+}
+
+// NotifyData notify data
+func (n *Node) NotifyData(buf []byte) error {
+	blockData := blocks.NewBlock(buf)
+	return n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
 }
 
 // GetDataFromBlock get data from block

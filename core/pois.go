@@ -155,12 +155,7 @@ func (n *Node) PoisRequestVerifySpaceTotal(
 
 func (n *Node) PoisRequestVerifyDeletionProof(
 	addr string,
-	roots [][]byte,
-	witChain *pb.AccWitnessNode,
-	accPath [][]byte,
-	minerId []byte,
-	minerPoisInfo *pb.MinerPoisInfo,
-	minerSign []byte,
+	RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 	timeout time.Duration,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
 	conn, err := grpc.Dial(
@@ -176,13 +171,6 @@ func (n *Node) PoisRequestVerifyDeletionProof(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestVerifyDeletionProof(ctx, &pb.RequestVerifyDeletionProof{
-		Roots:     roots,
-		WitChain:  witChain,
-		AccPath:   accPath,
-		MinerId:   minerId,
-		PoisInfo:  minerPoisInfo,
-		MinerSign: minerSign,
-	})
+	result, err := c.RequestVerifyDeletionProof(ctx, RequestVerifyDeletionProof)
 	return result, err
 }
