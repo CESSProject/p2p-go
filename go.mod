@@ -1,6 +1,6 @@
 module github.com/CESSProject/p2p-go
 
-go 1.19
+go 1.20
 
 require (
 	github.com/drgomesp/go-libp2p-grpc v0.1.0
