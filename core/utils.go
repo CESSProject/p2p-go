@@ -149,6 +149,18 @@ func GetExternalIp() (string, error) {
 		}
 	}
 
+	ctx4, cancel4 := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel4()
+	output, err = exec.CommandContext(ctx4, "bash", "-c", `curl ifcfg.me`).Output()
+	if err == nil {
+		externalIp = strings.ReplaceAll(string(output), "\"", "")
+		externalIp = strings.ReplaceAll(externalIp, ",", "")
+		externalIp = strings.ReplaceAll(externalIp, "\n", "")
+		if IsIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
 	return "", errors.New("please configure the public ip")
 }
 

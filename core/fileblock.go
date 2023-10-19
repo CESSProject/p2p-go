@@ -15,13 +15,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ipfs/go-cid"
 	ds "github.com/ipfs/go-datastore"
 	query "github.com/ipfs/go-datastore/query"
-	"github.com/multiformats/go-multihash"
 )
 
-var BlocksDir = "blocks"
+var data = ".data"
 
 // Datastore uses a uses a file per key to store values.
 type Datastore struct {
@@ -43,29 +41,17 @@ func NewDatastore(path string) (ds.Datastore, error) {
 
 // KeyFilename returns the filename associated with `key`
 func (d *Datastore) KeyFilename(key ds.Key) string {
-	return filepath.Join(d.path, BlocksDir)
+	return filepath.Join(d.path, key.Name(), data)
 }
 
 // Put stores the given value.
 func (d *Datastore) Put(ctx context.Context, key ds.Key, value []byte) (err error) {
 	fn := d.KeyFilename(key)
-	hash, err := CalcSHA256(value)
-	if err != nil {
-		return err
-	}
-
-	mhash, err := multihash.FromHexString("1220" + hash)
-	if err != nil {
-		return err
-	}
-
-	fn = filepath.Join(fn, cid.NewCidV0(mhash).String())
 	// mkdirall above.
 	err = os.MkdirAll(filepath.Dir(fn), 0755)
 	if err != nil {
 		return err
 	}
-
 	return os.WriteFile(fn, value, 0666)
 }
 
@@ -120,7 +106,7 @@ func (d *Datastore) Query(ctx context.Context, q query.Query) (query.Results, er
 		}
 
 		if !info.IsDir() {
-			path = strings.TrimSuffix(path, BlocksDir)
+			path = strings.TrimSuffix(path, data)
 			var result query.Result
 			key := ds.NewKey(path)
 			result.Entry.Key = key.String()

@@ -17,7 +17,6 @@ require (
 	github.com/libp2p/go-msgio v0.3.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.11.0
-	github.com/multiformats/go-multihash v0.2.3
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.11.0
@@ -93,6 +92,7 @@ require (
 	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multicodec v0.9.0 // indirect
+	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-multistream v0.4.1 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
