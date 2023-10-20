@@ -13,6 +13,8 @@ const privatekeyFile = ".private"
 const AllIpAddress = "0.0.0.0"
 const LocalAddress = "127.0.0.1"
 
+const FileBlockDir = "blocks"
+
 const DefaultFDCount = 65535
 
 // byte size
@@ -26,14 +28,5 @@ const BufferSize = 64 * SIZE_1KiB
 
 const DirMode = 0644
 
-const SegmentSize = 16 * SIZE_1MiB
-const FragmentSize = 8 * SIZE_1MiB
-
-const DataShards = 2
-const ParShards = 1
-
-const SegmentSizeTest = 64 * SIZE_1MiB
-const FragmentSizeTest = 16 * SIZE_1MiB
-
-const DataShardsTest = 4
-const ParShardsTest = 4
+const SegmentSize = 64 * SIZE_1MiB
+const FragmentSize = 16 * SIZE_1MiB

@@ -455,7 +455,7 @@ func NewBasicNode(
 	}
 
 	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-	fsdatastore, err := NewDatastore(n.workspace)
+	fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
 	if err != nil {
 		return nil, err
 	}
