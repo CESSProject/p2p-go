@@ -500,7 +500,7 @@ func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
 	if err != nil {
 		return nil, err
 	}
