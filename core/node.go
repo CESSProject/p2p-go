@@ -45,6 +45,7 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
+	mh "github.com/multiformats/go-multihash"
 	"github.com/pbnjay/memory"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -126,6 +127,9 @@ type P2P interface {
 
 	//
 	NewCidFromFid(fid string) (cid.Cid, error)
+
+	//
+	FidToCid(fid string) (string, error)
 
 	//
 	SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
@@ -505,6 +509,15 @@ func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
 		return nil, err
 	}
 	return block.RawData(), err
+}
+
+// FidToCid
+func (n *Node) FidToCid(fid string) (string, error) {
+	mhash, err := mh.FromHexString("1220" + fid)
+	if err != nil {
+		return "", err
+	}
+	return cid.NewCidV0(mhash).String(), nil
 }
 
 // DHTFindPeer searches for a peer with given ID.
