@@ -143,6 +143,9 @@ type P2P interface {
 	GetDataFromBlock(wantCid string) ([]byte, error)
 
 	//
+	GetLocalDataFromBlock(wantCid string) ([]byte, error)
+
+	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
 
 	// RouteTableFindPeers
@@ -506,6 +509,19 @@ func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
 		return nil, err
 	}
 	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	if err != nil {
+		return nil, err
+	}
+	return block.RawData(), err
+}
+
+// GetLocalDataFromBlock get local data from block
+func (n *Node) GetLocalDataFromBlock(wantCid string) ([]byte, error) {
+	wantcid, err := cid.Decode(wantCid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
 	if err != nil {
 		return nil, err
 	}
@@ -914,9 +930,11 @@ func (n *Node) initDHT() error {
 		}
 		bootaddrs = append(bootaddrs, *addrinfo)
 	}
-	if len(bootaddrs) > 0 {
-		options = append(options, dht.BootstrapPeers(bootaddrs...))
-	}
+
+	// if len(bootaddrs) > 0 {
+	// 	options = append(options, dht.BootstrapPeers(bootaddrs...))
+	// }
+
 	// Start a DHT, for use in peer discovery. We can't just make a new DHT
 	// client because we want each peer to maintain its own local copy of the
 	// DHT, so that the bootstrapping node of the DHT can go down without
