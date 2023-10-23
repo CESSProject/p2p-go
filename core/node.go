@@ -27,7 +27,6 @@ import (
 	"github.com/ipfs/go-cid"
 	ds_sync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	u "github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -45,6 +44,7 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
+	mh "github.com/multiformats/go-multihash"
 	"github.com/pbnjay/memory"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -125,7 +125,13 @@ type P2P interface {
 	Close() error
 
 	//
-	NewCidFromFid(fid string) (cid.Cid, error)
+	GetBlockstore() blockstore.Blockstore
+
+	//
+	GetBitSwap() *bitswap.Bitswap
+
+	//
+	FidToCid(fid string) (string, error)
 
 	//
 	SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
@@ -455,7 +461,7 @@ func NewBasicNode(
 	}
 
 	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-	fsdatastore, err := NewDatastore(n.workspace)
+	fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
 	if err != nil {
 		return nil, err
 	}
@@ -468,13 +474,12 @@ func NewBasicNode(
 	return n, nil
 }
 
-// NewCidFromFid creates block data of data
-func (n *Node) NewCidFromFid(fid string) (cid.Cid, error) {
-	if fid == "" {
-		return cid.Cid{}, errors.New("empty fid")
-	}
-	newCid := cid.NewCidV0(u.Hash([]byte(fid)))
-	return newCid, nil
+func (n *Node) GetBlockstore() blockstore.Blockstore {
+	return n.bstore
+}
+
+func (n *Node) GetBitSwap() *bitswap.Bitswap {
+	return n.bswap
 }
 
 // SaveAndNotifyDataBlock
@@ -500,11 +505,20 @@ func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
 	if err != nil {
 		return nil, err
 	}
 	return block.RawData(), err
+}
+
+// FidToCid
+func (n *Node) FidToCid(fid string) (string, error) {
+	mhash, err := mh.FromHexString("1220" + fid)
+	if err != nil {
+		return "", err
+	}
+	return cid.NewCidV0(mhash).String(), nil
 }
 
 // DHTFindPeer searches for a peer with given ID.

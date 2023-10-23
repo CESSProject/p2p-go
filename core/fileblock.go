@@ -32,6 +32,10 @@ var _ ds.PersistentDatastore = (*Datastore)(nil)
 
 // NewDatastore returns a new fs Datastore at given `path`
 func NewDatastore(path string) (ds.Datastore, error) {
+	err := os.MkdirAll(path, 0755)
+	if err != nil {
+		return nil, err
+	}
 	if !isDir(path) {
 		return nil, fmt.Errorf("failed to find directory at: %v (file? perms?)", path)
 	}
