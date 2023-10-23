@@ -146,6 +146,12 @@ type P2P interface {
 	GetLocalDataFromBlock(wantCid string) ([]byte, error)
 
 	//
+	GetDataFromBlockBySession(wantCid string) ([]byte, error)
+
+	//
+	GetDataFromBlockByClient(wantCid string) ([]byte, error)
+
+	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
 
 	// RouteTableFindPeers
@@ -509,6 +515,32 @@ func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
 		return nil, err
 	}
 	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	if err != nil {
+		return nil, err
+	}
+	return block.RawData(), err
+}
+
+// GetDataFromBlockBySession get data from block
+func (n *Node) GetDataFromBlockBySession(wantCid string) ([]byte, error) {
+	wantcid, err := cid.Decode(wantCid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := n.bswap.NewSession(n.ctxQueryFromCtxCancel).GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	if err != nil {
+		return nil, err
+	}
+	return block.RawData(), err
+}
+
+// GetDataFromBlockBySession get data from block
+func (n *Node) GetDataFromBlockByClient(wantCid string) ([]byte, error) {
+	wantcid, err := cid.Decode(wantCid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := n.bswap.Client.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
 	if err != nil {
 		return nil, err
 	}
