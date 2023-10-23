@@ -140,7 +140,7 @@ type P2P interface {
 	NotifyData(buf []byte) error
 
 	// GetDataFromBlock get data from block
-	GetDataFromBlock(wantCid string) ([]byte, error)
+	GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error)
 
 	//
 	GetLocalDataFromBlock(wantCid string) ([]byte, error)
@@ -509,12 +509,12 @@ func (n *Node) NotifyData(buf []byte) error {
 }
 
 // GetDataFromBlock get data from block
-func (n *Node) GetDataFromBlock(wantCid string) ([]byte, error) {
+func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error) {
 	wantcid, err := cid.Decode(wantCid)
 	if err != nil {
 		return nil, err
 	}
-	block, err := n.bswap.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
+	block, err := n.bswap.GetBlock(ctx, wantcid)
 	if err != nil {
 		return nil, err
 	}
