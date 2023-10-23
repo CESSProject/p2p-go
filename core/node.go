@@ -27,7 +27,6 @@ import (
 	"github.com/ipfs/go-cid"
 	ds_sync "github.com/ipfs/go-datastore/sync"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	u "github.com/ipfs/go-ipfs-util"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -126,7 +125,10 @@ type P2P interface {
 	Close() error
 
 	//
-	NewCidFromFid(fid string) (cid.Cid, error)
+	GetBlockstore() blockstore.Blockstore
+
+	//
+	GetBitSwap() *bitswap.Bitswap
 
 	//
 	FidToCid(fid string) (string, error)
@@ -472,13 +474,12 @@ func NewBasicNode(
 	return n, nil
 }
 
-// NewCidFromFid creates block data of data
-func (n *Node) NewCidFromFid(fid string) (cid.Cid, error) {
-	if fid == "" {
-		return cid.Cid{}, errors.New("empty fid")
-	}
-	newCid := cid.NewCidV0(u.Hash([]byte(fid)))
-	return newCid, nil
+func (n *Node) GetBlockstore() blockstore.Blockstore {
+	return n.bstore
+}
+
+func (n *Node) GetBitSwap() *bitswap.Bitswap {
+	return n.bswap
 }
 
 // SaveAndNotifyDataBlock
