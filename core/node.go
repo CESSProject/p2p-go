@@ -146,12 +146,6 @@ type P2P interface {
 	GetLocalDataFromBlock(wantCid string) ([]byte, error)
 
 	//
-	GetDataFromBlockBySession(wantCid string) ([]byte, error)
-
-	//
-	GetDataFromBlockByClient(wantCid string) ([]byte, error)
-
-	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
 
 	// RouteTableFindPeers
@@ -335,11 +329,10 @@ var _ P2P = (*Node)(nil)
 
 // NewBasicNode constructs a new *Node
 //
-//	  multiaddr: listen addresses of p2p host
 //	  workspace: service working directory
 //	  privatekeypath: private key file
-//		  If it's empty, automatically created in the program working directory
-//		  If it's a directory, it will be created in the specified directory
+//		  If it is empty, automatically created in the program working directory
+//		  If it is a directory, it will be created in the specified directory
 func NewBasicNode(
 	ctx context.Context,
 	port int,
@@ -405,9 +398,9 @@ func NewBasicNode(
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
 		libp2p.ConnectionManager(cmgr),
 		libp2p.DefaultTransports,
+		libp2p.DefaultMuxers,
 		libp2p.DefaultSecurity,
 		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
-		libp2p.DefaultMuxers,
 		libp2p.AddrsFactory(addressFactory),
 		libp2p.DefaultEnableRelay,
 		libp2p.DisableMetrics(),
@@ -515,32 +508,6 @@ func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, er
 		return nil, err
 	}
 	block, err := n.bswap.GetBlock(ctx, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
-
-// GetDataFromBlockBySession get data from block
-func (n *Node) GetDataFromBlockBySession(wantCid string) ([]byte, error) {
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bswap.NewSession(n.ctxQueryFromCtxCancel).GetBlock(n.ctxQueryFromCtxCancel, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
-
-// GetDataFromBlockBySession get data from block
-func (n *Node) GetDataFromBlockByClient(wantCid string) ([]byte, error) {
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bswap.Client.GetBlock(n.ctxQueryFromCtxCancel, wantcid)
 	if err != nil {
 		return nil, err
 	}
@@ -948,6 +915,7 @@ func (n *Node) initDHT() error {
 		dht.Mode(dht.ModeAutoServer),
 		dht.V1ProtocolOverride(protocol.ID(n.dhtProtocolVersion)),
 		dht.Resiliency(10),
+		dht.DisableAutoRefresh(),
 	)
 	bootstrap := n.bootstrap
 	var bootaddrs []peer.AddrInfo
@@ -989,19 +957,17 @@ func (n *Node) initDHT() error {
 		if err != nil {
 			continue
 		}
-		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
-		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
 		err = n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
 		if err != nil {
 			out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
 		} else {
 			out.Ok(fmt.Sprintf("Connection to boot node successful: %s", peerinfo.ID.Pretty()))
 		}
+		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
+		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
 	}
-
+	n.RoutingDiscovery = drouting.NewRoutingDiscovery(kademliaDHT)
 	n.IpfsDHT = kademliaDHT
-	n.RoutingDiscovery = drouting.NewRoutingDiscovery(n.IpfsDHT)
-
 	return nil
 }
 
