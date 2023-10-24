@@ -9,6 +9,7 @@ package config
 
 import (
 	"context"
+	"strings"
 
 	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -30,7 +31,6 @@ type Config struct {
 type Option func(cfg *Config) error
 
 const (
-	DefaultProtocolPrefix = "/kldr"
 	DevnetProtocolPrefix  = "/kldr-devnet"
 	TestnetProtocolPrefix = "/kldr-testnet"
 	MainnetProtocolPrefix = "/kldr-mainnet"
@@ -41,7 +41,17 @@ const (
 // This function consumes the config. Do not reuse it (really!).
 func (cfg *Config) NewNode(ctx context.Context) (core.P2P, error) {
 	if cfg.ProtocolPrefix == "" {
-		cfg.ProtocolPrefix = DefaultProtocolPrefix
+		if len(cfg.BootPeers) > 0 {
+			if strings.Contains(cfg.BootPeers[0], "test") {
+				cfg.ProtocolPrefix = TestnetProtocolPrefix
+			} else if strings.Contains(cfg.BootPeers[0], "main") {
+				cfg.ProtocolPrefix = MainnetProtocolPrefix
+			} else {
+				cfg.ProtocolPrefix = DevnetProtocolPrefix
+			}
+		} else {
+			cfg.ProtocolPrefix = DevnetProtocolPrefix
+		}
 	}
 	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager, cfg.ProtocolPrefix, cfg.PublicIpv4)
 }
