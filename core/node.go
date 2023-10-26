@@ -473,8 +473,6 @@ func NewBasicNode(
 		n.ctxQueryFromCtxCancel,
 		network,
 		n.bstore,
-		//bitswap.WithTargetMessageSize(65536),
-		bitswap.ProvideEnabled(true),
 	)
 
 	n.initProtocol(protocolPrefix)
