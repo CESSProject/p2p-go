@@ -469,7 +469,11 @@ func NewBasicNode(
 	}
 
 	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
-	n.bswap = bitswap.New(n.ctxQueryFromCtxCancel, network, n.bstore)
+	n.bswap = bitswap.New(
+		n.ctxQueryFromCtxCancel,
+		network,
+		n.bstore,
+	)
 
 	n.initProtocol(protocolPrefix)
 
