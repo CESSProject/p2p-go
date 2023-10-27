@@ -121,7 +121,7 @@ func GetExternalIp() (string, error) {
 
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel1()
-	output, err := exec.CommandContext(ctx1, "bash", "-c", "curl ifconfig.co").Output()
+	output, err := exec.CommandContext(ctx1, "sh", "-c", "curl ifconfig.co").Output()
 	if err != nil {
 		errstr += err.Error()
 	}
@@ -135,7 +135,7 @@ func GetExternalIp() (string, error) {
 
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel2()
-	output, err = exec.CommandContext(ctx2, "bash", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
+	output, err = exec.CommandContext(ctx2, "sh", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
 	if err != nil {
 		errstr += err.Error()
 	}
@@ -149,7 +149,7 @@ func GetExternalIp() (string, error) {
 
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel3()
-	output, err = exec.CommandContext(ctx3, "bash", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
+	output, err = exec.CommandContext(ctx3, "sh", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
 	if err != nil {
 		errstr += err.Error()
 	}
@@ -164,7 +164,7 @@ func GetExternalIp() (string, error) {
 
 	ctx4, cancel4 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel4()
-	output, err = exec.CommandContext(ctx4, "bash", "-c", `curl ifcfg.me`).Output()
+	output, err = exec.CommandContext(ctx4, "sh", "-c", `curl ifcfg.me`).Output()
 	if err != nil {
 		errstr += err.Error()
 	}
