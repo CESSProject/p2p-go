@@ -21,12 +21,12 @@ import (
 	libp2pgrpc "github.com/drgomesp/go-libp2p-grpc"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
-	bitswap "github.com/ipfs/boxo/bitswap"
-	bsnet "github.com/ipfs/boxo/bitswap/network"
-	blocks "github.com/ipfs/go-block-format"
-	"github.com/ipfs/go-cid"
-	ds_sync "github.com/ipfs/go-datastore/sync"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
+
+	//bsnet "github.com/ipfs/boxo/bitswap/network"
+	//blocks "github.com/ipfs/go-block-format"
+
+	//ds_sync "github.com/ipfs/go-datastore/sync"
+
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -44,7 +44,8 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
-	mh "github.com/multiformats/go-multihash"
+
+	//mh "github.com/multiformats/go-multihash"
 	"github.com/pbnjay/memory"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -124,26 +125,26 @@ type P2P interface {
 	// Close p2p
 	Close() error
 
-	//
-	GetBlockstore() blockstore.Blockstore
+	// //
+	// GetBlockstore() blockstore.Blockstore
 
-	//
-	GetBitSwap() *bitswap.Bitswap
+	// //
+	// GetBitSwap() *bitswap.Bitswap
 
-	//
-	FidToCid(fid string) (string, error)
+	// //
+	// FidToCid(fid string) (string, error)
 
-	//
-	SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
+	// //
+	// SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
 
-	//
-	NotifyData(buf []byte) error
+	// //
+	// NotifyData(buf []byte) error
 
-	// GetDataFromBlock get data from block
-	GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error)
+	// // GetDataFromBlock get data from block
+	// GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error)
 
-	//
-	GetLocalDataFromBlock(wantCid string) ([]byte, error)
+	// //
+	// GetLocalDataFromBlock(wantCid string) ([]byte, error)
 
 	//
 	GetDiscoveredPeers() <-chan *routing.QueryEvent
@@ -305,21 +306,21 @@ type Node struct {
 	discoveredPeerCh      <-chan *routing.QueryEvent
 	host                  host.Host
 	libp2pgrpcCli         *libp2pgrpc.Client
-	bstore                blockstore.Blockstore
-	bswap                 *bitswap.Bitswap
-	dir                   DataDirs
-	peerPublickey         []byte
-	workspace             string
-	privatekeyPath        string
-	idleTee               atomic.Value
-	serviceTee            atomic.Value
-	serviceTagDataCh      chan string
-	protocolVersion       string
-	dhtProtocolVersion    string
-	rendezvousVersion     string
-	grpcProtocolVersion   string
-	protocolPrefix        string
-	bootstrap             []string
+	//bstore                blockstore.Blockstore
+	//bswap                 *bitswap.Bitswap
+	dir                 DataDirs
+	peerPublickey       []byte
+	workspace           string
+	privatekeyPath      string
+	idleTee             atomic.Value
+	serviceTee          atomic.Value
+	serviceTagDataCh    chan string
+	protocolVersion     string
+	dhtProtocolVersion  string
+	rendezvousVersion   string
+	grpcProtocolVersion string
+	protocolPrefix      string
+	bootstrap           []string
 	*dht.IpfsDHT
 	*drouting.RoutingDiscovery
 	*protocols
@@ -462,83 +463,83 @@ func NewBasicNode(
 		return nil, err
 	}
 
-	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-	fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
-	if err != nil {
-		return nil, err
-	}
+	// network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
+	// fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
-	n.bswap = bitswap.New(
-		n.ctxQueryFromCtxCancel,
-		network,
-		n.bstore,
-	)
+	// n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
+	// n.bswap = bitswap.New(
+	// 	n.ctxQueryFromCtxCancel,
+	// 	network,
+	// 	n.bstore,
+	// )
 
 	n.initProtocol(protocolPrefix)
 
 	return n, nil
 }
 
-func (n *Node) GetBlockstore() blockstore.Blockstore {
-	return n.bstore
-}
+// func (n *Node) GetBlockstore() blockstore.Blockstore {
+// 	return n.bstore
+// }
 
-func (n *Node) GetBitSwap() *bitswap.Bitswap {
-	return n.bswap
-}
+// func (n *Node) GetBitSwap() *bitswap.Bitswap {
+// 	return n.bswap
+// }
 
-// SaveAndNotifyDataBlock
-func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
-	blockData := blocks.NewBlock(buf)
-	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
-	if err != nil {
-		return blockData.Cid(), err
-	}
-	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
-	return blockData.Cid(), err
-}
+// // SaveAndNotifyDataBlock
+// func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
+// 	blockData := blocks.NewBlock(buf)
+// 	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
+// 	if err != nil {
+// 		return blockData.Cid(), err
+// 	}
+// 	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
+// 	return blockData.Cid(), err
+// }
 
-// NotifyData notify data
-func (n *Node) NotifyData(buf []byte) error {
-	blockData := blocks.NewBlock(buf)
-	return n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
-}
+// // NotifyData notify data
+// func (n *Node) NotifyData(buf []byte) error {
+// 	blockData := blocks.NewBlock(buf)
+// 	return n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
+// }
 
-// GetDataFromBlock get data from block
-func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error) {
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bswap.GetBlock(ctx, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
+// // GetDataFromBlock get data from block
+// func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error) {
+// 	wantcid, err := cid.Decode(wantCid)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	block, err := n.bswap.GetBlock(ctx, wantcid)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return block.RawData(), err
+// }
 
-// GetLocalDataFromBlock get local data from block
-func (n *Node) GetLocalDataFromBlock(wantCid string) ([]byte, error) {
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
+// // GetLocalDataFromBlock get local data from block
+// func (n *Node) GetLocalDataFromBlock(wantCid string) ([]byte, error) {
+// 	wantcid, err := cid.Decode(wantCid)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return block.RawData(), err
+// }
 
-// FidToCid
-func (n *Node) FidToCid(fid string) (string, error) {
-	mhash, err := mh.FromHexString("1220" + fid)
-	if err != nil {
-		return "", err
-	}
-	return cid.NewCidV0(mhash).String(), nil
-}
+// // FidToCid
+// func (n *Node) FidToCid(fid string) (string, error) {
+// 	mhash, err := mh.FromHexString("1220" + fid)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return cid.NewCidV0(mhash).String(), nil
+// }
 
 // DHTFindPeer searches for a peer with given ID.
 func (n *Node) DHTFindPeer(peerid string) (peer.AddrInfo, error) {
