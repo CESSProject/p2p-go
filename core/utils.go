@@ -101,11 +101,15 @@ func GetExternalIp() (string, error) {
 		externalIp string
 	)
 
+	var errstr string
 	client := http.Client{
 		Timeout: time.Duration(10 * time.Second),
 	}
 
 	resp, err := client.Get("http://myexternalip.com/raw")
+	if err != nil {
+		errstr += err.Error()
+	}
 	if err == nil {
 		defer resp.Body.Close()
 		b, _ := io.ReadAll(resp.Body)
@@ -118,6 +122,9 @@ func GetExternalIp() (string, error) {
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel1()
 	output, err := exec.CommandContext(ctx1, "bash", "-c", "curl ifconfig.co").Output()
+	if err != nil {
+		errstr += err.Error()
+	}
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
@@ -129,6 +136,9 @@ func GetExternalIp() (string, error) {
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel2()
 	output, err = exec.CommandContext(ctx2, "bash", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
+	if err != nil {
+		errstr += err.Error()
+	}
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
@@ -140,6 +150,9 @@ func GetExternalIp() (string, error) {
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel3()
 	output, err = exec.CommandContext(ctx3, "bash", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
+	if err != nil {
+		errstr += err.Error()
+	}
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\"", "")
 		externalIp = strings.ReplaceAll(externalIp, ",", "")
@@ -152,6 +165,9 @@ func GetExternalIp() (string, error) {
 	ctx4, cancel4 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel4()
 	output, err = exec.CommandContext(ctx4, "bash", "-c", `curl ifcfg.me`).Output()
+	if err != nil {
+		errstr += err.Error()
+	}
 	if err == nil {
 		externalIp = strings.ReplaceAll(string(output), "\"", "")
 		externalIp = strings.ReplaceAll(externalIp, ",", "")
@@ -161,7 +177,7 @@ func GetExternalIp() (string, error) {
 		}
 	}
 
-	return "", errors.New("please configure the public ip")
+	return "", errors.New(errstr) //errors.New("please configure the public ip")
 }
 
 // ParseMultiaddrs
