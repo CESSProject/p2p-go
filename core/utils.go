@@ -97,15 +97,82 @@ func GetLocalIp() ([]string, error) {
 // Get external ip address
 func GetExternalIp() (string, error) {
 	var (
-		err        error
 		externalIp string
 	)
 
+	var errstr string
 	client := http.Client{
-		Timeout: time.Duration(10 * time.Second),
+		Timeout: time.Duration(8 * time.Second),
+	}
+
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel1()
+	output, err1 := exec.CommandContext(ctx1, "sh", "-c", "curl ifconfig.co").Output()
+	if err1 != nil {
+		errstr += fmt.Sprintf("[%v]", err1.Error())
+	}
+	if err1 == nil {
+		externalIp = strings.ReplaceAll(string(output), "\n", "")
+		externalIp = strings.ReplaceAll(externalIp, " ", "")
+		if IsIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel2()
+	output, err2 := exec.CommandContext(ctx2, "sh", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
+	if err2 != nil {
+		if err1.Error() != err2.Error() {
+			errstr += fmt.Sprintf("[%v]", err2.Error())
+		}
+	}
+	if err2 == nil {
+		externalIp = strings.ReplaceAll(string(output), "\n", "")
+		externalIp = strings.ReplaceAll(externalIp, " ", "")
+		if IsIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx3, cancel3 := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel3()
+	output, err3 := exec.CommandContext(ctx3, "sh", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
+	if err3 != nil {
+		if err1.Error() != err3.Error() && err2.Error() != err3.Error() {
+			errstr += fmt.Sprintf("[%v]", err3.Error())
+		}
+	}
+	if err3 == nil {
+		externalIp = strings.ReplaceAll(string(output), "\"", "")
+		externalIp = strings.ReplaceAll(externalIp, ",", "")
+		externalIp = strings.ReplaceAll(externalIp, "\n", "")
+		if IsIPv4(externalIp) {
+			return externalIp, nil
+		}
+	}
+
+	ctx4, cancel4 := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel4()
+	output, err4 := exec.CommandContext(ctx4, "sh", "-c", `curl ifcfg.me`).Output()
+	if err4 != nil {
+		if err1.Error() != err4.Error() && err2.Error() != err4.Error() && err3.Error() != err4.Error() {
+			errstr += fmt.Sprintf("[%v]", err4.Error())
+		}
+	}
+	if err4 == nil {
+		externalIp = strings.ReplaceAll(string(output), "\"", "")
+		externalIp = strings.ReplaceAll(externalIp, ",", "")
+		externalIp = strings.ReplaceAll(externalIp, "\n", "")
+		if IsIPv4(externalIp) {
+			return externalIp, nil
+		}
 	}
 
 	resp, err := client.Get("http://myexternalip.com/raw")
+	if err != nil {
+		errstr = fmt.Sprintf("[%v]", err.Error())
+	}
 	if err == nil {
 		defer resp.Body.Close()
 		b, _ := io.ReadAll(resp.Body)
@@ -115,53 +182,7 @@ func GetExternalIp() (string, error) {
 		}
 	}
 
-	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel1()
-	output, err := exec.CommandContext(ctx1, "bash", "-c", "curl ifconfig.co").Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\n", "")
-		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if IsIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel2()
-	output, err = exec.CommandContext(ctx2, "bash", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\n", "")
-		externalIp = strings.ReplaceAll(externalIp, " ", "")
-		if IsIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx3, cancel3 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel3()
-	output, err = exec.CommandContext(ctx3, "bash", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\"", "")
-		externalIp = strings.ReplaceAll(externalIp, ",", "")
-		externalIp = strings.ReplaceAll(externalIp, "\n", "")
-		if IsIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	ctx4, cancel4 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel4()
-	output, err = exec.CommandContext(ctx4, "bash", "-c", `curl ifcfg.me`).Output()
-	if err == nil {
-		externalIp = strings.ReplaceAll(string(output), "\"", "")
-		externalIp = strings.ReplaceAll(externalIp, ",", "")
-		externalIp = strings.ReplaceAll(externalIp, "\n", "")
-		if IsIPv4(externalIp) {
-			return externalIp, nil
-		}
-	}
-
-	return "", errors.New("please configure the public ip")
+	return "", errors.New(errstr)
 }
 
 // ParseMultiaddrs
