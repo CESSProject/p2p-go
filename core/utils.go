@@ -107,11 +107,10 @@ func GetExternalIp() (string, error) {
 
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel1()
-	output, err1 := exec.CommandContext(ctx1, "sh", "-c", "curl ifconfig.co").Output()
-	if err1 != nil {
-		errstr += fmt.Sprintf("[%v]", err1.Error())
-	}
-	if err1 == nil {
+	output, err := exec.CommandContext(ctx1, "sh", "-c", "curl ifconfig.co").Output()
+	if err != nil {
+		errstr += fmt.Sprintf("[%v]", err.Error())
+	} else {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
 		if IsIPv4(externalIp) {
@@ -121,13 +120,10 @@ func GetExternalIp() (string, error) {
 
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel2()
-	output, err2 := exec.CommandContext(ctx2, "sh", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
-	if err2 != nil {
-		if err1.Error() != err2.Error() {
-			errstr += fmt.Sprintf("[%v]", err2.Error())
-		}
-	}
-	if err2 == nil {
+	output, err = exec.CommandContext(ctx2, "sh", "-c", "curl cip.cc | grep  IP | awk '{print $3;}'").Output()
+	if err != nil {
+		errstr += fmt.Sprintf("[%v]", err.Error())
+	} else {
 		externalIp = strings.ReplaceAll(string(output), "\n", "")
 		externalIp = strings.ReplaceAll(externalIp, " ", "")
 		if IsIPv4(externalIp) {
@@ -137,13 +133,10 @@ func GetExternalIp() (string, error) {
 
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel3()
-	output, err3 := exec.CommandContext(ctx3, "sh", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
-	if err3 != nil {
-		if err1.Error() != err3.Error() && err2.Error() != err3.Error() {
-			errstr += fmt.Sprintf("[%v]", err3.Error())
-		}
-	}
-	if err3 == nil {
+	output, err = exec.CommandContext(ctx3, "sh", "-c", `curl ipinfo.io | grep \"ip\" | awk '{print $2;}'`).Output()
+	if err != nil {
+		errstr += fmt.Sprintf("[%v]", err.Error())
+	} else {
 		externalIp = strings.ReplaceAll(string(output), "\"", "")
 		externalIp = strings.ReplaceAll(externalIp, ",", "")
 		externalIp = strings.ReplaceAll(externalIp, "\n", "")
@@ -154,13 +147,10 @@ func GetExternalIp() (string, error) {
 
 	ctx4, cancel4 := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel4()
-	output, err4 := exec.CommandContext(ctx4, "sh", "-c", `curl ifcfg.me`).Output()
-	if err4 != nil {
-		if err1.Error() != err4.Error() && err2.Error() != err4.Error() && err3.Error() != err4.Error() {
-			errstr += fmt.Sprintf("[%v]", err4.Error())
-		}
-	}
-	if err4 == nil {
+	output, err = exec.CommandContext(ctx4, "sh", "-c", `curl ifcfg.me`).Output()
+	if err != nil {
+		errstr += fmt.Sprintf("[%v]", err.Error())
+	} else {
 		externalIp = strings.ReplaceAll(string(output), "\"", "")
 		externalIp = strings.ReplaceAll(externalIp, ",", "")
 		externalIp = strings.ReplaceAll(externalIp, "\n", "")
