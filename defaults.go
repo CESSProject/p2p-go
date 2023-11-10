@@ -10,7 +10,7 @@ package p2pgo
 import (
 	"time"
 
-	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/AstaFrode/go-libp2p/p2p/net/connmgr"
 )
 
 // DefaultListenPort configures libp2p to use default port.

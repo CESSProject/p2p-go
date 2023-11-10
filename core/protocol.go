@@ -8,8 +8,8 @@
 package core
 
 import (
+	"github.com/AstaFrode/go-libp2p/core/peer"
 	"github.com/CESSProject/p2p-go/pb"
-	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 type Protocol interface {
