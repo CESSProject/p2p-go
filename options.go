@@ -10,7 +10,7 @@ package p2pgo
 import (
 	"fmt"
 
-	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/AstaFrode/go-libp2p/core/connmgr"
 )
 
 // ListenPort configuration listening port

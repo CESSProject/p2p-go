@@ -11,8 +11,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/AstaFrode/go-libp2p/core/connmgr"
 	"github.com/CESSProject/p2p-go/core"
-	"github.com/libp2p/go-libp2p/core/connmgr"
 )
 
 // Config describes a set of settings for a libp2p node

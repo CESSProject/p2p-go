@@ -17,11 +17,11 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 
+	"github.com/AstaFrode/go-libp2p/core/network"
+	"github.com/AstaFrode/go-libp2p/core/peer"
+	"github.com/AstaFrode/go-libp2p/core/protocol"
 	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
-	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/protocol"
 )
 
 // pattern: /protocol-name/request-or-response-message/version

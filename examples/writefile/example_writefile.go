@@ -14,8 +14,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/AstaFrode/go-libp2p/core/peer"
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
