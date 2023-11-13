@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package p2p.api;
+
 option go_package = "./;pb";
 
 // designed to be shared between all app protocols
@@ -68,3 +70,25 @@ message ReadfileResponse {
     uint32 length = 5;
 }
 
+//// readDataStat protocol
+
+// a protocol define a set of reuqest and responses
+message ReadDataStatRequest {
+    // Roothash uniquely identifies a user data
+    string Roothash = 1;
+    // Datahash is the currently written data hash value
+    string Datahash = 2;
+    // MessageData is a generic message
+    MessageData messageData = 3;
+}
+
+message ReadDataStatResponse {
+    // Code indicates the result of this transfer
+    uint32 code = 1;
+    // Offset is the write offset the receiver wants
+    int64 dataSize = 2;
+    // Datahash is the currently written data hash value
+    string dataHash = 3;
+    // MessageData is a generic message
+    MessageData messageData = 4;
+}

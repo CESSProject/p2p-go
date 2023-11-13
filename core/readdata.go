@@ -22,8 +22,8 @@ import (
 	"github.com/AstaFrode/go-libp2p/core/network"
 	"github.com/AstaFrode/go-libp2p/core/peer"
 	"github.com/AstaFrode/go-libp2p/core/protocol"
-	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // pattern: /protocol-name/request-or-response-message/version
@@ -284,8 +284,14 @@ func (e *ReadDataProtocol) onReadDataResponse(s network.Stream) {
 		return
 	}
 
+	if data.MessageData == nil {
+		s.Reset()
+		return
+	}
+
 	e.ReadDataProtocol.Lock()
 	defer e.ReadDataProtocol.Unlock()
+
 	// locate request data and remove it if found
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {

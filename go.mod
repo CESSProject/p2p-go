@@ -3,17 +3,14 @@ module github.com/CESSProject/p2p-go
 go 1.20
 
 require (
-	github.com/AstaFrode/boxo v0.12.1-0.20231109082032-75fa153a39f3
-	github.com/AstaFrode/go-libp2p v0.26.4-0.20231025094835-732a19c0bd0b
-	github.com/AstaFrode/go-libp2p-grpc v0.1.1-0.20231109100113-0af9e902e45f
-	github.com/AstaFrode/go-libp2p-kad-dht v0.23.1-0.20231109074947-0279c8612966
+	github.com/AstaFrode/boxo v0.12.1-0.20231113152810-b03c5bbc92c0
+	github.com/AstaFrode/go-libp2p v0.26.4-0.20231113143058-912296254d44
+	github.com/AstaFrode/go-libp2p-kad-dht v0.23.1-0.20231113152435-ca99e70b9955
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.1
 	github.com/ipfs/go-block-format v0.1.2
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-datastore v0.6.0
-	github.com/libp2p/go-libp2p v0.26.4
-	github.com/libp2p/go-msgio v0.3.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.11.0
 	github.com/multiformats/go-multihash v0.2.3
@@ -26,8 +23,8 @@ require (
 )
 
 require (
-	github.com/AstaFrode/go-libp2p-gostream v0.5.1-0.20231109095351-8050802a5d8b // indirect
-	github.com/AstaFrode/go-libp2p-kbucket v0.5.1-0.20231109065217-dde6a45fa7ce // indirect
+	github.com/AstaFrode/go-libp2p-kbucket v0.5.1-0.20231113151623-a45fff026283 // indirect
+	github.com/AstaFrode/go-libp2p-record v0.2.1-0.20231113144445-2b6ba1a2d403 // indirect
 	github.com/AstaFrode/go-peertaskqueue v0.8.2-0.20231108073729-990e433425a4 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -55,7 +52,6 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.5 // indirect
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
-	github.com/ipfs/boxo v0.12.0 // indirect
 	github.com/ipfs/go-ipfs-delay v0.0.1 // indirect
 	github.com/ipfs/go-ipfs-pq v0.0.3 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
@@ -63,7 +59,6 @@ require (
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
-	github.com/ipld/go-ipld-prime v0.21.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
@@ -74,7 +69,7 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
-	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
+	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/libp2p/go-nat v0.1.0 // indirect
 	github.com/libp2p/go-netroute v0.2.1 // indirect
 	github.com/libp2p/go-reuseport v0.4.0 // indirect
@@ -97,7 +92,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect

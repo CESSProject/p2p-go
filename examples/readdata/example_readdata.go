@@ -68,6 +68,6 @@ func main() {
 	}
 	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
 
-	err = h1.ReadDataAction(info.ID, "example_readdata.go", "example_readdata.go", file, 1717)
+	err = h1.ReadDataAction(info.ID, "example_readdata.go", "example_readdata.go", file, 10)
 	fmt.Println("err: ", err)
 }

@@ -10,9 +10,6 @@ package core
 import (
 	"fmt"
 	"time"
-
-	"github.com/AstaFrode/go-libp2p/core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 const P2PWriteReqRespTime = time.Duration(time.Second * 30)
@@ -23,28 +20,15 @@ const FileProtocolBufSize = 2 * 1024 * 1024
 const P2PResponseOK uint32 = 200
 const P2PResponseFinish uint32 = 210
 const P2PResponseFailed uint32 = 400
-
-const TagProtocolMsgBuf = 1024 * 1024
-const FileProtocolMsgBuf = 16 * 1024 * 1024
-const IdleProtocolMsgBuf = 1024
-const MusProtocolMsgBuf = 32
+const P2PResponseRemoteFailed uint32 = 500
+const P2PResponseEmpty uint32 = 404
 
 const MaxFileNameLength = 255
 const MaxCustomDataLength = 255
 
 const (
-	FileType_ServiceFile uint32 = iota
-	FileType_IdleFile
-	FileType_TagFile
-	FileType_MusFile
-	FileType_UsFile
-	FileType_NamesFile
-)
-
-const (
-	FileDataDirectionry   = "file"
-	TmpDataDirectionry    = "tmp"
-	ServiceTagDirectionry = "stag"
+	FileDataDirectionry = "file"
+	TmpDataDirectionry  = "tmp"
 )
 
 const (
@@ -56,8 +40,7 @@ const (
 const (
 	p2pProtocolVer = "/1.0"
 	dhtProtocolVer = "/kad/1.0"
-	rendezvous     = "/rendezvous/1.0.0"
-	grpcProtocolID = "/grpc/1.0"
+	rendezvous     = "/rendezvous/1.0"
 )
 
 var (
@@ -67,19 +50,6 @@ var (
 )
 
 type DataDirs struct {
-	FileDir       string
-	TmpDir        string
-	ServiceTagDir string
-}
-
-type ProofFileType struct {
-	Names []string `json:"names"`
-	Us    []string `json:"us"`
-	Mus   []string `json:"mus"`
-	Sigma string   `json:"sigma"`
-}
-
-type DiscoveredPeer struct {
-	PeerID peer.ID
-	Addr   ma.Multiaddr
+	FileDir string
+	TmpDir  string
 }

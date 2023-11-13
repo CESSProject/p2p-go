@@ -20,8 +20,8 @@ import (
 	"github.com/AstaFrode/go-libp2p/core/network"
 	"github.com/AstaFrode/go-libp2p/core/peer"
 	"github.com/AstaFrode/go-libp2p/core/protocol"
-	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // pattern: /protocol-name/request-or-response-message/version
@@ -282,9 +282,15 @@ func (e *WriteFileProtocol) onWriteFileResponse(s network.Stream) {
 		return
 	}
 
+	if data.MessageData == nil {
+		s.Reset()
+		return
+	}
+
 	// locate request data and remove it if found
 	e.WriteFileProtocol.Lock()
 	defer e.WriteFileProtocol.Unlock()
+
 	_, ok := e.requests[data.MessageData.Id]
 	if ok {
 		if data.Code == P2PResponseOK || data.Code == P2PResponseFinish {

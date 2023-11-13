@@ -13,7 +13,6 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func (n *Node) PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error) {
@@ -30,11 +29,9 @@ func (n *Node) PoisServiceRequestGenTag(
 	filehash string,
 	customData string,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseGenTag, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -54,20 +51,15 @@ func (n *Node) PoisServiceRequestGenTag(
 
 func (n *Node) PoisServiceRequestBatchVerify(
 	addr string,
-	names []string,
-	us []string,
-	mus []string,
-	sigma string,
 	peerid []byte,
 	minerPbk []byte,
 	minerPeerIdSign []byte,
+	batchVerifyParam *pb.RequestBatchVerify_BatchVerifyParam,
 	qslices *pb.RequestBatchVerify_Qslice,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseBatchVerify, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +71,7 @@ func (n *Node) PoisServiceRequestBatchVerify(
 	defer cancel()
 
 	result, err := c.RequestBatchVerify(ctx, &pb.RequestBatchVerify{
-		AggProof: &pb.RequestBatchVerify_BatchVerifyParam{
-			Names: names,
-			Us:    us,
-			Mus:   mus,
-			Sigma: sigma,
-		},
+		AggProof:        batchVerifyParam,
 		PeerId:          peerid,
 		MinerPbk:        minerPbk,
 		MinerPeerIdSign: minerPeerIdSign,

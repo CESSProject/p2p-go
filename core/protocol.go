@@ -9,28 +9,21 @@ package core
 
 import (
 	"github.com/AstaFrode/go-libp2p/core/peer"
-	"github.com/CESSProject/p2p-go/pb"
 )
 
 type Protocol interface {
 	WriteFileAction(id peer.ID, roothash, path string) error
 	ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error
 	ReadDataAction(id peer.ID, roothash, datahash, path string, size int64) error
-	TagPushReq(peerid peer.ID) (uint32, error)
-	TagReq(peerId peer.ID, filename, customdata string, blocknum uint64) (uint32, error)
-	FileReq(peerId peer.ID, filehash string, filetype pb.FileType, fpath string) (uint32, error)
-	AggrProofReq(peerId peer.ID, ihash, shash []byte, qslice []*pb.Qslice, puk, sign []byte) (uint32, error)
+	ReadDataStatAction(id peer.ID, roothash string, datahash string) (uint64, error)
 }
 
 type protocols struct {
 	ProtocolPrefix string
 	*WriteFileProtocol
 	*ReadFileProtocol
-	*CustomDataTagProtocol
-	*FileProtocol
-	*AggrProofProtocol
-	*PushTagProtocol
 	*ReadDataProtocol
+	*ReadDataStatProtocol
 }
 
 func NewProtocol() *protocols {

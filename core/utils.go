@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/AstaFrode/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 

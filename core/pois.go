@@ -13,7 +13,6 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func (n *Node) PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiClient, error) {
@@ -24,11 +23,8 @@ func (n *Node) PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiCl
 	return pb.NewPoisApiClient(conn), nil
 }
 
-func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration, opts ...grpc.DialOption) (*pb.ResponseMinerInitParam, error) {
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +43,9 @@ func (n *Node) PoisMinerCommitGenChall(
 	addr string,
 	commitGenChall *pb.RequestMinerCommitGenChall,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.Challenge, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +63,9 @@ func (n *Node) PoisVerifyCommitProof(
 	addr string,
 	verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +87,9 @@ func (n *Node) PoisSpaceProofVerifySingleBlock(
 	proof *pb.SpaceProof,
 	spaceProofHashPolkadotSig []byte,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseSpaceProofVerify, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +118,9 @@ func (n *Node) PoisRequestVerifySpaceTotal(
 	acc []byte,
 	spaceChals []int64,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseSpaceProofVerifyTotal, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,13 +143,11 @@ func (n *Node) PoisRequestVerifySpaceTotal(
 
 func (n *Node) PoisRequestVerifyDeletionProof(
 	addr string,
-	RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
+	requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 	timeout time.Duration,
+	opts ...grpc.DialOption,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
-	conn, err := grpc.Dial(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -171,6 +157,6 @@ func (n *Node) PoisRequestVerifyDeletionProof(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestVerifyDeletionProof(ctx, RequestVerifyDeletionProof)
+	result, err := c.RequestVerifyDeletionProof(ctx, requestVerifyDeletionProof)
 	return result, err
 }

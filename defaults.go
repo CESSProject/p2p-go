@@ -8,6 +8,7 @@
 package p2pgo
 
 import (
+	"os"
 	"time"
 
 	"github.com/AstaFrode/go-libp2p/p2p/net/connmgr"
@@ -19,13 +20,22 @@ var DefaultListenPort = func(cfg *Config) error {
 	return cfg.Apply(ListenPort(port))
 }
 
-// DefaultConnectionManager creates a default connection manager
+// DefaultConnectionManager creates a default connection manager.
 var DefaultConnectionManager = func(cfg *Config) error {
 	mgr, err := connmgr.NewConnManager(1000, 5000, connmgr.WithGracePeriod(time.Hour))
 	if err != nil {
 		return err
 	}
 	return cfg.Apply(ConnectionManager(mgr))
+}
+
+// DefaultWorkSpace configures libp2p to use default work space.
+var DefaultWorkSpace = func(cfg *Config) error {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	return cfg.Apply(Workspace(dir))
 }
 
 // Complete list of default options and when to fallback on them.
@@ -43,6 +53,10 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.ConnManager == nil },
 		opt:      DefaultConnectionManager,
+	},
+	{
+		fallback: func(cfg *Config) bool { return cfg.Workspace == "" },
+		opt:      DefaultWorkSpace,
 	},
 }
 

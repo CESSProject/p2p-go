@@ -31,9 +31,9 @@ type Config struct {
 type Option func(cfg *Config) error
 
 const (
-	DevnetProtocolPrefix  = "/kldr-devnet"
-	TestnetProtocolPrefix = "/kldr-testnet"
-	MainnetProtocolPrefix = "/kldr-mainnet"
+	DevnetProtocolPrefix  = "/devnet"
+	TestnetProtocolPrefix = "/testnet"
+	MainnetProtocolPrefix = "/mainnet"
 )
 
 // NewNode constructs a new libp2p Host from the Config.

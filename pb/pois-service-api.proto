@@ -20,9 +20,10 @@ message Tag {
 }
 
 message RequestGenTag {
-  bytes file_data = 1;
-  string name = 2;
+  bytes fragment_data = 1;
+  string fragment_name = 2;
   string custom_data = 3;
+  string file_name = 4;
 }
 
 message ResponseGenTag {

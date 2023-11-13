@@ -16,7 +16,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	libp2pgrpc "github.com/AstaFrode/go-libp2p-grpc"
 	"github.com/CESSProject/p2p-go/out"
 	"github.com/CESSProject/p2p-go/pb"
 	ggio "github.com/gogo/protobuf/io"
@@ -98,9 +97,6 @@ type P2P interface {
 	// GetRendezvousVersion returns the rendezvous protocol
 	GetRendezvousVersion() string
 
-	// GetGrpcProtocolVersion returns the grpc protocol
-	GetGrpcProtocolVersion() string
-
 	// GetProtocolPrefix returns protocols prefix
 	GetProtocolPrefix() string
 
@@ -165,13 +161,19 @@ type P2P interface {
 	PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error)
 
 	// PoisGetMinerInitParam
-	PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
+	PoisGetMinerInitParam(
+		addr string,
+		accountKey []byte,
+		timeout time.Duration,
+		opts ...grpc.DialOption,
+	) (*pb.ResponseMinerInitParam, error)
 
 	// PoisMinerCommitGenChall
 	PoisMinerCommitGenChall(
 		addr string,
 		commitGenChall *pb.RequestMinerCommitGenChall,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.Challenge, error)
 
 	// PoisVerifyCommitProof
@@ -179,6 +181,7 @@ type P2P interface {
 		addr string,
 		verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
 	// PoisSpaceProofVerifySingleBlock
@@ -190,6 +193,7 @@ type P2P interface {
 		proof *pb.SpaceProof,
 		spaceProofHashPolkadotSig []byte,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseSpaceProofVerify, error)
 
 	//
@@ -202,6 +206,7 @@ type P2P interface {
 		acc []byte,
 		spaceChals []int64,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseSpaceProofVerifyTotal, error)
 
 	//
@@ -209,6 +214,7 @@ type P2P interface {
 		addr string,
 		RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
 	//
@@ -218,85 +224,19 @@ type P2P interface {
 		filehash string,
 		customData string,
 		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseGenTag, error)
 
 	//
 	PoisServiceRequestBatchVerify(
 		addr string,
-		names []string,
-		us []string,
-		mus []string,
-		sigma string,
 		peerid []byte,
 		minerPbk []byte,
 		minerPeerIdSign []byte,
+		batchVerifyParam *pb.RequestBatchVerify_BatchVerifyParam,
 		qslices *pb.RequestBatchVerify_Qslice,
 		timeout time.Duration,
-	) (*pb.ResponseBatchVerify, error)
-
-	//-------------------------p2p version
-
-	PoisGetMinerInitParamP2P(peerid peer.ID, accountKey []byte, timeout time.Duration) (*pb.ResponseMinerInitParam, error)
-
-	PoisMinerCommitGenChallP2P(
-		peerid peer.ID,
-		commitGenChall *pb.RequestMinerCommitGenChall,
-		timeout time.Duration,
-	) (*pb.Challenge, error)
-
-	PoisVerifyCommitProofP2P(
-		peerid peer.ID,
-		verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
-		timeout time.Duration,
-	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
-
-	PoisSpaceProofVerifySingleBlockP2P(
-		peerid peer.ID,
-		accountKey []byte,
-		spaceChals []int64,
-		minerPoisInfo *pb.MinerPoisInfo,
-		proof *pb.SpaceProof,
-		spaceProofHashPolkadotSig []byte,
-		timeout time.Duration,
-	) (*pb.ResponseSpaceProofVerify, error)
-
-	PoisRequestVerifySpaceTotalP2P(
-		peerid peer.ID,
-		accountKey []byte,
-		proofList []*pb.BlocksProof,
-		front int64,
-		rear int64,
-		acc []byte,
-		spaceChals []int64,
-		timeout time.Duration,
-	) (*pb.ResponseSpaceProofVerifyTotal, error)
-
-	PoisRequestVerifyDeletionProofP2P(
-		peerid peer.ID,
-		requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
-		timeout time.Duration,
-	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
-
-	// service p2p
-	PoisServiceRequestGenTagP2P(
-		peerid peer.ID,
-		fileData []byte,
-		filehash string,
-		customData string,
-		timeout time.Duration,
-	) (*pb.ResponseGenTag, error)
-
-	PoisServiceRequestBatchVerifyP2P(
-		peerid peer.ID,
-		names []string,
-		us []string,
-		mus []string,
-		sigma string,
-		minerPeerid []byte,
-		minerPbk []byte,
-		minerPeerIdSign []byte,
-		qslices *pb.RequestBatchVerify_Qslice,
-		timeout time.Duration,
+		opts ...grpc.DialOption,
 	) (*pb.ResponseBatchVerify, error)
 }
 
@@ -308,7 +248,6 @@ type Node struct {
 	ctxCancelFuncFromRoot context.CancelFunc
 	discoveredPeerCh      <-chan *routing.QueryEvent
 	host                  host.Host
-	libp2pgrpcCli         *libp2pgrpc.Client
 	bstore                blockstore.Blockstore
 	bswap                 *bitswap.Bitswap
 	dir                   DataDirs
@@ -321,7 +260,6 @@ type Node struct {
 	protocolVersion       string
 	dhtProtocolVersion    string
 	rendezvousVersion     string
-	grpcProtocolVersion   string
 	protocolPrefix        string
 	bootstrap             []string
 	*dht.IpfsDHT
@@ -453,13 +391,10 @@ func NewBasicNode(
 		protocolVersion:       protocolPrefix + p2pProtocolVer,
 		dhtProtocolVersion:    protocolPrefix + dhtProtocolVer,
 		rendezvousVersion:     protocolPrefix + rendezvous,
-		grpcProtocolVersion:   protocolPrefix + grpcProtocolID,
 		protocolPrefix:        protocolPrefix,
 		bootstrap:             boots,
 		protocols:             NewProtocol(),
 	}
-	libp2pgrpc.ProtocolID = protocol.ID(n.grpcProtocolVersion)
-	n.libp2pgrpcCli = libp2pgrpc.NewClient(n.host, libp2pgrpc.ProtocolID)
 
 	err = n.initDHT()
 	if err != nil {
@@ -702,10 +637,6 @@ func (n *Node) GetRendezvousVersion() string {
 	return n.rendezvousVersion
 }
 
-func (n *Node) GetGrpcProtocolVersion() string {
-	return n.grpcProtocolVersion
-}
-
 func (n *Node) GetBootstraps() []string {
 	return n.bootstrap
 }
@@ -824,17 +755,13 @@ func identification(workspace, fpath string) (crypto.PrivKey, error) {
 
 func mkdir(workspace string) (DataDirs, error) {
 	dataDir := DataDirs{
-		FileDir:       filepath.Join(workspace, FileDataDirectionry),
-		TmpDir:        filepath.Join(workspace, TmpDataDirectionry),
-		ServiceTagDir: filepath.Join(workspace, ServiceTagDirectionry),
+		FileDir: filepath.Join(workspace, FileDataDirectionry),
+		TmpDir:  filepath.Join(workspace, TmpDataDirectionry),
 	}
 	if err := os.MkdirAll(dataDir.FileDir, DirMode); err != nil {
 		return dataDir, err
 	}
 	if err := os.MkdirAll(dataDir.TmpDir, DirMode); err != nil {
-		return dataDir, err
-	}
-	if err := os.MkdirAll(dataDir.ServiceTagDir, DirMode); err != nil {
 		return dataDir, err
 	}
 	return dataDir, nil
@@ -910,21 +837,19 @@ func (n *Node) initProtocol(protocolPrefix string) {
 	n.SetProtocolPrefix(protocolPrefix)
 	n.WriteFileProtocol = n.NewWriteFileProtocol()
 	n.ReadFileProtocol = n.NewReadFileProtocol()
-	n.CustomDataTagProtocol = n.NewCustomDataTagProtocol()
-	n.FileProtocol = n.NewFileProtocol()
-	n.AggrProofProtocol = n.NewAggrProofProtocol()
-	n.PushTagProtocol = n.NewPushTagProtocol()
 	n.ReadDataProtocol = n.NewReadDataProtocol()
+	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
 }
 
 func (n *Node) initDHT() error {
 	var options []dht.Option
 	options = append(options,
 		dht.Mode(dht.ModeAutoServer),
-		dht.V1ProtocolOverride(protocol.ID(n.dhtProtocolVersion)),
+		dht.ProtocolPrefix(protocol.ID(n.dhtProtocolVersion)),
 		dht.Resiliency(10),
 		dht.DisableAutoRefresh(),
 	)
+
 	bootstrap := n.bootstrap
 	var bootaddrs []peer.AddrInfo
 	for _, v := range bootstrap {
@@ -974,6 +899,7 @@ func (n *Node) initDHT() error {
 		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
 		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
 	}
+
 	n.RoutingDiscovery = drouting.NewRoutingDiscovery(kademliaDHT)
 	n.IpfsDHT = kademliaDHT
 	return nil
