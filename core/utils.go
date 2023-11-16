@@ -193,9 +193,8 @@ func ParseMultiaddrs(domain string) ([]string, error) {
 	if err != nil {
 		return result, err
 	}
-
 	for _, v := range dnsnames {
-		if strings.Contains(v, "ip4") && strings.Contains(v, "tcp") && strings.Count(v, "=") == 1 {
+		if strings.Contains(v, "ip4") && strings.Contains(v, "tcp") {
 			result = append(result, strings.TrimPrefix(v, "dnsaddr="))
 		}
 	}
@@ -250,9 +249,6 @@ func FindFile(dir, name string) string {
 		}
 		return nil
 	})
-
-	if err != nil {
-		fmt.Println(err)
-	}
+	_ = err
 	return result
 }
