@@ -3,9 +3,9 @@ module github.com/CESSProject/p2p-go
 go 1.20
 
 require (
-	github.com/AstaFrode/boxo v0.12.1-0.20231113152810-b03c5bbc92c0
+	github.com/AstaFrode/boxo v0.12.1-0.20231117024608-7d5a75b69cdd
 	github.com/AstaFrode/go-libp2p v0.26.4-0.20231113143058-912296254d44
-	github.com/AstaFrode/go-libp2p-kad-dht v0.23.1-0.20231113152435-ca99e70b9955
+	github.com/AstaFrode/go-libp2p-kad-dht v0.23.1-0.20231117020818-8d3fc0a486ad
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.3.1
 	github.com/ipfs/go-block-format v0.1.2
@@ -59,6 +59,7 @@ require (
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
+	github.com/ipld/go-ipld-prime v0.21.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
@@ -92,6 +93,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect

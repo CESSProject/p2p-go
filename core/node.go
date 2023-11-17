@@ -25,6 +25,7 @@ import (
 
 	bitswap "github.com/AstaFrode/boxo/bitswap"
 	blockstore "github.com/AstaFrode/boxo/blockstore"
+	dutil "github.com/AstaFrode/go-libp2p/p2p/discovery/util"
 	blocks "github.com/ipfs/go-block-format"
 	ds_sync "github.com/ipfs/go-datastore/sync"
 
@@ -41,7 +42,6 @@ import (
 	"github.com/AstaFrode/go-libp2p/core/protocol"
 	"github.com/AstaFrode/go-libp2p/core/routing"
 	drouting "github.com/AstaFrode/go-libp2p/p2p/discovery/routing"
-	dutil "github.com/AstaFrode/go-libp2p/p2p/discovery/util"
 	rcmgr "github.com/AstaFrode/go-libp2p/p2p/host/resource-manager"
 	"github.com/ipfs/go-cid"
 	"github.com/mr-tron/base58"
@@ -342,9 +342,10 @@ func NewBasicNode(
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,
 		libp2p.DefaultSecurity,
+		libp2p.DefaultPeerstore,
+		libp2p.DefaultEnableRelay,
 		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
 		libp2p.AddrsFactory(addressFactory),
-		libp2p.DefaultEnableRelay,
 		libp2p.DisableMetrics(),
 		libp2p.ResourceManager(rm),
 		libp2p.NATPortMap(),
@@ -356,7 +357,7 @@ func NewBasicNode(
 
 	bhost, err := libp2p.New(opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[libp2p.New] %v", err)
 	}
 
 	if !bhost.ID().MatchesPrivateKey(prvKey) {
@@ -398,7 +399,7 @@ func NewBasicNode(
 
 	err = n.initDHT()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[initDHT] %v", err)
 	}
 
 	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
@@ -490,7 +491,6 @@ func (n *Node) DHTFindPeer(peerid string) (peer.AddrInfo, error) {
 
 // RouteTableFindPeers
 func (n *Node) RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error) {
-	dutil.Advertise(n.ctxQueryFromCtxCancel, n.RoutingDiscovery, n.rendezvousVersion)
 	if limit <= 0 {
 		return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion)
 	}
@@ -844,25 +844,25 @@ func (n *Node) initProtocol(protocolPrefix string) {
 func (n *Node) initDHT() error {
 	var options []dht.Option
 	options = append(options,
-		dht.Mode(dht.ModeAutoServer),
-		dht.ProtocolPrefix(protocol.ID(n.dhtProtocolVersion)),
+		dht.V1ProtocolOverride(protocol.ID(n.dhtProtocolVersion)),
 		dht.Resiliency(10),
 		dht.DisableAutoRefresh(),
+		dht.Mode(dht.ModeAutoServer),
 	)
 
 	bootstrap := n.bootstrap
-	var bootaddrs []peer.AddrInfo
-	for _, v := range bootstrap {
-		muladdr, err := ma.NewMultiaddr(v)
-		if err != nil {
-			continue
-		}
-		addrinfo, err := peer.AddrInfoFromP2pAddr(muladdr)
-		if err != nil {
-			continue
-		}
-		bootaddrs = append(bootaddrs, *addrinfo)
-	}
+	// var bootaddrs []peer.AddrInfo
+	// for _, v := range bootstrap {
+	// 	muladdr, err := ma.NewMultiaddr(v)
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	addrinfo, err := peer.AddrInfoFromP2pAddr(muladdr)
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	bootaddrs = append(bootaddrs, *addrinfo)
+	// }
 
 	// if len(bootaddrs) > 0 {
 	// 	options = append(options, dht.BootstrapPeers(bootaddrs...))
@@ -891,17 +891,17 @@ func (n *Node) initDHT() error {
 			continue
 		}
 		err = n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
-		if err != nil {
-			out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
-		} else {
-			out.Ok(fmt.Sprintf("Connection to boot node successful: %s", peerinfo.ID.Pretty()))
-		}
+		// if err != nil {
+		// 	out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
+		// } else {
+		// 	out.Ok(fmt.Sprintf("Connection to boot node successful: %s", peerinfo.ID.Pretty()))
+		// }
 		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
 		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
 	}
-
 	n.RoutingDiscovery = drouting.NewRoutingDiscovery(kademliaDHT)
 	n.IpfsDHT = kademliaDHT
+	dutil.Advertise(n.ctxQueryFromCtxCancel, n.RoutingDiscovery, n.rendezvousVersion)
 	return nil
 }
 
