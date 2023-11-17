@@ -342,9 +342,10 @@ func NewBasicNode(
 		libp2p.DefaultTransports,
 		libp2p.DefaultMuxers,
 		libp2p.DefaultSecurity,
+		libp2p.DefaultPeerstore,
+		libp2p.DefaultEnableRelay,
 		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
 		libp2p.AddrsFactory(addressFactory),
-		libp2p.DefaultEnableRelay,
 		libp2p.DisableMetrics(),
 		libp2p.ResourceManager(rm),
 		libp2p.NATPortMap(),
@@ -356,7 +357,7 @@ func NewBasicNode(
 
 	bhost, err := libp2p.New(opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[libp2p.New] %v", err)
 	}
 
 	if !bhost.ID().MatchesPrivateKey(prvKey) {
@@ -398,7 +399,7 @@ func NewBasicNode(
 
 	err = n.initDHT()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[initDHT] %v", err)
 	}
 
 	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
@@ -843,25 +844,25 @@ func (n *Node) initProtocol(protocolPrefix string) {
 func (n *Node) initDHT() error {
 	var options []dht.Option
 	options = append(options,
-		dht.Mode(dht.ModeAutoServer),
 		dht.V1ProtocolOverride(protocol.ID(n.dhtProtocolVersion)),
 		dht.Resiliency(10),
 		dht.DisableAutoRefresh(),
+		dht.Mode(dht.ModeAutoServer),
 	)
 
 	bootstrap := n.bootstrap
-	var bootaddrs []peer.AddrInfo
-	for _, v := range bootstrap {
-		muladdr, err := ma.NewMultiaddr(v)
-		if err != nil {
-			continue
-		}
-		addrinfo, err := peer.AddrInfoFromP2pAddr(muladdr)
-		if err != nil {
-			continue
-		}
-		bootaddrs = append(bootaddrs, *addrinfo)
-	}
+	// var bootaddrs []peer.AddrInfo
+	// for _, v := range bootstrap {
+	// 	muladdr, err := ma.NewMultiaddr(v)
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	addrinfo, err := peer.AddrInfoFromP2pAddr(muladdr)
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	bootaddrs = append(bootaddrs, *addrinfo)
+	// }
 
 	// if len(bootaddrs) > 0 {
 	// 	options = append(options, dht.BootstrapPeers(bootaddrs...))
