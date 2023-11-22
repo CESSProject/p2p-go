@@ -26,6 +26,7 @@ func (n *Node) PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Po
 func (n *Node) PoisServiceRequestGenTag(
 	addr string,
 	fileData []byte,
+	roothash string,
 	filehash string,
 	customData string,
 	timeout time.Duration,
@@ -42,9 +43,10 @@ func (n *Node) PoisServiceRequestGenTag(
 	defer cancel()
 
 	result, err := c.RequestGenTag(ctx, &pb.RequestGenTag{
-		FileData:   fileData,
-		Name:       filehash,
-		CustomData: customData,
+		FragmentData: fileData,
+		FragmentName: filehash,
+		CustomData:   customData,
+		FileName:     roothash,
 	})
 	return result, err
 }
