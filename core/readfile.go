@@ -22,8 +22,8 @@ import (
 	"github.com/AstaFrode/go-libp2p/core/network"
 	"github.com/AstaFrode/go-libp2p/core/peer"
 	"github.com/AstaFrode/go-libp2p/core/protocol"
-	"github.com/gogo/protobuf/proto"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // pattern: /protocol-name/request-or-response-message/version
