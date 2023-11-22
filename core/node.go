@@ -221,6 +221,7 @@ type P2P interface {
 	PoisServiceRequestGenTag(
 		addr string,
 		fileData []byte,
+		roothash string,
 		filehash string,
 		customData string,
 		timeout time.Duration,
