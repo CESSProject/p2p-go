@@ -210,6 +210,23 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 
 	fpath := filepath.Join(dir, data.Datahash)
 
+	if data.Datahash == ZeroFileHash_16M {
+		f, err := os.Create(fpath)
+		if err != nil {
+			s.Reset()
+			return
+		}
+		defer f.Close()
+		_, err = f.Write(make([]byte, FragmentSize))
+		if err != nil {
+			s.Reset()
+			return
+		}
+		resp.Code = P2PResponseFinish
+		e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeFileResponse), resp)
+		return
+	}
+
 	fstat, err = os.Stat(fpath)
 	if err == nil {
 		size = fstat.Size()

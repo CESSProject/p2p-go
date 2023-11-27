@@ -28,3 +28,5 @@ const DirMode = 0644
 const BufferSize = 64 * SIZE_1KiB
 const SegmentSize = 64 * SIZE_1MiB
 const FragmentSize = 16 * SIZE_1MiB
+
+const ZeroFileHash_16M = "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
