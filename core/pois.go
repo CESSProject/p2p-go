@@ -139,7 +139,7 @@ func (n *Node) RequestSpaceProofVerifySingleBlock(
 	return result, err
 }
 
-func (n *Node) PoisRequestVerifySpaceTotal(
+func (n *Node) RequestVerifySpaceTotal(
 	addr string,
 	requestSpaceProofVerifyTotal *pb.RequestSpaceProofVerifyTotal,
 	timeout time.Duration,

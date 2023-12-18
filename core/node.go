@@ -202,7 +202,7 @@ type P2P interface {
 		callOpts []grpc.CallOption,
 	) (*pb.ResponseSpaceProofVerify, error)
 
-	PoisRequestVerifySpaceTotal(
+	RequestVerifySpaceTotal(
 		addr string,
 		requestSpaceProofVerifyTotal *pb.RequestSpaceProofVerifyTotal,
 		timeout time.Duration,
