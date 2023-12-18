@@ -154,90 +154,76 @@ type P2P interface {
 	// GetServiceTagCh returns the tag channel of the service data received by the host
 	GetServiceTagCh() <-chan string
 
-	// PoisNewClient
-	PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiClient, error)
+	NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error)
 
-	//
-	PoisServiceNewClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error)
+	NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error)
 
-	// PoisGetMinerInitParam
-	PoisGetMinerInitParam(
+	NewPodr2ApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error)
+
+	NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2VerifierApiClient, error)
+
+	RequestMinerGetNewKey(
 		addr string,
 		accountKey []byte,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseMinerInitParam, error)
 
-	// PoisMinerCommitGenChall
-	PoisMinerCommitGenChall(
+	RequestMinerCommitGenChall(
 		addr string,
 		commitGenChall *pb.RequestMinerCommitGenChall,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.Challenge, error)
 
-	// PoisVerifyCommitProof
-	PoisVerifyCommitProof(
+	RequestVerifyCommitProof(
 		addr string,
 		verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
 
-	// PoisSpaceProofVerifySingleBlock
-	PoisSpaceProofVerifySingleBlock(
+	RequestVerifyDeletionProof(
 		addr string,
-		accountKey []byte,
-		spaceChals []int64,
-		minerPoisInfo *pb.MinerPoisInfo,
-		proof *pb.SpaceProof,
-		spaceProofHashPolkadotSig []byte,
+		requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
+	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
+
+	RequestSpaceProofVerifySingleBlock(
+		addr string,
+		requestSpaceProofVerify *pb.RequestSpaceProofVerify,
+		timeout time.Duration,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseSpaceProofVerify, error)
 
-	//
 	PoisRequestVerifySpaceTotal(
 		addr string,
-		accountKey []byte,
-		proofList []*pb.BlocksProof,
-		front int64,
-		rear int64,
-		acc []byte,
-		spaceChals []int64,
+		requestSpaceProofVerifyTotal *pb.RequestSpaceProofVerifyTotal,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseSpaceProofVerifyTotal, error)
 
-	//
-	PoisRequestVerifyDeletionProof(
+	RequestGenTag(
 		addr string,
-		RequestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
+		requestGenTag *pb.RequestGenTag,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
-	) (*pb.ResponseVerifyCommitOrDeletionProof, error)
-
-	//
-	PoisServiceRequestGenTag(
-		addr string,
-		fileData []byte,
-		roothash string,
-		filehash string,
-		customData string,
-		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseGenTag, error)
 
-	//
-	PoisServiceRequestBatchVerify(
+	RequestBatchVerify(
 		addr string,
-		peerid []byte,
-		minerPbk []byte,
-		minerPeerIdSign []byte,
-		batchVerifyParam *pb.RequestBatchVerify_BatchVerifyParam,
-		qslices *pb.RequestBatchVerify_Qslice,
+		requestBatchVerify *pb.RequestBatchVerify,
 		timeout time.Duration,
-		opts ...grpc.DialOption,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
 	) (*pb.ResponseBatchVerify, error)
 }
 

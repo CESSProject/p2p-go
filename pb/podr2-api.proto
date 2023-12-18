@@ -1,11 +1,15 @@
 syntax = "proto3";
 
-package podr2.api;
+package podr2;
 option go_package = "./;pb";
 
 service Podr2Api {
-  rpc request_gen_tag(RequestGenTag) returns (ResponseGenTag) {}
-  rpc request_batch_verify(RequestBatchVerify) returns (ResponseBatchVerify) {}
+  rpc request_gen_tag(RequestGenTag)
+      returns (ResponseGenTag) {}
+}
+
+service Podr2VerifierApi {
+    rpc request_batch_verify(RequestBatchVerify) returns (ResponseBatchVerify) {}
 }
 
 message Tag {
@@ -28,6 +32,7 @@ message RequestGenTag {
 
 message ResponseGenTag {
   Tag tag = 1;
+  bytes u_sig = 2;
 }
 
 message RequestBatchVerify {
@@ -49,6 +54,7 @@ message RequestBatchVerify {
   // 64 bytes sign content
   bytes miner_peer_id_sign = 4;
   Qslice qslices = 5;
+  repeated bytes u_sig = 6;
 }
 
 message ResponseBatchVerify {

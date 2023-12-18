@@ -1,21 +1,24 @@
 syntax = "proto3";
 
-package pois.api;
+package pois;
 option go_package = "./;pb";
 
-service PoisApi {
+service PoisCertifierApi {
   rpc request_miner_get_new_key(RequestMinerInitParam)
       returns (ResponseMinerInitParam) {}
   rpc request_miner_commit_gen_chall(RequestMinerCommitGenChall)
       returns (Challenge) {}
   rpc request_verify_commit_proof(RequestVerifyCommitAndAccProof)
       returns (ResponseVerifyCommitOrDeletionProof) {}
+  rpc request_verify_deletion_proof(RequestVerifyDeletionProof)
+      returns (ResponseVerifyCommitOrDeletionProof) {}
+}
+
+service PoisVerifierApi {
   rpc request_space_proof_verify_single_block(RequestSpaceProofVerify)
       returns (ResponseSpaceProofVerify) {}
   rpc request_verify_space_total(RequestSpaceProofVerifyTotal)
       returns (ResponseSpaceProofVerifyTotal) {}
-  rpc request_verify_deletion_proof(RequestVerifyDeletionProof)
-      returns (ResponseVerifyCommitOrDeletionProof) {}
 }
 
 message RequestMinerInitParam{
@@ -35,8 +38,7 @@ message ResponseMinerInitParam{
 message RequestMinerCommitGenChall {
   bytes miner_id = 1;
   Commits commit = 2;
-  MinerPoisInfo pois_info = 3;
-  bytes miner_sign = 4;
+  bytes miner_sign = 3;
 }
 
 message Commits {
@@ -65,7 +67,8 @@ message RequestVerifyCommitAndAccProof {
   CommitProofGroup commit_proof_group = 1;
   AccProof acc_proof = 2;
   bytes miner_id = 3;
-  bytes miner_sign = 4;
+  MinerPoisInfo pois_info = 4;
+  bytes miner_sign = 5;
 }
 message CommitProofGroup {
   repeated CommitProofGroupInner commit_proof_group_inner = 1;
