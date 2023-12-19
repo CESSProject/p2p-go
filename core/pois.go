@@ -15,148 +15,147 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (n *Node) PoisNewClient(addr string, opts ...grpc.DialOption) (pb.PoisApiClient, error) {
+func (n *Node) NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return pb.NewPoisApiClient(conn), nil
+	return pb.NewPoisCertifierApiClient(conn), nil
 }
 
-func (n *Node) PoisGetMinerInitParam(addr string, accountKey []byte, timeout time.Duration, opts ...grpc.DialOption) (*pb.ResponseMinerInitParam, error) {
+func (n *Node) NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return pb.NewPoisVerifierApiClient(conn), nil
+}
+
+func (n *Node) RequestMinerGetNewKey(
+	addr string,
+	accountKey []byte,
+	timeout time.Duration,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
+) (*pb.ResponseMinerInitParam, error) {
+	conn, err := grpc.Dial(addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
+	c := pb.NewPoisCertifierApiClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-
-	result, err := c.RequestMinerGetNewKey(ctx, &pb.RequestMinerInitParam{
-		MinerId: accountKey,
-	})
+	result, err := c.RequestMinerGetNewKey(
+		ctx,
+		&pb.RequestMinerInitParam{
+			MinerId: accountKey,
+		},
+		callOpts...)
 	return result, err
 }
 
-func (n *Node) PoisMinerCommitGenChall(
+func (n *Node) RequestMinerCommitGenChall(
 	addr string,
 	commitGenChall *pb.RequestMinerCommitGenChall,
 	timeout time.Duration,
-	opts ...grpc.DialOption,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
 ) (*pb.Challenge, error) {
-	conn, err := grpc.Dial(addr, opts...)
+	conn, err := grpc.Dial(addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
+	c := pb.NewPoisCertifierApiClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestMinerCommitGenChall(ctx, commitGenChall)
+	result, err := c.RequestMinerCommitGenChall(ctx, commitGenChall, callOpts...)
 	return result, err
 }
 
-func (n *Node) PoisVerifyCommitProof(
+func (n *Node) RequestVerifyCommitProof(
 	addr string,
 	verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 	timeout time.Duration,
-	opts ...grpc.DialOption,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
-	conn, err := grpc.Dial(addr, opts...)
+	conn, err := grpc.Dial(addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
+	c := pb.NewPoisCertifierApiClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestVerifyCommitProof(ctx, verifyCommitAndAccProof)
+	result, err := c.RequestVerifyCommitProof(ctx, verifyCommitAndAccProof, callOpts...)
 	return result, err
 }
 
-func (n *Node) PoisSpaceProofVerifySingleBlock(
-	addr string,
-	accountKey []byte,
-	spaceChals []int64,
-	minerPoisInfo *pb.MinerPoisInfo,
-	proof *pb.SpaceProof,
-	spaceProofHashPolkadotSig []byte,
-	timeout time.Duration,
-	opts ...grpc.DialOption,
-) (*pb.ResponseSpaceProofVerify, error) {
-	conn, err := grpc.Dial(addr, opts...)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	result, err := c.RequestSpaceProofVerifySingleBlock(ctx, &pb.RequestSpaceProofVerify{
-		SpaceChals:                     spaceChals,
-		MinerId:                        accountKey,
-		PoisInfo:                       minerPoisInfo,
-		Proof:                          proof,
-		MinerSpaceProofHashPolkadotSig: spaceProofHashPolkadotSig,
-	})
-	return result, err
-}
-
-func (n *Node) PoisRequestVerifySpaceTotal(
-	addr string,
-	accountKey []byte,
-	proofList []*pb.BlocksProof,
-	front int64,
-	rear int64,
-	acc []byte,
-	spaceChals []int64,
-	timeout time.Duration,
-	opts ...grpc.DialOption,
-) (*pb.ResponseSpaceProofVerifyTotal, error) {
-	conn, err := grpc.Dial(addr, opts...)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	result, err := c.RequestVerifySpaceTotal(ctx, &pb.RequestSpaceProofVerifyTotal{
-		MinerId:    accountKey,
-		ProofList:  proofList,
-		Front:      front,
-		Rear:       rear,
-		Acc:        acc,
-		SpaceChals: spaceChals,
-	})
-	return result, err
-}
-
-func (n *Node) PoisRequestVerifyDeletionProof(
+func (n *Node) RequestVerifyDeletionProof(
 	addr string,
 	requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 	timeout time.Duration,
-	opts ...grpc.DialOption,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
 ) (*pb.ResponseVerifyCommitOrDeletionProof, error) {
-	conn, err := grpc.Dial(addr, opts...)
+	conn, err := grpc.Dial(addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	c := pb.NewPoisApiClient(conn)
+	c := pb.NewPoisCertifierApiClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	result, err := c.RequestVerifyDeletionProof(ctx, requestVerifyDeletionProof)
+	result, err := c.RequestVerifyDeletionProof(ctx, requestVerifyDeletionProof, callOpts...)
+	return result, err
+}
+
+func (n *Node) RequestSpaceProofVerifySingleBlock(
+	addr string,
+	requestSpaceProofVerify *pb.RequestSpaceProofVerify,
+	timeout time.Duration,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
+) (*pb.ResponseSpaceProofVerify, error) {
+	conn, err := grpc.Dial(addr, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisVerifierApiClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	result, err := c.RequestSpaceProofVerifySingleBlock(ctx, requestSpaceProofVerify, callOpts...)
+	return result, err
+}
+
+func (n *Node) RequestVerifySpaceTotal(
+	addr string,
+	requestSpaceProofVerifyTotal *pb.RequestSpaceProofVerifyTotal,
+	timeout time.Duration,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
+) (*pb.ResponseSpaceProofVerifyTotal, error) {
+	conn, err := grpc.Dial(addr, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPoisVerifierApiClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	result, err := c.RequestVerifySpaceTotal(ctx, requestSpaceProofVerifyTotal, callOpts...)
 	return result, err
 }
