@@ -32,7 +32,8 @@ message ResponseMinerInitParam{
   int64 front = 4;//begin with 0
   int64 rear = 5;//begin with 0
   bytes miner_id = 6;//miner id
-  bytes signature = 7;//sig all
+  bytes status_tee_sign = 7;
+  bytes signature_with_tee_controller = 8;//sig all
 }
 
 message RequestMinerCommitGenChall {
@@ -102,7 +103,8 @@ message AccWitnessNode {
 
 message ResponseVerifyCommitOrDeletionProof{
   PoisStatus pois_status = 1;
-  bytes signature_above = 2;
+  bytes status_tee_sign = 2;
+  bytes signature_with_tee_controller = 3;
 }
 
 message PoisStatus{
