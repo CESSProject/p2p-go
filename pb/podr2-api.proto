@@ -28,11 +28,13 @@ message RequestGenTag {
   string fragment_name = 2;
   string custom_data = 3;
   string file_name = 4;
+  bytes miner_id = 5;
 }
 
 message ResponseGenTag {
   Tag tag = 1;
   bytes u_sig = 2;
+  bytes tag_sig_info = 3;
 }
 
 message RequestBatchVerify {
@@ -54,7 +56,7 @@ message RequestBatchVerify {
   // 64 bytes sign content
   bytes miner_peer_id_sign = 4;
   Qslice qslices = 5;
-  repeated bytes u_sig = 6;
+  repeated bytes u_sigs = 6;
 }
 
 message ResponseBatchVerify {
