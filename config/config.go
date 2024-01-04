@@ -24,6 +24,7 @@ type Config struct {
 	PrivatekeyPath string
 	ProtocolPrefix string
 	PublicIpv4     string
+	EnableBitswap  bool
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor
@@ -53,7 +54,7 @@ func (cfg *Config) NewNode(ctx context.Context) (core.P2P, error) {
 			cfg.ProtocolPrefix = DevnetProtocolPrefix
 		}
 	}
-	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager, cfg.ProtocolPrefix, cfg.PublicIpv4)
+	return core.NewBasicNode(ctx, cfg.ListenPort, cfg.Workspace, cfg.PrivatekeyPath, cfg.BootPeers, cfg.ConnManager, cfg.ProtocolPrefix, cfg.PublicIpv4, cfg.EnableBitswap)
 }
 
 // Apply applies the given options to the config, returning the first error

@@ -71,3 +71,11 @@ func PublicIpv4(ip string) Option {
 		return nil
 	}
 }
+
+// EnableBitswap enables bitswap function
+func EnableBitswap() Option {
+	return func(cfg *Config) error {
+		cfg.EnableBitswap = true
+		return nil
+	}
+}

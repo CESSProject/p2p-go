@@ -151,9 +151,6 @@ type P2P interface {
 	// RouteTableFindPeers
 	RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error)
 
-	// GetServiceTagCh returns the tag channel of the service data received by the host
-	GetServiceTagCh() <-chan string
-
 	NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error)
 
 	NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error)
@@ -243,11 +240,11 @@ type Node struct {
 	privatekeyPath        string
 	idleTee               atomic.Value
 	serviceTee            atomic.Value
-	serviceTagDataCh      chan string
 	protocolVersion       string
 	dhtProtocolVersion    string
 	rendezvousVersion     string
 	protocolPrefix        string
+	enableBswap           bool
 	bootstrap             []string
 	*dht.IpfsDHT
 	*drouting.RoutingDiscovery
@@ -271,6 +268,7 @@ func NewBasicNode(
 	cmgr connmgr.ConnManager,
 	protocolPrefix string,
 	publicip string,
+	enableBswap bool,
 ) (P2P, error) {
 	if !FreeLocalPort(uint32(port)) {
 		return nil, errors.New("port is in use")
@@ -375,12 +373,12 @@ func NewBasicNode(
 		privatekeyPath:        privatekeypath,
 		dir:                   dataDir,
 		peerPublickey:         publickey,
-		serviceTagDataCh:      make(chan string, 1),
 		protocolVersion:       protocolPrefix + p2pProtocolVer,
 		dhtProtocolVersion:    protocolPrefix + dhtProtocolVer,
 		rendezvousVersion:     protocolPrefix + rendezvous,
 		protocolPrefix:        protocolPrefix,
 		bootstrap:             boots,
+		enableBswap:           enableBswap,
 		protocols:             NewProtocol(),
 	}
 
@@ -389,18 +387,19 @@ func NewBasicNode(
 		return nil, fmt.Errorf("[initDHT] %v", err)
 	}
 
-	network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-	fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
-	if err != nil {
-		return nil, err
+	if n.enableBswap {
+		network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
+		fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
+		if err != nil {
+			return nil, err
+		}
+		n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
+		n.bswap = bitswap.New(
+			n.ctxQueryFromCtxCancel,
+			network,
+			n.bstore,
+		)
 	}
-
-	n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
-	n.bswap = bitswap.New(
-		n.ctxQueryFromCtxCancel,
-		network,
-		n.bstore,
-	)
 
 	n.initProtocol(protocolPrefix)
 
@@ -417,6 +416,9 @@ func (n *Node) GetBitSwap() *bitswap.Bitswap {
 
 // SaveAndNotifyDataBlock
 func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
+	if !n.enableBswap {
+		return cid.Cid{}, errors.New("The bitswap function is not enabled")
+	}
 	blockData := blocks.NewBlock(buf)
 	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
 	if err != nil {
@@ -428,12 +430,18 @@ func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
 
 // NotifyData notify data
 func (n *Node) NotifyData(buf []byte) error {
+	if !n.enableBswap {
+		return errors.New("The bitswap function is not enabled")
+	}
 	blockData := blocks.NewBlock(buf)
 	return n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
 }
 
 // GetDataFromBlock get data from block
 func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error) {
+	if !n.enableBswap {
+		return nil, errors.New("The bitswap function is not enabled")
+	}
 	wantcid, err := cid.Decode(wantCid)
 	if err != nil {
 		return nil, err
@@ -447,6 +455,9 @@ func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, er
 
 // GetLocalDataFromBlock get local data from block
 func (n *Node) GetLocalDataFromBlock(wantCid string) ([]byte, error) {
+	if !n.enableBswap {
+		return nil, errors.New("The bitswap function is not enabled")
+	}
 	wantcid, err := cid.Decode(wantCid)
 	if err != nil {
 		return nil, err
@@ -561,7 +572,6 @@ func (n *Node) Close() error {
 		return err
 	}
 	n.ctxCancelFuncFromRoot()
-	close(n.serviceTagDataCh)
 	return nil
 }
 
@@ -654,17 +664,6 @@ func (n *Node) GetCtxQueryFromCtxCancel() context.Context {
 
 func (n *Node) GetDirs() DataDirs {
 	return n.dir
-}
-
-func (n *Node) putServiceTagCh(path string) {
-	if len(n.serviceTagDataCh) > 0 {
-		_ = <-n.serviceTagDataCh
-	}
-	n.serviceTagDataCh <- path
-}
-
-func (n *Node) GetServiceTagCh() <-chan string {
-	return n.serviceTagDataCh
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
@@ -877,7 +876,7 @@ func (n *Node) initDHT() error {
 		if err != nil {
 			continue
 		}
-		err = n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
+		n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
 		// if err != nil {
 		// 	out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
 		// } else {
