@@ -166,7 +166,7 @@ func GetExternalIp() (string, error) {
 	if err == nil {
 		defer resp.Body.Close()
 		b, _ := io.ReadAll(resp.Body)
-		externalIp = fmt.Sprintf("%s", string(b))
+		externalIp = string(b)
 		if IsIPv4(externalIp) {
 			return externalIp, nil
 		}

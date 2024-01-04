@@ -8,7 +8,6 @@
 package core
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -44,9 +43,9 @@ const (
 )
 
 var (
-	FileNameLengthErr   = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
-	FileNameEmptyErr    = fmt.Errorf("filename is empty")
-	CustomDataLengthErr = fmt.Errorf("custom data length exceeds %d", MaxCustomDataLength)
+// FileNameLengthErr   = fmt.Errorf("filename length exceeds %d", MaxFileNameLength)
+// FileNameEmptyErr    = fmt.Errorf("filename is empty")
+// CustomDataLengthErr = fmt.Errorf("custom data length exceeds %d", MaxCustomDataLength)
 )
 
 type DataDirs struct {

@@ -167,6 +167,12 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 // remote peer requests handler
 func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 	defer s.Close()
+
+	if !e.enableRecv {
+		s.Reset()
+		return
+	}
+
 	// get request data
 	data := &pb.WritefileRequest{}
 	buf, err := io.ReadAll(s)
