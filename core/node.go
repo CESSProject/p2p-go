@@ -121,6 +121,12 @@ type P2P interface {
 	// PeerID returns your own peerid
 	PeerID() peer.ID
 
+	//
+	EnableRecv()
+
+	//
+	DisableRecv()
+
 	// Close p2p
 	Close() error
 
@@ -245,6 +251,7 @@ type Node struct {
 	rendezvousVersion     string
 	protocolPrefix        string
 	enableBswap           bool
+	enableRecv            bool
 	bootstrap             []string
 	*dht.IpfsDHT
 	*drouting.RoutingDiscovery
@@ -379,6 +386,7 @@ func NewBasicNode(
 		protocolPrefix:        protocolPrefix,
 		bootstrap:             boots,
 		enableBswap:           enableBswap,
+		enableRecv:            true,
 		protocols:             NewProtocol(),
 	}
 
@@ -664,6 +672,14 @@ func (n *Node) GetCtxQueryFromCtxCancel() context.Context {
 
 func (n *Node) GetDirs() DataDirs {
 	return n.dir
+}
+
+func (n *Node) EnableRecv() {
+	n.enableRecv = true
+}
+
+func (n *Node) DisableRecv() {
+	n.enableRecv = false
 }
 
 func (n *Node) SetIdleFileTee(peerid string) {
