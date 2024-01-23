@@ -52,6 +52,27 @@ func (n *Node) RequestGenTag(
 	return result, err
 }
 
+func (n *Node) RequestEcho(
+	addr string,
+	echoMessage *pb.EchoMessage,
+	timeout time.Duration,
+	dialOpts []grpc.DialOption,
+	callOpts []grpc.CallOption,
+) (*pb.EchoMessage, error) {
+	conn, err := grpc.Dial(addr, dialOpts...)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewPodr2ApiClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	result, err := c.Echo(ctx, echoMessage, callOpts...)
+	return result, err
+}
+
 func (n *Node) RequestBatchVerify(
 	addr string,
 	requestBatchVerify *pb.RequestBatchVerify,
