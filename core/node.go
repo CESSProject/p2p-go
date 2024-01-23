@@ -221,6 +221,14 @@ type P2P interface {
 		callOpts []grpc.CallOption,
 	) (*pb.ResponseGenTag, error)
 
+	RequestEcho(
+		addr string,
+		echoMessage *pb.EchoMessage,
+		timeout time.Duration,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
+	) (*pb.EchoMessage, error)
+
 	RequestBatchVerify(
 		addr string,
 		requestBatchVerify *pb.RequestBatchVerify,
