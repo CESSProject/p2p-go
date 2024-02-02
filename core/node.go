@@ -157,6 +157,8 @@ type P2P interface {
 	// RouteTableFindPeers
 	RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error)
 
+	// grpc api
+
 	NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error)
 
 	NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error)
@@ -164,6 +166,8 @@ type P2P interface {
 	NewPodr2ApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error)
 
 	NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2VerifierApiClient, error)
+
+	NewPubkeyApiClient(addr string, opts ...grpc.DialOption) (pb.CesealPubkeysProviderClient, error)
 
 	RequestMinerGetNewKey(
 		addr string,
@@ -236,6 +240,30 @@ type P2P interface {
 		dialOpts []grpc.DialOption,
 		callOpts []grpc.CallOption,
 	) (*pb.ResponseBatchVerify, error)
+
+	GetIdentityPubkey(
+		addr string,
+		request *pb.Request,
+		timeout time.Duration,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
+	) (*pb.IdentityPubkeyResponse, error)
+
+	GetMasterPubkey(
+		addr string,
+		request *pb.Request,
+		timeout time.Duration,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
+	) (*pb.MasterPubkeyResponse, error)
+
+	GetPodr2Pubkey(
+		addr string,
+		request *pb.Request,
+		timeout time.Duration,
+		dialOpts []grpc.DialOption,
+		callOpts []grpc.CallOption,
+	) (*pb.Podr2PubkeyResponse, error)
 }
 
 // Node type - Implementation of a P2P Host
