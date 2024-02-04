@@ -217,13 +217,7 @@ type P2P interface {
 		callOpts []grpc.CallOption,
 	) (*pb.ResponseSpaceProofVerifyTotal, error)
 
-	RequestGenTag(
-		addr string,
-		requestGenTag *pb.RequestGenTag,
-		timeout time.Duration,
-		dialOpts []grpc.DialOption,
-		callOpts []grpc.CallOption,
-	) (*pb.ResponseGenTag, error)
+	RequestGenTag(c pb.Podr2ApiClient) (pb.Podr2Api_RequestGenTagClient, error)
 
 	RequestEcho(
 		addr string,
