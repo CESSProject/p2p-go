@@ -23,8 +23,8 @@ message IdentityPubkeyResponse {
     // the identity public key
     bytes pubkey = 1;
     // The timestamp for the processing of the request
-    uint64 timestamp = 2;
-    // Use the sr25519 algorithm to sign the timestamp fields above
+    int64 timestamp = 2;
+    // Use the sr25519 algorithm to sign the timestamp fields above (use it's Big-Endian bytes)
     bytes signature = 3;
 }
 
@@ -32,7 +32,8 @@ message MasterPubkeyResponse {
     // the master public key
     bytes pubkey = 1;
     // The timestamp for the processing of the request
-    uint64 timestamp = 2;
+    int64 timestamp = 2;
+    // Use the sr25519 algorithm to sign the timestamp fields above (use it's Big-Endian bytes)
     bytes signature = 3;
 }
 
@@ -40,7 +41,7 @@ message Podr2PubkeyResponse {
     // the PODR2 public key
     bytes pubkey = 1;
     // The timestamp for the processing of the request
-    uint64 timestamp = 2;
-    // Use the RSA algorithm to sign the timestamp fields above
+    int64 timestamp = 2;
+    // Use the RSA algorithm to sign the timestamp fields above (use it's Big-Endian bytes)
     bytes signature = 3;
 }

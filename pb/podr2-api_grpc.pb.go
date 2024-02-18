@@ -27,7 +27,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type Podr2ApiClient interface {
-	RequestGenTag(ctx context.Context, in *RequestGenTag, opts ...grpc.CallOption) (*ResponseGenTag, error)
+	RequestGenTag(ctx context.Context, opts ...grpc.CallOption) (Podr2Api_RequestGenTagClient, error)
 	// A echo rpc to measure network RTT.
 	Echo(ctx context.Context, in *EchoMessage, opts ...grpc.CallOption) (*EchoMessage, error)
 }
@@ -40,13 +40,35 @@ func NewPodr2ApiClient(cc grpc.ClientConnInterface) Podr2ApiClient {
 	return &podr2ApiClient{cc}
 }
 
-func (c *podr2ApiClient) RequestGenTag(ctx context.Context, in *RequestGenTag, opts ...grpc.CallOption) (*ResponseGenTag, error) {
-	out := new(ResponseGenTag)
-	err := c.cc.Invoke(ctx, Podr2Api_RequestGenTag_FullMethodName, in, out, opts...)
+func (c *podr2ApiClient) RequestGenTag(ctx context.Context, opts ...grpc.CallOption) (Podr2Api_RequestGenTagClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Podr2Api_ServiceDesc.Streams[0], Podr2Api_RequestGenTag_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &podr2ApiRequestGenTagClient{stream}
+	return x, nil
+}
+
+type Podr2Api_RequestGenTagClient interface {
+	Send(*RequestGenTag) error
+	Recv() (*ResponseGenTag, error)
+	grpc.ClientStream
+}
+
+type podr2ApiRequestGenTagClient struct {
+	grpc.ClientStream
+}
+
+func (x *podr2ApiRequestGenTagClient) Send(m *RequestGenTag) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *podr2ApiRequestGenTagClient) Recv() (*ResponseGenTag, error) {
+	m := new(ResponseGenTag)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *podr2ApiClient) Echo(ctx context.Context, in *EchoMessage, opts ...grpc.CallOption) (*EchoMessage, error) {
@@ -62,7 +84,7 @@ func (c *podr2ApiClient) Echo(ctx context.Context, in *EchoMessage, opts ...grpc
 // All implementations must embed UnimplementedPodr2ApiServer
 // for forward compatibility
 type Podr2ApiServer interface {
-	RequestGenTag(context.Context, *RequestGenTag) (*ResponseGenTag, error)
+	RequestGenTag(Podr2Api_RequestGenTagServer) error
 	// A echo rpc to measure network RTT.
 	Echo(context.Context, *EchoMessage) (*EchoMessage, error)
 	mustEmbedUnimplementedPodr2ApiServer()
@@ -72,8 +94,8 @@ type Podr2ApiServer interface {
 type UnimplementedPodr2ApiServer struct {
 }
 
-func (UnimplementedPodr2ApiServer) RequestGenTag(context.Context, *RequestGenTag) (*ResponseGenTag, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestGenTag not implemented")
+func (UnimplementedPodr2ApiServer) RequestGenTag(Podr2Api_RequestGenTagServer) error {
+	return status.Errorf(codes.Unimplemented, "method RequestGenTag not implemented")
 }
 func (UnimplementedPodr2ApiServer) Echo(context.Context, *EchoMessage) (*EchoMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Echo not implemented")
@@ -91,22 +113,30 @@ func RegisterPodr2ApiServer(s grpc.ServiceRegistrar, srv Podr2ApiServer) {
 	s.RegisterService(&Podr2Api_ServiceDesc, srv)
 }
 
-func _Podr2Api_RequestGenTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestGenTag)
-	if err := dec(in); err != nil {
+func _Podr2Api_RequestGenTag_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(Podr2ApiServer).RequestGenTag(&podr2ApiRequestGenTagServer{stream})
+}
+
+type Podr2Api_RequestGenTagServer interface {
+	Send(*ResponseGenTag) error
+	Recv() (*RequestGenTag, error)
+	grpc.ServerStream
+}
+
+type podr2ApiRequestGenTagServer struct {
+	grpc.ServerStream
+}
+
+func (x *podr2ApiRequestGenTagServer) Send(m *ResponseGenTag) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *podr2ApiRequestGenTagServer) Recv() (*RequestGenTag, error) {
+	m := new(RequestGenTag)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(Podr2ApiServer).RequestGenTag(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Podr2Api_RequestGenTag_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(Podr2ApiServer).RequestGenTag(ctx, req.(*RequestGenTag))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 func _Podr2Api_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -135,15 +165,18 @@ var Podr2Api_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*Podr2ApiServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "request_gen_tag",
-			Handler:    _Podr2Api_RequestGenTag_Handler,
-		},
-		{
 			MethodName: "Echo",
 			Handler:    _Podr2Api_Echo_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "request_gen_tag",
+			Handler:       _Podr2Api_RequestGenTag_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "podr2-api.proto",
 }
 

@@ -31,24 +31,8 @@ func (n *Node) NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (
 	return pb.NewPodr2VerifierApiClient(conn), nil
 }
 
-func (n *Node) RequestGenTag(
-	addr string,
-	requestGenTag *pb.RequestGenTag,
-	timeout time.Duration,
-	dialOpts []grpc.DialOption,
-	callOpts []grpc.CallOption,
-) (*pb.ResponseGenTag, error) {
-	conn, err := grpc.Dial(addr, dialOpts...)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	c := pb.NewPodr2ApiClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	result, err := c.RequestGenTag(ctx, requestGenTag, callOpts...)
+func (n *Node) RequestGenTag(c pb.Podr2ApiClient) (pb.Podr2Api_RequestGenTagClient, error) {
+	result, err := c.RequestGenTag(context.Background())
 	return result, err
 }
 
