@@ -228,6 +228,11 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 			s.Reset()
 			return
 		}
+		err = f.Sync()
+		if err != nil {
+			s.Reset()
+			return
+		}
 		resp.Code = P2PResponseFinish
 		e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeFileResponse), resp)
 		return
@@ -272,7 +277,11 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 		s.Reset()
 		return
 	}
-
+	err = f.Sync()
+	if err != nil {
+		s.Reset()
+		return
+	}
 	if int(int(size)+int(data.Length)) == FragmentSize {
 		hash, err := CalcPathSHA256(fpath)
 		if err != nil || hash != data.Datahash {
