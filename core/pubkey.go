@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (n *Node) NewPubkeyApiClient(addr string, opts ...grpc.DialOption) (pb.CesealPubkeysProviderClient, error) {
+func (n *PeerNode) NewPubkeyApiClient(addr string, opts ...grpc.DialOption) (pb.CesealPubkeysProviderClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (n *Node) NewPubkeyApiClient(addr string, opts ...grpc.DialOption) (pb.Cese
 	return pb.NewCesealPubkeysProviderClient(conn), nil
 }
 
-func (n *Node) GetIdentityPubkey(
+func (n *PeerNode) GetIdentityPubkey(
 	addr string,
 	request *pb.Request,
 	timeout time.Duration,
@@ -44,7 +44,7 @@ func (n *Node) GetIdentityPubkey(
 	return result, err
 }
 
-func (n *Node) GetMasterPubkey(
+func (n *PeerNode) GetMasterPubkey(
 	addr string,
 	request *pb.Request,
 	timeout time.Duration,
@@ -65,7 +65,7 @@ func (n *Node) GetMasterPubkey(
 	return result, err
 }
 
-func (n *Node) GetPodr2Pubkey(
+func (n *PeerNode) GetPodr2Pubkey(
 	addr string,
 	request *pb.Request,
 	timeout time.Duration,

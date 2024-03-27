@@ -16,41 +16,28 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/CESSProject/p2p-go/config"
 	"github.com/CESSProject/p2p-go/out"
 	"github.com/CESSProject/p2p-go/pb"
 	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 
-	bsnet "github.com/AstaFrode/boxo/bitswap/network"
-
-	bitswap "github.com/AstaFrode/boxo/bitswap"
-	blockstore "github.com/AstaFrode/boxo/blockstore"
-	dutil "github.com/AstaFrode/go-libp2p/p2p/discovery/util"
-	blocks "github.com/ipfs/go-block-format"
-	ds_sync "github.com/ipfs/go-datastore/sync"
-
-	"github.com/AstaFrode/go-libp2p"
-	dht "github.com/AstaFrode/go-libp2p-kad-dht"
-	"github.com/AstaFrode/go-libp2p/core/connmgr"
-	"github.com/AstaFrode/go-libp2p/core/crypto"
-	"github.com/AstaFrode/go-libp2p/core/discovery"
-	"github.com/AstaFrode/go-libp2p/core/event"
-	"github.com/AstaFrode/go-libp2p/core/host"
-	"github.com/AstaFrode/go-libp2p/core/network"
-	"github.com/AstaFrode/go-libp2p/core/peer"
-	"github.com/AstaFrode/go-libp2p/core/peerstore"
-	"github.com/AstaFrode/go-libp2p/core/protocol"
-	"github.com/AstaFrode/go-libp2p/core/routing"
-	drouting "github.com/AstaFrode/go-libp2p/p2p/discovery/routing"
-	rcmgr "github.com/AstaFrode/go-libp2p/p2p/host/resource-manager"
-	"github.com/ipfs/go-cid"
+	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/event"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
+	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
-
-	mh "github.com/multiformats/go-multihash"
-	"github.com/pbnjay/memory"
 	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 )
 
@@ -67,23 +54,11 @@ type P2P interface {
 	// Message protocol
 	Protocol
 
-	// GetCtxRoot returns the root context of the host
-	GetCtxRoot() context.Context
-
-	// GetCtxCancelFromRoot returns the cancel context from root context
-	GetCtxCancelFromRoot() context.Context
-
-	// GetCtxQueryFromCtxCancel returns tne query context from cancel context
-	GetCtxQueryFromCtxCancel() context.Context
-
 	// PrivatekeyPath returns the key file location
 	PrivatekeyPath() string
 
 	// Workspace returns to the working directory
 	Workspace() string
-
-	// AddMultiaddrToPeerstore adds multiaddr to the host's peerstore
-	AddMultiaddrToPeerstore(multiaddr string, t time.Duration) (peer.ID, error)
 
 	// GetPeerPublickey returns the host's public key
 	GetPeerPublickey() []byte
@@ -97,9 +72,6 @@ type P2P interface {
 	// GetRendezvousVersion returns the rendezvous protocol
 	GetRendezvousVersion() string
 
-	// GetProtocolPrefix returns protocols prefix
-	GetProtocolPrefix() string
-
 	// GetDirs returns the data directory structure of the host
 	GetDirs() DataDirs
 
@@ -110,16 +82,10 @@ type P2P interface {
 	SetBootstraps(bootstrap []string)
 
 	//
-	GetDht() *dht.IpfsDHT
+	GetHost() host.Host
 
 	//
-	GetRoutingTable() *drouting.RoutingDiscovery
-
-	// DHTFindPeer searches for a peer with given ID
-	DHTFindPeer(peerid string) (peer.AddrInfo, error)
-
-	// PeerID returns your own peerid
-	PeerID() peer.ID
+	GetDHTable() *dht.IpfsDHT
 
 	//
 	EnableRecv()
@@ -129,33 +95,6 @@ type P2P interface {
 
 	// Close p2p
 	Close() error
-
-	//
-	GetBlockstore() blockstore.Blockstore
-
-	//
-	GetBitSwap() *bitswap.Bitswap
-
-	//
-	FidToCid(fid string) (string, error)
-
-	//
-	SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error)
-
-	//
-	NotifyData(buf []byte) error
-
-	// GetDataFromBlock get data from block
-	GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error)
-
-	//
-	GetLocalDataFromBlock(wantCid string) ([]byte, error)
-
-	//
-	GetDiscoveredPeers() <-chan *routing.QueryEvent
-
-	// RouteTableFindPeers
-	RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error)
 
 	// grpc api
 
@@ -261,58 +200,75 @@ type P2P interface {
 }
 
 // Node type - Implementation of a P2P Host
-type Node struct {
-	ctxRoot               context.Context
-	ctxCancelFromRoot     context.Context
-	ctxQueryFromCtxCancel context.Context
-	ctxCancelFuncFromRoot context.CancelFunc
-	discoveredPeerCh      <-chan *routing.QueryEvent
-	host                  host.Host
-	bstore                blockstore.Blockstore
-	bswap                 *bitswap.Bitswap
-	dir                   DataDirs
-	peerPublickey         []byte
-	workspace             string
-	privatekeyPath        string
-	idleTee               atomic.Value
-	serviceTee            atomic.Value
-	protocolVersion       string
-	dhtProtocolVersion    string
-	rendezvousVersion     string
-	protocolPrefix        string
-	enableBswap           bool
-	enableRecv            bool
-	bootstrap             []string
-	*dht.IpfsDHT
-	*drouting.RoutingDiscovery
+type PeerNode struct {
+	host               host.Host
+	dir                DataDirs
+	peerPublickey      []byte
+	workspace          string
+	privatekeyPath     string
+	idleTee            atomic.Value
+	serviceTee         atomic.Value
+	protocolVersion    string
+	dhtProtocolVersion string
+	rendezvousVersion  string
+	protocolPrefix     string
+	enableRecv         bool
+	bootnodes          []string
+	dhtable            *dht.IpfsDHT
 	*protocols
 }
 
-var _ P2P = (*Node)(nil)
+var _ P2P = (*PeerNode)(nil)
 
-// NewBasicNode constructs a new *Node
+// NewPeerNode constructs a new *PeerNode
 //
 //	  workspace: service working directory
 //	  privatekeypath: private key file
 //		  If it is empty, automatically created in the program working directory
 //		  If it is a directory, it will be created in the specified directory
-func NewBasicNode(
-	ctx context.Context,
-	port int,
-	workspace string,
-	privatekeypath string,
-	bootstrap []string,
-	cmgr connmgr.ConnManager,
-	protocolPrefix string,
-	publicip string,
-	enableBswap bool,
-) (P2P, error) {
-	if !FreeLocalPort(uint32(port)) {
-		return nil, errors.New("port is in use")
+func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
+	if !FreeLocalPort(uint32(cfg.ListenPort)) {
+		return nil, fmt.Errorf("port %d is already in use", cfg.ListenPort)
+	}
+
+	err := verifyWorkspace(cfg.Workspace)
+	if err != nil {
+		return nil, err
+	}
+
+	prvKey, err := identification(cfg.Workspace, cfg.PrivatekeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.PublicIpv4 != "" {
+		if !IsIPv4(cfg.PublicIpv4) {
+			return nil, fmt.Errorf("illegal IPv4 address: %s", cfg.PublicIpv4)
+		}
+	}
+
+	var opts []libp2p.Option
+	var multiaddrs []ma.Multiaddr
+	externalIp, err := GetExternalIp()
+	if err != nil {
+		if cfg.PublicIpv4 != "" {
+			extMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.PublicIpv4, cfg.ListenPort))
+			multiaddrs = append(multiaddrs, extMultiAddr)
+		}
+	} else {
+		extMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", externalIp, cfg.ListenPort))
+		multiaddrs = append(multiaddrs, extMultiAddr)
+	}
+
+	if len(multiaddrs) > 0 {
+		opts = append(opts, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+			addrs = append(addrs, multiaddrs...)
+			return addrs
+		}))
 	}
 
 	var boots = make([]string, 0)
-	for _, b := range bootstrap {
+	for _, b := range cfg.BootPeers {
 		bootnodes, err := ParseMultiaddrs(b)
 		if err != nil {
 			out.Err(err.Error())
@@ -320,61 +276,22 @@ func NewBasicNode(
 		}
 		boots = append(boots, bootnodes...)
 	}
-
-	if err := verifyWorkspace(workspace); err != nil {
-		return nil, err
-	}
-
-	prvKey, err := identification(workspace, privatekeypath)
-	if err != nil {
-		return nil, err
-	}
-
-	var opts []libp2p.Option
-	var multiaddrs []ma.Multiaddr
-	if publicip == "" {
-		externalIp, err := GetExternalIp()
-		if err != nil {
-			return nil, err
+	if len(boots) == 0 {
+		rm, err := buildPrimaryResourceManager()
+		if err == nil {
+			opts = append(opts, libp2p.ResourceManager(rm))
 		}
-		extMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", externalIp, port))
-		multiaddrs = append(multiaddrs, extMultiAddr)
-	} else {
-		if !IsIPv4(publicip) {
-			return nil, errors.New("invalid ipv4")
-		}
-		extMultiAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", publicip, port))
-		multiaddrs = append(multiaddrs, extMultiAddr)
-	}
-
-	addressFactory := func(addrs []ma.Multiaddr) []ma.Multiaddr {
-		addrs = append(addrs, multiaddrs...)
-		return addrs
-	}
-
-	rm, err := buildResourceManager()
-	if err != nil {
-		return nil, err
 	}
 
 	opts = append(opts,
 		libp2p.Identity(prvKey),
-		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port)),
-		libp2p.ConnectionManager(cmgr),
-		libp2p.DefaultTransports,
-		libp2p.DefaultMuxers,
-		libp2p.DefaultSecurity,
-		libp2p.DefaultPeerstore,
-		libp2p.DefaultEnableRelay,
-		libp2p.ProtocolVersion(protocolPrefix+p2pProtocolVer),
-		libp2p.AddrsFactory(addressFactory),
+		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort)),
+		libp2p.ConnectionManager(cfg.ConnManager),
+		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Security(tls.ID, tls.New),
+		libp2p.ProtocolVersion(cfg.ProtocolPrefix+p2pProtocolVer),
 		libp2p.DisableMetrics(),
-		libp2p.ResourceManager(rm),
-		libp2p.NATPortMap(),
-		libp2p.EnableNATService(),
 		libp2p.EnableRelay(),
-		libp2p.EnableRelayService(),
-		libp2p.EnableHolePunching(),
 	)
 
 	bhost, err := libp2p.New(opts...)
@@ -391,180 +308,57 @@ func NewBasicNode(
 		return nil, err
 	}
 
-	dataDir, err := mkdir(workspace)
+	peer_node := &PeerNode{
+		host:               bhost,
+		workspace:          cfg.Workspace,
+		privatekeyPath:     cfg.PrivatekeyPath,
+		peerPublickey:      publickey,
+		protocolPrefix:     cfg.ProtocolPrefix,
+		protocolVersion:    cfg.ProtocolPrefix + p2pProtocolVer,
+		dhtProtocolVersion: cfg.ProtocolPrefix + dhtProtocolVer,
+		rendezvousVersion:  cfg.ProtocolPrefix + rendezvous,
+		bootnodes:          boots,
+		enableRecv:         true,
+		protocols:          NewProtocol(),
+	}
+
+	peer_node.dhtable, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
+	if err != nil {
+		return nil, fmt.Errorf("[NewDHT] %v", err)
+	}
+
+	peer_node.dir, err = mkdir(cfg.Workspace)
 	if err != nil {
 		return nil, err
 	}
 
-	ctxcancel, cancel := context.WithCancel(ctx)
-	ctxreg, events := routing.RegisterForQueryEvents(ctxcancel)
+	peer_node.initProtocol(cfg.ProtocolPrefix)
 
-	n := &Node{
-		ctxRoot:               ctx,
-		ctxCancelFromRoot:     ctxcancel,
-		ctxQueryFromCtxCancel: ctxreg,
-		ctxCancelFuncFromRoot: cancel,
-		discoveredPeerCh:      events,
-		host:                  bhost,
-		workspace:             workspace,
-		privatekeyPath:        privatekeypath,
-		dir:                   dataDir,
-		peerPublickey:         publickey,
-		protocolVersion:       protocolPrefix + p2pProtocolVer,
-		dhtProtocolVersion:    protocolPrefix + dhtProtocolVer,
-		rendezvousVersion:     protocolPrefix + rendezvous,
-		protocolPrefix:        protocolPrefix,
-		bootstrap:             boots,
-		enableBswap:           enableBswap,
-		enableRecv:            true,
-		protocols:             NewProtocol(),
-	}
-
-	err = n.initDHT()
-	if err != nil {
-		return nil, fmt.Errorf("[initDHT] %v", err)
-	}
-
-	if n.enableBswap {
-		network := bsnet.NewFromIpfsHost(n.host, n.RoutingDiscovery)
-		fsdatastore, err := NewDatastore(filepath.Join(n.workspace, FileBlockDir))
-		if err != nil {
-			return nil, err
-		}
-		n.bstore = blockstore.NewBlockstore(ds_sync.MutexWrap(fsdatastore))
-		n.bswap = bitswap.New(
-			n.ctxQueryFromCtxCancel,
-			network,
-			n.bstore,
-		)
-	}
-
-	n.initProtocol(protocolPrefix)
-
-	return n, nil
-}
-
-func (n *Node) GetBlockstore() blockstore.Blockstore {
-	return n.bstore
-}
-
-func (n *Node) GetBitSwap() *bitswap.Bitswap {
-	return n.bswap
-}
-
-// SaveAndNotifyDataBlock
-func (n *Node) SaveAndNotifyDataBlock(buf []byte) (cid.Cid, error) {
-	if !n.enableBswap {
-		return cid.Cid{}, errors.New("The bitswap function is not enabled")
-	}
-	blockData := blocks.NewBlock(buf)
-	err := n.bstore.Put(n.ctxQueryFromCtxCancel, blockData)
-	if err != nil {
-		return blockData.Cid(), err
-	}
-	err = n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
-	return blockData.Cid(), err
-}
-
-// NotifyData notify data
-func (n *Node) NotifyData(buf []byte) error {
-	if !n.enableBswap {
-		return errors.New("The bitswap function is not enabled")
-	}
-	blockData := blocks.NewBlock(buf)
-	return n.bswap.NotifyNewBlocks(n.ctxQueryFromCtxCancel, blockData)
-}
-
-// GetDataFromBlock get data from block
-func (n *Node) GetDataFromBlock(ctx context.Context, wantCid string) ([]byte, error) {
-	if !n.enableBswap {
-		return nil, errors.New("The bitswap function is not enabled")
-	}
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bswap.GetBlock(ctx, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
-
-// GetLocalDataFromBlock get local data from block
-func (n *Node) GetLocalDataFromBlock(wantCid string) ([]byte, error) {
-	if !n.enableBswap {
-		return nil, errors.New("The bitswap function is not enabled")
-	}
-	wantcid, err := cid.Decode(wantCid)
-	if err != nil {
-		return nil, err
-	}
-	block, err := n.bstore.Get(n.ctxQueryFromCtxCancel, wantcid)
-	if err != nil {
-		return nil, err
-	}
-	return block.RawData(), err
-}
-
-// FidToCid
-func (n *Node) FidToCid(fid string) (string, error) {
-	mhash, err := mh.FromHexString("1220" + fid)
-	if err != nil {
-		return "", err
-	}
-	return cid.NewCidV0(mhash).String(), nil
-}
-
-// DHTFindPeer searches for a peer with given ID.
-func (n *Node) DHTFindPeer(peerid string) (peer.AddrInfo, error) {
-	id, err := peer.Decode(peerid)
-	if err != nil {
-		return peer.AddrInfo{}, err
-	}
-	return n.IpfsDHT.FindPeer(n.ctxQueryFromCtxCancel, id)
-}
-
-// RouteTableFindPeers
-func (n *Node) RouteTableFindPeers(limit int) (<-chan peer.AddrInfo, error) {
-	if limit <= 0 {
-		return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion)
-	}
-	return n.RoutingDiscovery.FindPeers(n.ctxQueryFromCtxCancel, n.rendezvousVersion, discovery.Limit(limit))
-}
-
-// PeerID returns for own peerid
-func (n *Node) PeerID() peer.ID {
-	return n.IpfsDHT.PeerID()
-}
-
-// GetDiscoveredPeers
-func (n *Node) GetDiscoveredPeers() <-chan *routing.QueryEvent {
-	return n.discoveredPeerCh
+	return peer_node, nil
 }
 
 // ID returns the (local) peer.ID associated with this Host
-func (n *Node) ID() peer.ID {
+func (n *PeerNode) ID() peer.ID {
 	return n.host.ID()
 }
 
 // Peerstore returns the Host's repository of Peer Addresses and Keys.
-func (n *Node) Peerstore() peerstore.Peerstore {
+func (n *PeerNode) Peerstore() peerstore.Peerstore {
 	return n.host.Peerstore()
 }
 
 // Returns the listen addresses of the Host
-func (n *Node) Addrs() []ma.Multiaddr {
+func (n *PeerNode) Addrs() []ma.Multiaddr {
 	return n.host.Addrs()
 }
 
 // Networks returns the Network interface of the Host
-func (n *Node) Network() network.Network {
+func (n *PeerNode) Network() network.Network {
 	return n.host.Network()
 }
 
 // Mux returns the Mux multiplexing incoming streams to protocol handlers
-func (n *Node) Mux() protocol.Switch {
+func (n *PeerNode) Mux() protocol.Switch {
 	return n.host.Mux()
 }
 
@@ -573,25 +367,25 @@ func (n *Node) Mux() protocol.Switch {
 // peerstore. If there is not an active connection, Connect will issue a
 // h.Network.Dial, and block until a connection is open, or an error is
 // returned. // TODO: Relay + NAT.
-func (n *Node) Connect(ctx context.Context, pi peer.AddrInfo) error {
+func (n *PeerNode) Connect(ctx context.Context, pi peer.AddrInfo) error {
 	return n.host.Connect(ctx, pi)
 }
 
 // SetStreamHandler sets the protocol handler on the Host's Mux.
 // This is equivalent to: host.Mux().SetHandler(proto, handler) (Threadsafe)
-func (n *Node) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
+func (n *PeerNode) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {
 	n.host.SetStreamHandler(pid, handler)
 }
 
 // SetStreamHandlerMatch sets the protocol handler on the Host's Mux
 // using a matching function for protocol selection.
-func (n *Node) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
+func (n *PeerNode) SetStreamHandlerMatch(pid protocol.ID, m func(protocol.ID) bool, handler network.StreamHandler) {
 	n.host.SetStreamHandlerMatch(pid, m, handler)
 }
 
 // RemoveStreamHandler removes a handler on the mux that was set by
 // SetStreamHandler
-func (n *Node) RemoveStreamHandler(pid protocol.ID) {
+func (n *PeerNode) RemoveStreamHandler(pid protocol.ID) {
 	n.host.RemoveStreamHandler(pid)
 }
 
@@ -599,124 +393,86 @@ func (n *Node) RemoveStreamHandler(pid protocol.ID) {
 // header with given ProtocolID. If there is no connection to p, attempts
 // to create one. If ProtocolID is "", writes no header.
 // (Threadsafe)
-func (n *Node) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
+func (n *PeerNode) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
 	return n.host.NewStream(ctx, p, pids...)
 }
 
 // Close shuts down the host, its Network, and services.
-func (n *Node) Close() error {
+func (n *PeerNode) Close() error {
 	err := n.host.Close()
 	if err != nil {
 		return err
 	}
-	n.ctxCancelFuncFromRoot()
 	return nil
 }
 
 // ConnManager returns this hosts connection manager
-func (n *Node) ConnManager() connmgr.ConnManager {
+func (n *PeerNode) ConnManager() connmgr.ConnManager {
 	return n.host.ConnManager()
 }
 
 // EventBus returns the hosts eventbus
-func (n *Node) EventBus() event.Bus {
+func (n *PeerNode) EventBus() event.Bus {
 	return n.host.EventBus()
 }
 
-func (n *Node) GetProtocolPrefix() string {
-	return n.protocolPrefix
-}
-
-func (n *Node) AddMultiaddrToPeerstore(multiaddr string, t time.Duration) (peer.ID, error) {
-	time := peerstore.RecentlyConnectedAddrTTL
-	if t.Seconds() > 0 {
-		time = t
-	}
-
-	maddr, err := ma.NewMultiaddr(multiaddr)
-	if err != nil {
-		return "", err
-	}
-
-	// Extract the peer ID from the multiaddr.
-	info, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		return "", err
-	}
-
-	n.Peerstore().AddAddr(info.ID, maddr, time)
-	return info.ID, nil
-}
-
-func (n *Node) PrivatekeyPath() string {
+func (n *PeerNode) PrivatekeyPath() string {
 	return n.privatekeyPath
 }
 
-func (n *Node) Workspace() string {
+func (n *PeerNode) Workspace() string {
 	return n.workspace
 }
 
-func (n *Node) GetPeerPublickey() []byte {
+func (n *PeerNode) GetPeerPublickey() []byte {
 	return n.peerPublickey
 }
 
-func (n *Node) GetProtocolVersion() string {
+func (n *PeerNode) GetProtocolVersion() string {
 	return n.protocolVersion
 }
 
-func (n *Node) GetDhtProtocolVersion() string {
+func (n *PeerNode) GetDhtProtocolVersion() string {
 	return n.dhtProtocolVersion
 }
 
-func (n *Node) GetRendezvousVersion() string {
+func (n *PeerNode) GetRendezvousVersion() string {
 	return n.rendezvousVersion
 }
 
-func (n *Node) GetBootstraps() []string {
-	return n.bootstrap
+func (n *PeerNode) GetBootstraps() []string {
+	return n.bootnodes
 }
 
-func (n *Node) SetBootstraps(bootstrap []string) {
-	n.bootstrap = bootstrap
+func (n *PeerNode) SetBootstraps(bootstrap []string) {
+	n.bootnodes = bootstrap
 }
 
-func (n *Node) GetDht() *dht.IpfsDHT {
-	return n.IpfsDHT
+func (n *PeerNode) GetHost() host.Host {
+	return n.host
 }
 
-func (n *Node) GetRoutingTable() *drouting.RoutingDiscovery {
-	return n.RoutingDiscovery
+func (n *PeerNode) GetDHTable() *dht.IpfsDHT {
+	return n.dhtable
 }
 
-func (n *Node) GetCtxRoot() context.Context {
-	return n.ctxRoot
-}
-
-func (n *Node) GetCtxCancelFromRoot() context.Context {
-	return n.ctxCancelFromRoot
-}
-
-func (n *Node) GetCtxQueryFromCtxCancel() context.Context {
-	return n.ctxQueryFromCtxCancel
-}
-
-func (n *Node) GetDirs() DataDirs {
+func (n *PeerNode) GetDirs() DataDirs {
 	return n.dir
 }
 
-func (n *Node) EnableRecv() {
+func (n *PeerNode) EnableRecv() {
 	n.enableRecv = true
 }
 
-func (n *Node) DisableRecv() {
+func (n *PeerNode) DisableRecv() {
 	n.enableRecv = false
 }
 
-func (n *Node) SetIdleFileTee(peerid string) {
+func (n *PeerNode) SetIdleFileTee(peerid string) {
 	n.idleTee.Store(peerid)
 }
 
-func (n *Node) GetIdleFileTee() string {
+func (n *PeerNode) GetIdleFileTee() string {
 	value, ok := n.idleTee.Load().(string)
 	if !ok {
 		return ""
@@ -724,11 +480,11 @@ func (n *Node) GetIdleFileTee() string {
 	return value
 }
 
-func (n *Node) SetServiceFileTee(peerid string) {
+func (n *PeerNode) SetServiceFileTee(peerid string) {
 	n.serviceTee.Store(peerid)
 }
 
-func (n *Node) GetServiceFileTee() string {
+func (n *PeerNode) GetServiceFileTee() string {
 	value, ok := n.serviceTee.Load().(string)
 	if !ok {
 		return ""
@@ -801,7 +557,7 @@ func mkdir(workspace string) (DataDirs, error) {
 
 // helper method - generate message data shared between all node's p2p protocols
 // messageId: unique for requests, copied from request for responses
-func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
+func (n *PeerNode) NewMessageData(messageId string, gossip bool) *pb.MessageData {
 	// Add protobufs bin data for message author public key
 	// this is useful for authenticating  messages forwarded by a node authored by another node
 	nodePubKey, err := crypto.MarshalPublicKey(n.host.Peerstore().PubKey(n.host.ID()))
@@ -823,7 +579,7 @@ func (n *Node) NewMessageData(messageId string, gossip bool) *pb.MessageData {
 // helper method - writes a protobuf go data object to a network stream
 // data: reference of protobuf go data object to send (not the object itself)
 // s: network stream to write the data to
-func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) error {
+func (n *PeerNode) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) error {
 	s, err := n.host.NewStream(context.Background(), id, p)
 	if err != nil {
 		return err
@@ -840,12 +596,12 @@ func (n *Node) SendProtoMessage(id peer.ID, p protocol.ID, data proto.Message) e
 }
 
 // NewPeerStream
-func (n *Node) NewPeerStream(id peer.ID, p protocol.ID) (network.Stream, error) {
+func (n *PeerNode) NewPeerStream(id peer.ID, p protocol.ID) (network.Stream, error) {
 	return n.host.NewStream(context.Background(), id, p)
 }
 
 // SendMsgToStream
-func (n *Node) SendMsgToStream(s network.Stream, msg []byte) error {
+func (n *PeerNode) SendMsgToStream(s network.Stream, msg []byte) error {
 	_, err := s.Write(msg)
 	return err
 }
@@ -865,7 +621,7 @@ func verifyWorkspace(ws string) error {
 	return nil
 }
 
-func (n *Node) initProtocol(protocolPrefix string) {
+func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.SetProtocolPrefix(protocolPrefix)
 	n.WriteFileProtocol = n.NewWriteFileProtocol()
 	n.ReadFileProtocol = n.NewReadFileProtocol()
@@ -873,47 +629,33 @@ func (n *Node) initProtocol(protocolPrefix string) {
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
 }
 
-func (n *Node) initDHT() error {
+func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, error) {
 	var options []dht.Option
 	options = append(options,
-		dht.V1ProtocolOverride(protocol.ID(n.dhtProtocolVersion)),
+		dht.ProtocolPrefix(protocol.ID(protocolPrefix)),
+		dht.V1ProtocolOverride(protocol.ID(dhtProtocol)),
 		dht.Resiliency(10),
-		dht.DisableAutoRefresh(),
-		dht.Mode(dht.ModeAutoServer),
+		dht.BucketSize(bucketsize),
 	)
 
-	bootstrap := n.bootstrap
-	// var bootaddrs []peer.AddrInfo
-	// for _, v := range bootstrap {
-	// 	muladdr, err := ma.NewMultiaddr(v)
-	// 	if err != nil {
-	// 		continue
-	// 	}
-	// 	addrinfo, err := peer.AddrInfoFromP2pAddr(muladdr)
-	// 	if err != nil {
-	// 		continue
-	// 	}
-	// 	bootaddrs = append(bootaddrs, *addrinfo)
-	// }
-
-	// if len(bootaddrs) > 0 {
-	// 	options = append(options, dht.BootstrapPeers(bootaddrs...))
-	// }
+	if len(boot_nodes) == 0 {
+		options = append(options, dht.Mode(dht.ModeServer))
+	}
 
 	// Start a DHT, for use in peer discovery. We can't just make a new DHT
 	// client because we want each peer to maintain its own local copy of the
 	// DHT, so that the bootstrapping node of the DHT can go down without
 	// inhibiting future peer discovery.
-	kademliaDHT, err := dht.New(n.ctxQueryFromCtxCancel, n.host, options...)
+	kademliaDHT, err := dht.New(ctx, h, options...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err = kademliaDHT.Bootstrap(n.ctxQueryFromCtxCancel); err != nil {
-		return err
+	if err = kademliaDHT.Bootstrap(ctx); err != nil {
+		return nil, err
 	}
 
-	for _, peerAddr := range bootstrap {
+	for _, peerAddr := range boot_nodes {
 		bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
 		if err != nil {
 			continue
@@ -922,62 +664,48 @@ func (n *Node) initDHT() error {
 		if err != nil {
 			continue
 		}
-		n.host.Connect(n.ctxQueryFromCtxCancel, *peerinfo)
-		// if err != nil {
-		// 	out.Err(fmt.Sprintf("Connection to boot node failed: %s", peerinfo.ID.Pretty()))
-		// } else {
-		// 	out.Ok(fmt.Sprintf("Connection to boot node successful: %s", peerinfo.ID.Pretty()))
-		// }
-		kademliaDHT.RoutingTable().PeerAdded(peerinfo.ID)
-		n.AddMultiaddrToPeerstore(bootstrapAddr.String(), peerstore.PermanentAddrTTL)
+		err = h.Connect(ctx, *peerinfo)
+		if err != nil {
+			out.Err(fmt.Sprintf("Failed to connect to boot node: %s", peerinfo.ID.String()))
+		} else {
+			out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
+		}
 	}
-	n.RoutingDiscovery = drouting.NewRoutingDiscovery(kademliaDHT)
-	n.IpfsDHT = kademliaDHT
-	dutil.Advertise(n.ctxQueryFromCtxCancel, n.RoutingDiscovery, n.rendezvousVersion)
-	return nil
+	return kademliaDHT, nil
 }
 
-func getNumFDs() int {
-	var l unix.Rlimit
-	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &l); err != nil {
-		out.Warn(fmt.Sprintf("failed to get fd limit: %v", err))
-		return DefaultFDCount
-	}
-	return int(l.Cur)
-}
-
-func buildResourceManager() (network.ResourceManager, error) {
+func buildPrimaryResourceManager() (network.ResourceManager, error) {
 	// Start with the default scaling limits.
-	scalingLimits := rcmgr.DefaultLimits
+	scalingLimits := rcmgr.InfiniteLimits
 
 	// Add limits around included libp2p protocols
-	libp2p.SetDefaultServiceLimits(&scalingLimits)
+	// libp2p.SetDefaultServiceLimits(&scalingLimits)
 
 	// Turn the scaling limits into a concrete set of limits using `.AutoScale`. This
 	// scales the limits proportional to your system memory.
-	//scaledDefaultLimits := scalingLimits.AutoScale()
+	// scaledDefaultLimits := scalingLimits.AutoScale()
 
-	scaledDefaultLimits := scalingLimits.Scale(int64(memory.TotalMemory()/10*8), int(getNumFDs()/10*8))
+	// scaledDefaultLimits := scalingLimits.Scale(int64(memory.TotalMemory()/10*8), DefaultPrimaryFDCount)
+	// // Tweak certain settings
+	// cfg := rcmgr.PartialLimitConfig{
+	// 	System: rcmgr.ResourceLimits{
+	// 		// Allow unlimited outbound streams
+	// 		Conns:           2,
+	// 		StreamsOutbound: rcmgr.Unlimited,
+	// 	},
+	// 	// Everything else is default. The exact values will come from `scaledDefaultLimits` above.
+	// }
 
-	// Tweak certain settings
-	cfg := rcmgr.PartialLimitConfig{
-		System: rcmgr.ResourceLimits{
-			// Allow unlimited outbound streams
-			StreamsOutbound: rcmgr.Unlimited,
-		},
-		// Everything else is default. The exact values will come from `scaledDefaultLimits` above.
-	}
-
-	// Create our limits by using our cfg and replacing the default values with values from `scaledDefaultLimits`
-	limits := cfg.Build(scaledDefaultLimits)
+	// // Create our limits by using our cfg and replacing the default values with values from `scaledDefaultLimits`
+	// limits := cfg.Build(scaledDefaultLimits)
 
 	// The resource manager expects a limiter, se we create one from our limits.
-	limiter := rcmgr.NewFixedLimiter(limits)
+	limiter := rcmgr.NewFixedLimiter(scalingLimits)
 
 	// Metrics are enabled by default. If you want to disable metrics, use the
 	// WithMetricsDisabled option
 	// Initialize the resource manager
-	rm, err := rcmgr.NewResourceManager(limiter)
+	rm, err := rcmgr.NewResourceManager(limiter, rcmgr.WithMetricsDisabled())
 	if err != nil {
 		return nil, errors.Wrapf(err, "[NewResourceManager]")
 	}

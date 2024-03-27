@@ -21,7 +21,11 @@
 
 ## Binaries for programs and plugins
 main*
+test*
+.private
 *.exe
 *.dll
 *.so
 *.a
+*.tar.gz
+*.zip

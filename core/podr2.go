@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (n *Node) NewPodr2ApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error) {
+func (n *PeerNode) NewPodr2ApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2ApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (n *Node) NewPodr2ApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2
 	return pb.NewPodr2ApiClient(conn), nil
 }
 
-func (n *Node) NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2VerifierApiClient, error) {
+func (n *PeerNode) NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (pb.Podr2VerifierApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
@@ -31,12 +31,12 @@ func (n *Node) NewPodr2VerifierApiClient(addr string, opts ...grpc.DialOption) (
 	return pb.NewPodr2VerifierApiClient(conn), nil
 }
 
-func (n *Node) RequestGenTag(c pb.Podr2ApiClient) (pb.Podr2Api_RequestGenTagClient, error) {
+func (n *PeerNode) RequestGenTag(c pb.Podr2ApiClient) (pb.Podr2Api_RequestGenTagClient, error) {
 	result, err := c.RequestGenTag(context.Background())
 	return result, err
 }
 
-func (n *Node) RequestEcho(
+func (n *PeerNode) RequestEcho(
 	addr string,
 	echoMessage *pb.EchoMessage,
 	timeout time.Duration,
@@ -57,7 +57,7 @@ func (n *Node) RequestEcho(
 	return result, err
 }
 
-func (n *Node) RequestBatchVerify(
+func (n *PeerNode) RequestBatchVerify(
 	addr string,
 	requestBatchVerify *pb.RequestBatchVerify,
 	timeout time.Duration,

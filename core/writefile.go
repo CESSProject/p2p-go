@@ -17,10 +17,10 @@ import (
 
 	"github.com/CESSProject/p2p-go/pb"
 
-	"github.com/AstaFrode/go-libp2p/core/network"
-	"github.com/AstaFrode/go-libp2p/core/peer"
-	"github.com/AstaFrode/go-libp2p/core/protocol"
 	"github.com/google/uuid"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -34,13 +34,13 @@ type writeMsgResp struct {
 }
 
 type WriteFileProtocol struct { // local host
-	*Node
+	*PeerNode
 	*sync.Mutex
 	requests map[string]*writeMsgResp // determine whether it is your own response
 }
 
-func (n *Node) NewWriteFileProtocol() *WriteFileProtocol {
-	e := WriteFileProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeMsgResp)}
+func (n *PeerNode) NewWriteFileProtocol() *WriteFileProtocol {
+	e := WriteFileProtocol{PeerNode: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeMsgResp)}
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeFileRequest), e.onWriteFileRequest)
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeFileResponse), e.onWriteFileResponse)
 	return &e
