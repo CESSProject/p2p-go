@@ -19,10 +19,10 @@ import (
 	"github.com/CESSProject/p2p-go/pb"
 	"github.com/pkg/errors"
 
-	"github.com/AstaFrode/go-libp2p/core/network"
-	"github.com/AstaFrode/go-libp2p/core/peer"
-	"github.com/AstaFrode/go-libp2p/core/protocol"
 	"github.com/google/uuid"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -36,13 +36,13 @@ type readDataResp struct {
 }
 
 type ReadDataProtocol struct {
-	*Node // local host
+	*PeerNode // local host
 	*sync.Mutex
 	requests map[string]*readDataResp // determine whether it is your own response
 }
 
-func (n *Node) NewReadDataProtocol() *ReadDataProtocol {
-	e := ReadDataProtocol{Node: n, Mutex: new(sync.Mutex), requests: make(map[string]*readDataResp)}
+func (n *PeerNode) NewReadDataProtocol() *ReadDataProtocol {
+	e := ReadDataProtocol{PeerNode: n, Mutex: new(sync.Mutex), requests: make(map[string]*readDataResp)}
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readDataRequest), e.onReadDataRequest)
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readDataResponse), e.onReadDataResponse)
 	return &e

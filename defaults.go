@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/AstaFrode/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 )
 
 // DefaultListenPort configures libp2p to use default port.
@@ -22,11 +22,12 @@ var DefaultListenPort = func(cfg *Config) error {
 
 // DefaultConnectionManager creates a default connection manager.
 var DefaultConnectionManager = func(cfg *Config) error {
-	mgr, err := connmgr.NewConnManager(1000, 5000, connmgr.WithGracePeriod(time.Hour))
+	mgr, err := connmgr.NewConnManager(10, 100, connmgr.WithGracePeriod(time.Minute), connmgr.WithSilencePeriod(time.Minute))
 	if err != nil {
 		return err
 	}
-	return cfg.Apply(ConnectionManager(mgr))
+	cfg.ConnManager = mgr
+	return nil
 }
 
 // DefaultWorkSpace configures libp2p to use default work space.
@@ -36,6 +37,11 @@ var DefaultWorkSpace = func(cfg *Config) error {
 		return err
 	}
 	return cfg.Apply(Workspace(dir))
+}
+
+// DefaultWorkSpace configures libp2p to use default work space.
+var DefaultBucketSize = func(cfg *Config) error {
+	return cfg.Apply(BucketSize(100))
 }
 
 // Complete list of default options and when to fallback on them.
@@ -57,6 +63,10 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.Workspace == "" },
 		opt:      DefaultWorkSpace,
+	},
+	{
+		fallback: func(cfg *Config) bool { return cfg.BucketSize == 0 },
+		opt:      DefaultBucketSize,
 	},
 }
 

@@ -8,9 +8,9 @@
 package p2pgo
 
 import (
-	"fmt"
+	"time"
 
-	"github.com/AstaFrode/go-libp2p/core/connmgr"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 )
 
 // ListenPort configuration listening port
@@ -29,13 +29,20 @@ func Workspace(workspace string) Option {
 	}
 }
 
-// ConnectionManager configuration connection manager
-func ConnectionManager(connman connmgr.ConnManager) Option {
+// MaxConnection configuration max connection
+func MaxConnection(low, high int) Option {
 	return func(cfg *Config) error {
-		if cfg.ConnManager != nil {
-			return fmt.Errorf("cannot specify multiple connection managers")
+		if low < 0 {
+			low = 1
 		}
-		cfg.ConnManager = connman
+		if high < 0 {
+			high = low
+		}
+		mgr, err := connmgr.NewConnManager(low, high, connmgr.WithGracePeriod(time.Hour), connmgr.WithSilencePeriod(time.Minute))
+		if err != nil {
+			return nil
+		}
+		cfg.ConnManager = mgr
 		return nil
 	}
 }
@@ -72,10 +79,18 @@ func PublicIpv4(ip string) Option {
 	}
 }
 
-// EnableBitswap enables bitswap function
-func EnableBitswap() Option {
+// BucketSize configuration bucket size
+func BucketSize(size int) Option {
 	return func(cfg *Config) error {
-		cfg.EnableBitswap = true
+		cfg.BucketSize = size
+		return nil
+	}
+}
+
+// Version configuration version
+func Version(ver string) Option {
+	return func(cfg *Config) error {
+		cfg.Version = ver
 		return nil
 	}
 }

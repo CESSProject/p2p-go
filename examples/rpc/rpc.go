@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	var n = &core.Node{}
+	var n = &core.PeerNode{}
 	result, err := n.RequestSpaceProofVerifySingleBlock(
 		"127.0.0.1:10010",
 		&pb.RequestSpaceProofVerify{},

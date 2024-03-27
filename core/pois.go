@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (n *Node) NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error) {
+func (n *PeerNode) NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisCertifierApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (n *Node) NewPoisCertifierApiClient(addr string, opts ...grpc.DialOption) (
 	return pb.NewPoisCertifierApiClient(conn), nil
 }
 
-func (n *Node) NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error) {
+func (n *PeerNode) NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (pb.PoisVerifierApiClient, error) {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (n *Node) NewPoisVerifierApiClient(addr string, opts ...grpc.DialOption) (p
 	return pb.NewPoisVerifierApiClient(conn), nil
 }
 
-func (n *Node) RequestMinerGetNewKey(
+func (n *PeerNode) RequestMinerGetNewKey(
 	addr string,
 	accountKey []byte,
 	timeout time.Duration,
@@ -55,7 +55,7 @@ func (n *Node) RequestMinerGetNewKey(
 	return result, err
 }
 
-func (n *Node) RequestMinerCommitGenChall(
+func (n *PeerNode) RequestMinerCommitGenChall(
 	addr string,
 	commitGenChall *pb.RequestMinerCommitGenChall,
 	timeout time.Duration,
@@ -76,7 +76,7 @@ func (n *Node) RequestMinerCommitGenChall(
 	return result, err
 }
 
-func (n *Node) RequestVerifyCommitProof(
+func (n *PeerNode) RequestVerifyCommitProof(
 	addr string,
 	verifyCommitAndAccProof *pb.RequestVerifyCommitAndAccProof,
 	timeout time.Duration,
@@ -97,7 +97,7 @@ func (n *Node) RequestVerifyCommitProof(
 	return result, err
 }
 
-func (n *Node) RequestVerifyDeletionProof(
+func (n *PeerNode) RequestVerifyDeletionProof(
 	addr string,
 	requestVerifyDeletionProof *pb.RequestVerifyDeletionProof,
 	timeout time.Duration,
@@ -118,7 +118,7 @@ func (n *Node) RequestVerifyDeletionProof(
 	return result, err
 }
 
-func (n *Node) RequestSpaceProofVerifySingleBlock(
+func (n *PeerNode) RequestSpaceProofVerifySingleBlock(
 	addr string,
 	requestSpaceProofVerify *pb.RequestSpaceProofVerify,
 	timeout time.Duration,
@@ -139,7 +139,7 @@ func (n *Node) RequestSpaceProofVerifySingleBlock(
 	return result, err
 }
 
-func (n *Node) RequestVerifySpaceTotal(
+func (n *PeerNode) RequestVerifySpaceTotal(
 	addr string,
 	requestSpaceProofVerifyTotal *pb.RequestSpaceProofVerifyTotal,
 	timeout time.Duration,

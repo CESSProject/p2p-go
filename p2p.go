@@ -9,6 +9,7 @@ package p2pgo
 
 import (
 	"context"
+	"strings"
 
 	"github.com/CESSProject/p2p-go/config"
 	"github.com/CESSProject/p2p-go/core"
@@ -36,7 +37,7 @@ type Option = config.Option
 //
 // To stop/shutdown the returned p2p node, the user needs to cancel the passed
 // context and call `Close` on the returned Host.
-func New(ctx context.Context, opts ...Option) (core.P2P, error) {
+func New(ctx context.Context, opts ...Option) (*core.PeerNode, error) {
 	return NewWithoutDefaults(ctx, append(opts, FallbackDefaults)...)
 }
 
@@ -46,10 +47,23 @@ func New(ctx context.Context, opts ...Option) (core.P2P, error) {
 // Warning: This function should not be considered a stable interface. We may
 // choose to add required services at any time and, by using this function, you
 // opt-out of any defaults we may provide.
-func NewWithoutDefaults(ctx context.Context, opts ...Option) (core.P2P, error) {
+func NewWithoutDefaults(ctx context.Context, opts ...Option) (*core.PeerNode, error) {
 	var cfg Config
 	if err := cfg.Apply(opts...); err != nil {
 		return nil, err
 	}
-	return cfg.NewNode(ctx)
+	if cfg.ProtocolPrefix == "" {
+		if len(cfg.BootPeers) > 0 {
+			if strings.Contains(cfg.BootPeers[0], "test") {
+				cfg.ProtocolPrefix = config.TestnetProtocolPrefix
+			} else if strings.Contains(cfg.BootPeers[0], "main") {
+				cfg.ProtocolPrefix = config.MainnetProtocolPrefix
+			} else {
+				cfg.ProtocolPrefix = config.DevnetProtocolPrefix
+			}
+		} else {
+			cfg.ProtocolPrefix = config.DevnetProtocolPrefix
+		}
+	}
+	return core.NewPeerNode(ctx, &cfg)
 }
