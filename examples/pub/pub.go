@@ -60,7 +60,10 @@ func main() {
 	}
 	defer peer_node.Close()
 
-	fmt.Println(peer_node.Addrs(), peer_node.ID())
+	log.Println(peer_node.Addrs(), peer_node.ID().String())
+	log.Println(peer_node.GetProtocolVersion())
+	log.Println(peer_node.GetRendezvousVersion())
+	log.Println(peer_node.GetDhtProtocolVersion())
 
 	// create a new PubSub service using the GossipSub router
 	gossipSub, err := pubsub.NewGossipSub(ctx, peer_node.GetHost())
