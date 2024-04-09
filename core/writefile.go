@@ -216,7 +216,7 @@ func (e *WriteFileProtocol) onWriteFileRequest(s network.Stream) {
 
 	fpath := filepath.Join(dir, data.Datahash)
 
-	if data.Datahash == ZeroFileHash_16M {
+	if data.Datahash == ZeroFileHash_8M {
 		f, err := os.Create(fpath)
 		if err != nil {
 			s.Reset()
