@@ -19,7 +19,7 @@ const (
 	DefaultProtocolPrefix         = "/cess"
 	DefaultProtocolOverridePrefix = "/cess/dht/"
 
-	ZeroFileHash_16M = "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e"
+	ZeroFileHash_8M = "2daeb1f36095b44b318410b3f4e8b5d989dcc7bb023d1426c492dab0a3053e74"
 
 	DirMode = 0755
 
@@ -28,6 +28,6 @@ const (
 	SIZE_1GiB = 1024 * SIZE_1MiB
 
 	BufferSize   = 64 * SIZE_1KiB
-	SegmentSize  = 64 * SIZE_1MiB
-	FragmentSize = 16 * SIZE_1MiB
+	SegmentSize  = 32 * SIZE_1MiB
+	FragmentSize = 8 * SIZE_1MiB
 )
