@@ -75,11 +75,11 @@ type P2P interface {
 	// GetDirs returns the data directory structure of the host
 	GetDirs() DataDirs
 
-	// GetBootstraps returns a list of host bootstraps
-	GetBootstraps() []string
+	// GetBootnode returns bootnode
+	GetBootnode() string
 
-	// SetBootstraps updates the host's bootstrap list
-	SetBootstraps(bootstrap []string)
+	// SetBootnode updates the host's boot node
+	SetBootnode(bootnode string)
 
 	//
 	GetHost() host.Host
@@ -216,7 +216,7 @@ type PeerNode struct {
 	rendezvousVersion  string
 	protocolPrefix     string
 	enableRecv         bool
-	bootnodes          []string
+	bootnode           string
 	dhtable            *dht.IpfsDHT
 	*protocols
 }
@@ -320,12 +320,11 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		protocolVersion:    cfg.ProtocolPrefix + p2pProtocolVer,
 		dhtProtocolVersion: cfg.ProtocolPrefix + dhtProtocolVer,
 		rendezvousVersion:  cfg.ProtocolPrefix + rendezvous,
-		bootnodes:          boots,
 		enableRecv:         true,
 		protocols:          NewProtocol(),
 	}
 
-	peer_node.dhtable, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
+	peer_node.dhtable, peer_node.bootnode, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
 	if err != nil {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
@@ -443,12 +442,12 @@ func (n *PeerNode) GetRendezvousVersion() string {
 	return n.rendezvousVersion
 }
 
-func (n *PeerNode) GetBootstraps() []string {
-	return n.bootnodes
+func (n *PeerNode) GetBootnode() string {
+	return n.bootnode
 }
 
-func (n *PeerNode) SetBootstraps(bootstrap []string) {
-	n.bootnodes = bootstrap
+func (n *PeerNode) SetBootnode(bootnode string) {
+	n.bootnode = bootnode
 }
 
 func (n *PeerNode) GetHost() host.Host {
@@ -636,7 +635,7 @@ func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
 }
 
-func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, error) {
+func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, error) {
 	var options []dht.Option
 	options = append(options,
 		dht.ProtocolPrefix(protocol.ID(protocolPrefix)),
@@ -655,11 +654,11 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 	// inhibiting future peer discovery.
 	kademliaDHT, err := dht.New(ctx, h, options...)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if err = kademliaDHT.Bootstrap(ctx); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	for _, peerAddr := range boot_nodes {
@@ -672,13 +671,12 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 			continue
 		}
 		err = h.Connect(ctx, *peerinfo)
-		if err != nil {
-			out.Err(fmt.Sprintf("Failed to connect to boot node: %s", peerinfo.ID.String()))
-		} else {
+		if err == nil {
 			out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
+			return kademliaDHT, bootstrapAddr.String(), nil
 		}
 	}
-	return kademliaDHT, nil
+	return kademliaDHT, "", fmt.Errorf("failed to connect to all boot nodes")
 }
 
 func buildPrimaryResourceManager() (network.ResourceManager, error) {
