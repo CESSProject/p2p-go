@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
@@ -33,6 +34,8 @@ type Nnode struct {
 	*core.PeerNode
 }
 
+var room string
+
 func main() {
 	ctx := context.Background()
 	port, err := strconv.Atoi(os.Args[1])
@@ -47,7 +50,7 @@ func main() {
 		p2pgo.Workspace("/home/test/sub"),
 		p2pgo.BucketSize(100),
 		p2pgo.BootPeers([]string{
-			"/ip4/127.0.0.1/tcp/3328/p2p/12D3KooWCQBqdQGJj1FUkt7FYdmLhwAxQ1sXC1TSn985MKg6nTbn",
+			"_dnsaddr.boot-bucket-devnet.cess.cloud",
 		}),
 		p2pgo.ProtocolPrefix(config.TestnetProtocolPrefix),
 	)
@@ -66,16 +69,27 @@ func main() {
 	fmt.Println(peer_node.GetRendezvousVersion())
 	fmt.Println(peer_node.GetDhtProtocolVersion())
 	fmt.Println(peer_node.GetProtocolVersion())
+	fmt.Println(peer_node.GetBootnode())
 
-	go Discover(ctx, peer_node.GetHost(), peer_node.GetDHTable(), peer_node.GetRendezvousVersion())
+	//go Discover(ctx, peer_node.GetHost(), peer_node.GetDHTable(), peer_node.GetRendezvousVersion())
 
 	// setup local mDNS discovery
 	if err := setupDiscovery(peer_node.GetHost()); err != nil {
 		panic(err)
 	}
 
+	if strings.Contains(peer_node.GetBootnode(), "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S") {
+		room = fmt.Sprintf("%s-12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S", core.NetworkRoom)
+	} else if strings.Contains(peer_node.GetBootnode(), "12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T") {
+		room = fmt.Sprintf("%s-12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T", core.NetworkRoom)
+	} else if strings.Contains(peer_node.GetBootnode(), "12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd") {
+		room = fmt.Sprintf("%s-12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd", core.NetworkRoom)
+	} else {
+		panic("Failed to connect to boot node")
+	}
+
 	// join the pubsub topic called librum
-	topic, err := gossipSub.Join(core.NetworkRoom)
+	topic, err := gossipSub.Join(room)
 	if err != nil {
 		panic(err)
 	}
@@ -166,6 +180,6 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 // This lets us automatically discover peers on the same LAN and connect to them.
 func setupDiscovery(h host.Host) error {
 	// setup mDNS discovery to find local peers
-	s := mdns.NewMdnsService(h, core.NetworkRoom, &discoveryNotifee{h: h})
+	s := mdns.NewMdnsService(h, room, &discoveryNotifee{h: h})
 	return s.Start()
 }
