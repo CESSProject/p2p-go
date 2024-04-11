@@ -93,6 +93,9 @@ type P2P interface {
 	//
 	DisableRecv()
 
+	//
+	GetRecvFlag() bool
+
 	// Close p2p
 	Close() error
 
@@ -466,6 +469,10 @@ func (n *PeerNode) EnableRecv() {
 
 func (n *PeerNode) DisableRecv() {
 	n.enableRecv = false
+}
+
+func (n *PeerNode) GetRecvFlag() bool {
+	return n.enableRecv
 }
 
 func (n *PeerNode) SetIdleFileTee(peerid string) {
