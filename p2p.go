@@ -37,7 +37,7 @@ type Option = config.Option
 //
 // To stop/shutdown the returned p2p node, the user needs to cancel the passed
 // context and call `Close` on the returned Host.
-func New(ctx context.Context, opts ...Option) (*core.PeerNode, error) {
+func New(ctx context.Context, opts ...Option) (core.PeerNode, error) {
 	return NewWithoutDefaults(ctx, append(opts, FallbackDefaults)...)
 }
 
@@ -47,10 +47,10 @@ func New(ctx context.Context, opts ...Option) (*core.PeerNode, error) {
 // Warning: This function should not be considered a stable interface. We may
 // choose to add required services at any time and, by using this function, you
 // opt-out of any defaults we may provide.
-func NewWithoutDefaults(ctx context.Context, opts ...Option) (*core.PeerNode, error) {
+func NewWithoutDefaults(ctx context.Context, opts ...Option) (core.PeerNode, error) {
 	var cfg Config
 	if err := cfg.Apply(opts...); err != nil {
-		return nil, err
+		return core.PeerNode{}, err
 	}
 	if cfg.ProtocolPrefix == "" {
 		if len(cfg.BootPeers) > 0 {

@@ -28,7 +28,7 @@ func main() {
 		context.Background(),
 		p2pgo.ListenPort(port),
 		p2pgo.Workspace("."),
-		p2pgo.BootPeers([]string{"_dnsaddr.boot-bucket-testnet.cess.cloud"}),
+		p2pgo.BootPeers([]string{"_dnsaddr.boot-bucket-devnet.cess.cloud"}),
 		p2pgo.BucketSize(100),
 		p2pgo.ProtocolPrefix(config.TestnetProtocolPrefix),
 	)

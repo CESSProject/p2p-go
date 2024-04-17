@@ -233,24 +233,24 @@ var _ P2P = (*PeerNode)(nil)
 //	  privatekeypath: private key file
 //		  If it is empty, automatically created in the program working directory
 //		  If it is a directory, it will be created in the specified directory
-func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
+func NewPeerNode(ctx context.Context, cfg *config.Config) (PeerNode, error) {
 	if !FreeLocalPort(uint32(cfg.ListenPort)) {
-		return nil, fmt.Errorf("port %d is already in use", cfg.ListenPort)
+		return PeerNode{}, fmt.Errorf("port %d is already in use", cfg.ListenPort)
 	}
 
 	err := verifyWorkspace(cfg.Workspace)
 	if err != nil {
-		return nil, err
+		return PeerNode{}, err
 	}
 
 	prvKey, err := identification(cfg.Workspace, cfg.PrivatekeyPath)
 	if err != nil {
-		return nil, err
+		return PeerNode{}, err
 	}
 
 	if cfg.PublicIpv4 != "" {
 		if !IsIPv4(cfg.PublicIpv4) {
-			return nil, fmt.Errorf("illegal IPv4 address: %s", cfg.PublicIpv4)
+			return PeerNode{}, fmt.Errorf("illegal IPv4 address: %s", cfg.PublicIpv4)
 		}
 	}
 
@@ -303,19 +303,19 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 
 	bhost, err := libp2p.New(opts...)
 	if err != nil {
-		return nil, fmt.Errorf("[libp2p.New] %v", err)
+		return PeerNode{}, fmt.Errorf("[libp2p.New] %v", err)
 	}
 
 	if !bhost.ID().MatchesPrivateKey(prvKey) {
-		return nil, errors.New("invalid private key")
+		return PeerNode{}, errors.New("invalid private key")
 	}
 
 	publickey, err := base58.Decode(bhost.ID().String())
 	if err != nil {
-		return nil, err
+		return PeerNode{}, err
 	}
 
-	peer_node := &PeerNode{
+	peer_node := PeerNode{
 		host:               bhost,
 		workspace:          cfg.Workspace,
 		privatekeyPath:     cfg.PrivatekeyPath,
@@ -330,12 +330,12 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 
 	peer_node.dhtable, peer_node.bootnode, peer_node.netenv, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
 	if err != nil {
-		return nil, fmt.Errorf("[NewDHT] %v", err)
+		return PeerNode{}, fmt.Errorf("[NewDHT] %v", err)
 	}
 
 	peer_node.dir, err = mkdir(cfg.Workspace)
 	if err != nil {
-		return nil, err
+		return PeerNode{}, err
 	}
 
 	peer_node.initProtocol(cfg.ProtocolPrefix)
