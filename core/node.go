@@ -78,6 +78,9 @@ type P2P interface {
 	// GetBootnode returns bootnode
 	GetBootnode() string
 
+	// GetNetEnv returns network env
+	GetNetEnv() string
+
 	// SetBootnode updates the host's boot node
 	SetBootnode(bootnode string)
 
@@ -217,6 +220,7 @@ type PeerNode struct {
 	protocolPrefix     string
 	enableRecv         bool
 	bootnode           string
+	netenv             string
 	dhtable            *dht.IpfsDHT
 	*protocols
 }
@@ -324,7 +328,7 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		protocols:          NewProtocol(),
 	}
 
-	peer_node.dhtable, peer_node.bootnode, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
+	peer_node.dhtable, peer_node.bootnode, peer_node.netenv, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
 	if err != nil {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
@@ -460,6 +464,10 @@ func (n *PeerNode) GetDHTable() *dht.IpfsDHT {
 
 func (n *PeerNode) GetDirs() DataDirs {
 	return n.dir
+}
+
+func (n *PeerNode) GetNetEnv() string {
+	return n.netenv
 }
 
 func (n *PeerNode) EnableRecv() {
@@ -635,7 +643,7 @@ func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
 }
 
-func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, error) {
+func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
 	var options []dht.Option
 	options = append(options,
 		dht.ProtocolPrefix(protocol.ID(protocolPrefix)),
@@ -654,13 +662,14 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 	// inhibiting future peer discovery.
 	kademliaDHT, err := dht.New(ctx, h, options...)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	if err = kademliaDHT.Bootstrap(ctx); err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
+	netenv := ""
 	for _, peerAddr := range boot_nodes {
 		bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
 		if err != nil {
@@ -673,10 +682,23 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 		err = h.Connect(ctx, *peerinfo)
 		if err == nil {
 			out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
-			return kademliaDHT, bootstrapAddr.String(), nil
+			switch peerinfo.ID.String() {
+			case "12D3KooWS8a18xoBzwkmUsgGBctNo6QCr6XCpUDR946mTBBUTe83",
+				"12D3KooWDWeiiqbpNGAqA5QbDTdKgTtwX8LCShWkTpcyxpRf2jA9",
+				"12D3KooWNcTWWuUWKhjTVDF1xZ38yCoHXoF4aDjnbjsNpeVwj33U":
+				netenv = "testnet"
+			case "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S",
+				"12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd",
+				"12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T":
+				netenv = "devnet"
+			default:
+				netenv = "mainnet"
+			}
+
+			return kademliaDHT, bootstrapAddr.String(), netenv, nil
 		}
 	}
-	return kademliaDHT, "", fmt.Errorf("failed to connect to all boot nodes")
+	return kademliaDHT, "", netenv, fmt.Errorf("failed to connect to all boot nodes")
 }
 
 func buildPrimaryResourceManager() (network.ResourceManager, error) {
