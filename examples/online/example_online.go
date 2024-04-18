@@ -22,7 +22,6 @@ import (
 func main() {
 	ctx := context.Background()
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
-	sourcePort2 := flag.Int("p2", 15001, "Source port number")
 	// To construct a simple host with all the default settings, just use `New`
 	h1, err := p2pgo.New(
 		ctx,
@@ -39,23 +38,7 @@ func main() {
 
 	log.Println("node1:", h1.Addrs(), h1.ID())
 
-	// To construct a simple host with all the default settings, just use `New`
-	h2, err := p2pgo.New(
-		ctx,
-		p2pgo.PrivatekeyFile(".private2"),
-		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
-		p2pgo.Workspace("."),
-		p2pgo.BootPeers([]string{"_dnsaddr.boot-bucket-devnet.cess.cloud"}),
-	)
-	if err != nil {
-		log.Println("[p2pgo.New]", err)
-		return
-	}
-	defer h2.Close()
-
-	log.Println("node2:", h2.Addrs(), h2.ID())
-
-	remote := fmt.Sprintf("/ip4/192.168.110.247/tcp/15001/p2p/%v", h2.ID())
+	remote := "/ip4/127.0.0.1/tcp/8001/p2p/12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S"
 
 	maddr, err := ma.NewMultiaddr(remote)
 	if err != nil {

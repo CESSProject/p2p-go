@@ -336,12 +336,27 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
 
-	peer_node.dir, err = mkdir(cfg.Workspace)
-	if err != nil {
-		return nil, err
-	}
+	if len(boots) > 0 {
+		peer_node.dir, err = mkdir(cfg.Workspace)
+		if err != nil {
+			return nil, err
+		}
 
-	peer_node.initProtocol(cfg.ProtocolPrefix)
+		peer_node.initProtocol(cfg.ProtocolPrefix)
+
+		for _, v := range boots {
+			bootstrapAddr, err := ma.NewMultiaddr(v)
+			if err != nil {
+				continue
+			}
+			peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+			if err != nil {
+				continue
+			}
+			peer_node.Connect(ctx, *peerinfo)
+			peer_node.OnlineAction(peerinfo.ID)
+		}
+	}
 
 	return peer_node, nil
 }

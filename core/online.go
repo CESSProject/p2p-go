@@ -9,7 +9,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -63,8 +62,10 @@ func (e *protocols) OnlineAction(id peer.ID) error {
 			continue
 		}
 		e.OnlineProtocol.requests[req.Id] = &onlineResp{
-			ch:          respChan,
-			MessageData: &pb.MessageData{},
+			ch: respChan,
+			MessageData: &pb.MessageData{
+				Id: req.Id,
+			},
 		}
 		break
 	}
@@ -92,59 +93,10 @@ func (e *protocols) OnlineAction(id peer.ID) error {
 		if !ok {
 			return errors.New(ERR_RespFailure)
 		}
+		return nil
 	case <-timeout.C:
 		return errors.New(ERR_RespTimeOut)
 	}
-
-	e.OnlineProtocol.Lock()
-	resp, ok := e.OnlineProtocol.requests[req.Id]
-	if !ok {
-		e.OnlineProtocol.Unlock()
-		return errors.New(ERR_RespFailure)
-	}
-	e.OnlineProtocol.Unlock()
-	fmt.Println("received onlline response msg from: ", resp.NodeId)
-	if resp.NodeId == id.String() {
-		return nil
-	}
-
-	return errors.New(ERR_RespInvalidData)
-}
-
-// remote peer requests handler
-func (e *OnlineProtocol) onOnlineRequest(s network.Stream) {
-	defer s.Close()
-
-	if !e.enableRecv {
-		s.Reset()
-		return
-	}
-
-	// get request data
-	data := &pb.MessageData{}
-	buf, err := io.ReadAll(s)
-	if err != nil {
-		s.Reset()
-		return
-	}
-
-	// unmarshal it
-	err = proto.Unmarshal(buf, data)
-	if err != nil {
-		s.Reset()
-		return
-	}
-
-	fmt.Println("i already receiced onlline msg from ", s.Conn().RemotePeer())
-	fmt.Println("msg multiaddr is: ", data.NodeId)
-	resp := &pb.MessageData{
-		Id:     data.Id,
-		NodeId: e.OnlineProtocol.ID().String(),
-	}
-	fmt.Println("RemoteMultiaddr: ", s.Conn().RemoteMultiaddr())
-	fmt.Println("RemoteMultiaddr.string: ", s.Conn().RemoteMultiaddr().String())
-	fmt.Println("response online: ", e.OnlineProtocol.ID().String())
-	e.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+OnlineResponse), resp)
 }
 
 // remote peer response handler
@@ -177,6 +129,5 @@ func (e *OnlineProtocol) onOnlineResponse(s network.Stream) {
 	_, ok := e.requests[data.Id]
 	if ok {
 		e.requests[data.Id].ch <- true
-		e.requests[data.Id].NodeId = data.NodeId
 	}
 }
