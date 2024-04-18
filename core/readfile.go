@@ -148,6 +148,7 @@ func (e *protocols) ReadFileActionWithExtension(id peer.ID, roothash, datahash, 
 		Datahash: datahash,
 		Offset:   offset,
 		//add extension data
+		ExtendData:  extData,
 		MessageData: e.ReadFileProtocol.NewMessageData(uuid.New().String(), false),
 	}
 	return e.readFileAction(id, req, func(req *pb.ReadfileRequest, resp *readMsgResp) error {
