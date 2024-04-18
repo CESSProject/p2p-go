@@ -677,36 +677,39 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 		return nil, "", "", err
 	}
 
-	netenv := ""
-	for _, peerAddr := range boot_nodes {
-		bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
-		if err != nil {
-			continue
-		}
-		peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
-		if err != nil {
-			continue
-		}
-		err = h.Connect(ctx, *peerinfo)
-		if err == nil {
-			out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
-			switch peerinfo.ID.String() {
-			case "12D3KooWS8a18xoBzwkmUsgGBctNo6QCr6XCpUDR946mTBBUTe83",
-				"12D3KooWDWeiiqbpNGAqA5QbDTdKgTtwX8LCShWkTpcyxpRf2jA9",
-				"12D3KooWNcTWWuUWKhjTVDF1xZ38yCoHXoF4aDjnbjsNpeVwj33U":
-				netenv = "testnet"
-			case "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S",
-				"12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd",
-				"12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T":
-				netenv = "devnet"
-			default:
-				netenv = "mainnet"
+	if len(boot_nodes) > 0 {
+		netenv := ""
+		for _, peerAddr := range boot_nodes {
+			bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
+			if err != nil {
+				continue
 			}
-
-			return kademliaDHT, bootstrapAddr.String(), netenv, nil
+			peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+			if err != nil {
+				continue
+			}
+			err = h.Connect(ctx, *peerinfo)
+			if err == nil {
+				out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
+				switch peerinfo.ID.String() {
+				case "12D3KooWS8a18xoBzwkmUsgGBctNo6QCr6XCpUDR946mTBBUTe83",
+					"12D3KooWDWeiiqbpNGAqA5QbDTdKgTtwX8LCShWkTpcyxpRf2jA9",
+					"12D3KooWNcTWWuUWKhjTVDF1xZ38yCoHXoF4aDjnbjsNpeVwj33U":
+					netenv = "testnet"
+				case "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S",
+					"12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd",
+					"12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T":
+					netenv = "devnet"
+				default:
+					netenv = "mainnet"
+				}
+				return kademliaDHT, bootstrapAddr.String(), netenv, nil
+			}
 		}
+	} else {
+		return kademliaDHT, "", "", nil
 	}
-	return kademliaDHT, "", netenv, fmt.Errorf("failed to connect to all boot nodes")
+	return kademliaDHT, "", "", fmt.Errorf("failed to connect to all boot nodes")
 }
 
 func buildPrimaryResourceManager() (network.ResourceManager, error) {
