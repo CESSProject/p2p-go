@@ -66,6 +66,9 @@ type P2P interface {
 	// GetProtocolVersion returns the ProtocolVersion of the host
 	GetProtocolVersion() string
 
+	//
+	GetProtocolPrefix() string
+
 	// GetDhtProtocolVersion returns the host's DHT ProtocolVersion
 	GetDhtProtocolVersion() string
 
@@ -438,6 +441,10 @@ func (n *PeerNode) GetProtocolVersion() string {
 	return n.protocolVersion
 }
 
+func (n *PeerNode) GetProtocolPrefix() string {
+	return n.protocolPrefix
+}
+
 func (n *PeerNode) GetDhtProtocolVersion() string {
 	return n.dhtProtocolVersion
 }
@@ -641,6 +648,7 @@ func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.ReadFileProtocol = n.NewReadFileProtocol()
 	n.ReadDataProtocol = n.NewReadDataProtocol()
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
+	n.OnlineProtocol = n.NewOnlineProtocol()
 }
 
 func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
