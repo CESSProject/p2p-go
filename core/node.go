@@ -66,6 +66,9 @@ type P2P interface {
 	// GetProtocolVersion returns the ProtocolVersion of the host
 	GetProtocolVersion() string
 
+	//
+	GetProtocolPrefix() string
+
 	// GetDhtProtocolVersion returns the host's DHT ProtocolVersion
 	GetDhtProtocolVersion() string
 
@@ -333,12 +336,27 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
 
-	peer_node.dir, err = mkdir(cfg.Workspace)
-	if err != nil {
-		return nil, err
-	}
+	if len(boots) > 0 {
+		peer_node.dir, err = mkdir(cfg.Workspace)
+		if err != nil {
+			return nil, err
+		}
 
-	peer_node.initProtocol(cfg.ProtocolPrefix)
+		peer_node.initProtocol(cfg.ProtocolPrefix)
+
+		for _, v := range boots {
+			bootstrapAddr, err := ma.NewMultiaddr(v)
+			if err != nil {
+				continue
+			}
+			peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+			if err != nil {
+				continue
+			}
+			peer_node.Connect(ctx, *peerinfo)
+			peer_node.OnlineAction(peerinfo.ID)
+		}
+	}
 
 	return peer_node, nil
 }
@@ -436,6 +454,10 @@ func (n *PeerNode) GetPeerPublickey() []byte {
 
 func (n *PeerNode) GetProtocolVersion() string {
 	return n.protocolVersion
+}
+
+func (n *PeerNode) GetProtocolPrefix() string {
+	return n.protocolPrefix
 }
 
 func (n *PeerNode) GetDhtProtocolVersion() string {
@@ -641,6 +663,7 @@ func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.ReadFileProtocol = n.NewReadFileProtocol()
 	n.ReadDataProtocol = n.NewReadDataProtocol()
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
+	n.OnlineProtocol = n.NewOnlineProtocol()
 }
 
 func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
@@ -669,36 +692,39 @@ func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, bo
 		return nil, "", "", err
 	}
 
-	netenv := ""
-	for _, peerAddr := range boot_nodes {
-		bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
-		if err != nil {
-			continue
-		}
-		peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
-		if err != nil {
-			continue
-		}
-		err = h.Connect(ctx, *peerinfo)
-		if err == nil {
-			out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
-			switch peerinfo.ID.String() {
-			case "12D3KooWS8a18xoBzwkmUsgGBctNo6QCr6XCpUDR946mTBBUTe83",
-				"12D3KooWDWeiiqbpNGAqA5QbDTdKgTtwX8LCShWkTpcyxpRf2jA9",
-				"12D3KooWNcTWWuUWKhjTVDF1xZ38yCoHXoF4aDjnbjsNpeVwj33U":
-				netenv = "testnet"
-			case "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S",
-				"12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd",
-				"12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T":
-				netenv = "devnet"
-			default:
-				netenv = "mainnet"
+	if len(boot_nodes) > 0 {
+		netenv := ""
+		for _, peerAddr := range boot_nodes {
+			bootstrapAddr, err := ma.NewMultiaddr(peerAddr)
+			if err != nil {
+				continue
 			}
-
-			return kademliaDHT, bootstrapAddr.String(), netenv, nil
+			peerinfo, err := peer.AddrInfoFromP2pAddr(bootstrapAddr)
+			if err != nil {
+				continue
+			}
+			err = h.Connect(ctx, *peerinfo)
+			if err == nil {
+				out.Ok(fmt.Sprintf("Connect to the boot node: %s", peerinfo.ID.String()))
+				switch peerinfo.ID.String() {
+				case "12D3KooWS8a18xoBzwkmUsgGBctNo6QCr6XCpUDR946mTBBUTe83",
+					"12D3KooWDWeiiqbpNGAqA5QbDTdKgTtwX8LCShWkTpcyxpRf2jA9",
+					"12D3KooWNcTWWuUWKhjTVDF1xZ38yCoHXoF4aDjnbjsNpeVwj33U":
+					netenv = "testnet"
+				case "12D3KooWGDk9JJ5F6UPNuutEKSbHrTXnF5eSn3zKaR27amgU6o9S",
+					"12D3KooWEGeAp1MvvUrBYQtb31FE1LPg7aHsd1LtTXn6cerZTBBd",
+					"12D3KooWRm2sQg65y2ZgCUksLsjWmKbBtZ4HRRsGLxbN76XTtC8T":
+					netenv = "devnet"
+				default:
+					netenv = "mainnet"
+				}
+				return kademliaDHT, bootstrapAddr.String(), netenv, nil
+			}
 		}
+	} else {
+		return kademliaDHT, "", "", nil
 	}
-	return kademliaDHT, "", netenv, fmt.Errorf("failed to connect to all boot nodes")
+	return kademliaDHT, "", "", fmt.Errorf("failed to connect to all boot nodes")
 }
 
 func buildPrimaryResourceManager() (network.ResourceManager, error) {
