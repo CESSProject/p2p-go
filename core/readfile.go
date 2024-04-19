@@ -214,15 +214,18 @@ func (e *ReadFileProtocol) readFileAction(
 		if resp.ReadfileResponse == nil {
 			return errors.New(ERR_RespFailure)
 		}
-		if resp.Code == P2PResponseFinish {
-			return nil
-		}
 		if len(resp.ReadfileResponse.Data) == 0 || resp.Length == 0 {
+			if resp.Code == P2PResponseFinish {
+				return nil
+			}
 			return errors.New(ERR_RespFailure)
 		}
 		err = callback(req, resp)
 		if err != nil {
 			return err
+		}
+		if resp.Code == P2PResponseFinish {
+			return nil
 		}
 	}
 }
@@ -241,23 +244,23 @@ func (e *ReadFileProtocol) DefaultReadFileServerHandle(req *pb.ReadfileRequest) 
 
 	f, err := os.Open(fpath)
 	if err != nil {
-		return nil, err
+		return &pb.ReadfileResponse{Code: P2PResponseFailed}, err
 	}
 	defer f.Close()
 
 	fstat, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return &pb.ReadfileResponse{Code: P2PResponseRemoteFailed}, err
 	}
 
 	if _, err = f.Seek(req.Offset, 0); err != nil {
-		return nil, err
+		return &pb.ReadfileResponse{Code: P2PResponseRemoteFailed}, err
 	}
 
 	var readBuf = make([]byte, FileProtocolBufSize)
 	num, err := f.Read(readBuf)
 	if err != nil {
-		return nil, err
+		return &pb.ReadfileResponse{Code: P2PResponseRemoteFailed}, err
 	}
 
 	if num+int(req.Offset) >= int(fstat.Size()) {
@@ -297,7 +300,7 @@ func (e *ReadFileProtocol) onReadFileRequest(s network.Stream) {
 		handle = e.DefaultReadFileServerHandle
 	}
 	resp, err := handle(data)
-	if err != nil {
+	if err != nil && resp == nil {
 		s.Reset()
 		return
 	}
