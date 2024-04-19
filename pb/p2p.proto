@@ -55,6 +55,8 @@ message ReadfileRequest {
     MessageData messageData = 3;
     // Offset is the offset that the reader wants to read
     int64 offset = 4;
+    // Extended data is used to expand business
+    bytes extendData=5;
 }
 
 message ReadfileResponse {
