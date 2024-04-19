@@ -16,6 +16,7 @@ type Protocol interface {
 	ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error
 	ReadDataAction(id peer.ID, roothash, datahash, path string, size int64) error
 	ReadDataStatAction(id peer.ID, roothash string, datahash string) (uint64, error)
+	OnlineAction(id peer.ID) error
 }
 
 type protocols struct {
@@ -24,6 +25,7 @@ type protocols struct {
 	*ReadFileProtocol
 	*ReadDataProtocol
 	*ReadDataStatProtocol
+	*OnlineProtocol
 }
 
 func NewProtocol() *protocols {
