@@ -128,31 +128,15 @@ func (e *protocols) ReadFileAction(id peer.ID, roothash, datahash, path string, 
 	})
 }
 
-func (e *protocols) ReadFileActionWithExtension(id peer.ID, roothash, datahash, path string, size int64, extData []byte) error {
-	var err error
-	var offset int64
-	var fstat fs.FileInfo
-	var f *os.File
-
-	if fstat, err = os.Stat(path); err == nil && fstat.IsDir() {
-		return fmt.Errorf("%s is a directory", path)
-	}
-	f, err = os.Create(path)
-	if err != nil {
-		return errors.Wrapf(err, "[create file]")
-	}
-	defer f.Close()
-	defer f.Sync()
+func (e *protocols) ReadFileActionWithExtension(id peer.ID, roothash, datahash string, writer io.Writer, extData []byte) error {
 	req := &pb.ReadfileRequest{
-		Roothash: roothash,
-		Datahash: datahash,
-		Offset:   offset,
-		//add extension data
+		Roothash:    roothash,
+		Datahash:    datahash,
 		ExtendData:  extData,
 		MessageData: e.ReadFileProtocol.NewMessageData(uuid.New().String(), false),
 	}
 	return e.readFileAction(id, req, func(req *pb.ReadfileRequest, resp *readMsgResp) error {
-		num, err := f.Write(resp.Data[:resp.Length])
+		num, err := writer.Write(resp.Data[:resp.Length])
 		if err != nil {
 			return errors.Wrapf(err, "[write file]")
 		}
