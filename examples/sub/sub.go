@@ -18,7 +18,6 @@ import (
 	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/CESSProject/p2p-go/config"
 	"github.com/CESSProject/p2p-go/core"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -52,7 +51,6 @@ func main() {
 		p2pgo.BootPeers([]string{
 			"_dnsaddr.boot-bucket-devnet.cess.cloud",
 		}),
-		p2pgo.ProtocolPrefix(config.TestnetProtocolPrefix),
 	)
 	if err != nil {
 		panic(err)
@@ -93,7 +91,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	fmt.Println("join a room: ", room)
 	// subscribe to topic
 	subscriber, err := topic.Subscribe()
 	if err != nil {
