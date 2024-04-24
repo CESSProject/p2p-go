@@ -654,6 +654,7 @@ func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.ReadFileProtocol = n.NewReadFileProtocol()
 	n.ReadDataProtocol = n.NewReadDataProtocol()
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
+	n.OnlineProtocol = n.NewOnlineProtocol()
 }
 
 func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
