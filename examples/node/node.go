@@ -10,32 +10,59 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/CESSProject/p2p-go/config"
 )
 
-func main() {
-	port, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		fmt.Println("please enter os.Args[1] as port")
-		os.Exit(1)
-	}
+const P2P_PORT = 4001
 
-	peerNode, err := p2pgo.New(
+var P2P_BOOT_ADDRS = []string{
+	//testnet
+	"_dnsaddr.boot-miner-testnet.cess.cloud",
+}
+
+func main() {
+	peer_node, err := p2pgo.New(
 		context.Background(),
-		p2pgo.ListenPort(port),
 		p2pgo.Workspace("."),
-		p2pgo.BootPeers([]string{"_dnsaddr.boot-bucket-testnet.cess.cloud"}),
-		p2pgo.BucketSize(100),
-		p2pgo.ProtocolPrefix(config.TestnetProtocolPrefix),
+		p2pgo.ListenPort(P2P_PORT),
+		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
 		panic(err)
 	}
-	defer peerNode.Close()
+	defer peer_node.Close()
 
-	fmt.Println(peerNode.Addrs(), peerNode.ID())
+	// get peer id
+	fmt.Println(peer_node.ID())
+
+	// get peer addrs
+	fmt.Println(peer_node.Addrs())
+
+	// get peer workspace
+	fmt.Println(peer_node.Workspace())
+
+	// get peer public key
+	fmt.Println(peer_node.GetPeerPublickey())
+
+	// get peer protocol prefix
+	fmt.Println(peer_node.GetProtocolPrefix())
+
+	// get peer bootnode
+	fmt.Println(peer_node.GetBootnode())
+
+	// get peer private key file
+	fmt.Println(peer_node.PrivatekeyPath())
+
+	// get peer host
+	fmt.Println(peer_node.GetHost())
+
+	// get peer DHT table
+	fmt.Println(peer_node.GetDHTable())
+
+	// get peer recv flag
+	fmt.Println(peer_node.GetRecvFlag())
+
+	// get peer dirs
+	fmt.Println(peer_node.GetDirs())
 }
