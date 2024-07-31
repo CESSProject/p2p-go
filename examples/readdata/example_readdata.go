@@ -11,13 +11,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
-	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
+
+var BootPeers = []string{
+	"_dnsaddr.boot-miner-devnet.cess.cloud",
+}
 
 func main() {
 	file := "readfile"
@@ -25,49 +27,63 @@ func main() {
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
 	sourcePort2 := flag.Int("p2", 15001, "Source port number")
 
-	// To construct a simple host with all the default settings, just use `New`
-	h1, err := p2pgo.New(
+	// peer1
+	peer1, err := p2pgo.New(
 		ctx,
-		p2pgo.PrivatekeyFile(".private1"),
-		p2pgo.ListenPort(*sourcePort1), // regular tcp connections
-		p2pgo.Workspace("."),
+		p2pgo.ListenPort(*sourcePort1),
+		p2pgo.Workspace("./peer1"),
+		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
 		panic(err)
 	}
-	defer h1.Close()
+	defer peer1.Close()
 
-	fmt.Println("node1:", h1.Addrs(), h1.ID())
+	fmt.Println("node1:", peer1.Addrs(), peer1.ID())
 
-	// To construct a simple host with all the default settings, just use `New`
-	h2, err := p2pgo.New(
+	// peer2
+	peer2, err := p2pgo.New(
 		ctx,
-		p2pgo.PrivatekeyFile(".private2"),
-		p2pgo.ListenPort(*sourcePort2), // regular tcp connections
-		p2pgo.Workspace("."),
+		p2pgo.ListenPort(*sourcePort2),
+		p2pgo.Workspace("./peer2"),
+		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
 		panic(err)
 	}
-	defer h2.Close()
+	defer peer2.Close()
 
-	fmt.Println("node2:", h2.Addrs(), h2.ID())
+	fmt.Println("node2:", peer2.Addrs(), peer2.ID())
 
-	remote := fmt.Sprintf("/ip4/0.0.0.0/tcp/15001/p2p/%v", h2.ID())
+	remoteAddrs := peer2.Addrs()
 
-	maddr, err := ma.NewMultiaddr(remote)
-	if err != nil {
-		fmt.Println("NewMultiaddr err: ", err)
-		os.Exit(1)
+	for _, v := range remoteAddrs {
+		remoteAddr, err := ma.NewMultiaddr(fmt.Sprintf("%s/p2p/%s", v, peer2.ID().String()))
+		if err != nil {
+			fmt.Println("NewMultiaddr err: ", err)
+			continue
+		}
+		info, err := peer.AddrInfoFromP2pAddr(remoteAddr)
+		if err != nil {
+			fmt.Println("AddrInfoFromP2pAddr err: ", err)
+			continue
+		}
+
+		err = peer1.Connect(context.TODO(), *info)
+		if err != nil {
+			fmt.Println("Connect err: ", err)
+			continue
+		}
+
+		// you need to put the test.txt file in ./peer2/file directory
+		// the size cannot exceed the size of test.txt
+		err = peer1.ReadDataAction(info.ID, "test.txt", file, 20)
+		if err != nil {
+			fmt.Println("ReadDataAction err: ", err)
+			continue
+		}
+		fmt.Println("ok")
+		return
 	}
-	// Extract the peer ID from the multiaddr.
-	info, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		fmt.Println("AddrInfoFromP2pAddr err: ", err)
-		os.Exit(1)
-	}
-	h1.Peerstore().AddAddr(info.ID, maddr, time.Hour)
-
-	err = h1.ReadDataAction(info.ID, "example_readdata.go", "example_readdata.go", file, 10)
-	fmt.Println("err: ", err)
+	fmt.Println("failed")
 }

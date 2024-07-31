@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	p2pgo "github.com/CESSProject/p2p-go"
@@ -17,56 +18,71 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-const P2P_PORT1 = 4001
-const P2P_PORT2 = 4002
-
-var P2P_BOOT_ADDRS = []string{
-	//testnet
+var BootPeers = []string{
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
 func main() {
 	ctx := context.Background()
+	sourcePort1 := flag.Int("p1", 15000, "Source port number")
+	sourcePort2 := flag.Int("p2", 15001, "Source port number")
 
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer1"),
-		p2pgo.ListenPort(P2P_PORT1),
-		p2pgo.BootPeers(P2P_BOOT_ADDRS),
+		p2pgo.ListenPort(*sourcePort1),
+		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
 		panic(err)
 	}
 	defer peer1.Close()
 
+	fmt.Println("peer1:", peer1.Addrs(), peer1.ID())
+
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer2"),
-		p2pgo.ListenPort(P2P_PORT2),
-		p2pgo.BootPeers(P2P_BOOT_ADDRS),
+		p2pgo.ListenPort(*sourcePort2),
+		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
 		panic(err)
 	}
 	defer peer2.Close()
 
-	maddr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/192.168.110.247/tcp/%d/p2p/%s", P2P_PORT2, peer2.ID()))
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("peer2:", peer2.Addrs(), peer2.ID())
 
-	target_addr, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		panic(err)
-	}
+	remoteAddrs := peer2.Addrs()
 
-	err = peer1.Connect(ctx, *target_addr)
-	if err != nil {
-		panic(err)
-	}
+	for _, v := range remoteAddrs {
+		remoteAddr, err := ma.NewMultiaddr(fmt.Sprintf("%s/p2p/%s", v, peer2.ID().String()))
+		if err != nil {
+			fmt.Println("NewMultiaddr err: ", err)
+			continue
+		}
 
-	err = peer1.ReadFileAction(target_addr.ID, "test_fid", "fragment_hash", "test_file", core.FragmentSize)
-	fmt.Println("err: ", err)
+		info, err := peer.AddrInfoFromP2pAddr(remoteAddr)
+		if err != nil {
+			fmt.Println("AddrInfoFromP2pAddr err: ", err)
+			continue
+		}
+
+		err = peer1.Connect(context.TODO(), *info)
+		if err != nil {
+			fmt.Println("Connect err: ", err)
+			continue
+		}
+
+		err = peer1.ReadFileAction(info.ID, "fid", "fragment_hash", "test_file", core.FragmentSize)
+		if err != nil {
+			fmt.Println("ReadDataAction err: ", err)
+			continue
+		}
+		fmt.Println("ok")
+		return
+	}
+	fmt.Println("failed")
 }

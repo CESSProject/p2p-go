@@ -136,7 +136,7 @@ func (e *protocols) WriteFileAction(id peer.ID, roothash, path string) error {
 				return errors.New(ERR_RespFailure)
 			}
 		case <-timeout.C:
-			return errors.New(ERR_RespTimeOut)
+			return errors.New(ERR_TimeOut)
 		}
 
 		e.WriteFileProtocol.Lock()

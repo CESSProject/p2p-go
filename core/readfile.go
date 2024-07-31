@@ -200,7 +200,7 @@ func (e *ReadFileProtocol) readFileAction(
 				return errors.New(ERR_RespFailure)
 			}
 		case <-timeout.C:
-			return errors.New(ERR_RespTimeOut)
+			return errors.New(ERR_TimeOut)
 		}
 
 		e.ReadFileProtocol.Lock()
