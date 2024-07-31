@@ -95,7 +95,7 @@ func (e *protocols) OnlineAction(id peer.ID) error {
 		}
 		return nil
 	case <-timeout.C:
-		return errors.New(ERR_RespTimeOut)
+		return errors.New(ERR_TimeOut)
 	}
 }
 

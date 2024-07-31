@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	p2pgo "github.com/CESSProject/p2p-go"
+	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -22,7 +23,6 @@ var BootPeers = []string{
 }
 
 func main() {
-	file := "readfile"
 	ctx := context.Background()
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
 	sourcePort2 := flag.Int("p2", 15001, "Source port number")
@@ -30,8 +30,8 @@ func main() {
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.Workspace("./peer1"),
+		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
@@ -39,13 +39,13 @@ func main() {
 	}
 	defer peer1.Close()
 
-	fmt.Println("node1:", peer1.Addrs(), peer1.ID())
+	fmt.Println("peer1:", peer1.Addrs(), peer1.ID())
 
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.Workspace("./peer2"),
+		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.BootPeers(BootPeers),
 	)
 	if err != nil {
@@ -53,7 +53,7 @@ func main() {
 	}
 	defer peer2.Close()
 
-	fmt.Println("node2:", peer2.Addrs(), peer2.ID())
+	fmt.Println("peer2:", peer2.Addrs(), peer2.ID())
 
 	remoteAddrs := peer2.Addrs()
 
@@ -63,6 +63,7 @@ func main() {
 			fmt.Println("NewMultiaddr err: ", err)
 			continue
 		}
+
 		info, err := peer.AddrInfoFromP2pAddr(remoteAddr)
 		if err != nil {
 			fmt.Println("AddrInfoFromP2pAddr err: ", err)
@@ -75,9 +76,7 @@ func main() {
 			continue
 		}
 
-		// you need to put the test.txt file in ./peer2/file directory
-		// the size cannot exceed the size of test.txt
-		err = peer1.ReadDataAction(info.ID, "test.txt", file, 20)
+		err = peer1.ReadFileAction(info.ID, "fid", "fragment_hash", "test_file", core.FragmentSize)
 		if err != nil {
 			fmt.Println("ReadDataAction err: ", err)
 			continue

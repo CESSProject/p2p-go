@@ -10,9 +10,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
 
 	p2pgo "github.com/CESSProject/p2p-go"
+	"github.com/CESSProject/p2p-go/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -67,6 +68,12 @@ func main() {
 		panic(err)
 	}
 
-	fragmentsize, err := peer1.ReadDataStatAction(target_addr.ID, "test_fid", "fragment_hash")
-	log.Println("fragment size: ", fragmentsize, " err: ", err)
+	err = os.WriteFile("./test_file", make([]byte, core.FragmentSize), os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	defer os.Remove("./test_file")
+
+	err = peer1.WriteFileAction(target_addr.ID, "test_fid", "./test_file")
+	fmt.Println("err: ", err)
 }

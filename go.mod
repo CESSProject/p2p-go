@@ -1,6 +1,8 @@
 module github.com/CESSProject/p2p-go
 
-go 1.20
+go 1.21
+
+toolchain go1.21.12
 
 require (
 	github.com/gogo/protobuf v1.3.2
@@ -89,7 +91,6 @@ require (
 	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/common v0.47.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/protocolbuffers/protobuf v5.26.1+incompatible // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.4 // indirect
 	github.com/quic-go/quic-go v0.39.4 // indirect

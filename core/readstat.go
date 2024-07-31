@@ -89,7 +89,7 @@ func (e *protocols) ReadDataStatAction(id peer.ID, roothash string, datahash str
 			return 0, errors.New(ERR_RespFailure)
 		}
 	case <-timeout.C:
-		return 0, errors.New(ERR_RespTimeOut)
+		return 0, errors.New(ERR_TimeOut)
 	}
 
 	e.ReadDataStatProtocol.Lock()
