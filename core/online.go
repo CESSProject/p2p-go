@@ -30,8 +30,11 @@ type OnlineProtocol struct { // local host
 	record chan string
 }
 
-func (n *PeerNode) NewOnlineProtocol() *OnlineProtocol {
-	e := OnlineProtocol{PeerNode: n, record: make(chan string, 100)}
+func (n *PeerNode) NewOnlineProtocol(cacheLen int) *OnlineProtocol {
+	if cacheLen <= 0 {
+		cacheLen = 1000
+	}
+	e := OnlineProtocol{PeerNode: n, record: make(chan string, cacheLen)}
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+OnlineRequest), e.onOnlineResponse)
 	return &e
 }

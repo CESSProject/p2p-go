@@ -31,6 +31,11 @@ var DefaultDialTimeout = func(cfg *Config) error {
 	return cfg.Apply(DialTimeout(10))
 }
 
+// DefaultWorkSpace configures libp2p to use default work space.
+var DefaultRecordCacheLen = func(cfg *Config) error {
+	return cfg.Apply(RecordCacheLen(1000))
+}
+
 // Complete list of default options and when to fallback on them.
 //
 // Please *DON'T* specify default options any other way. Putting this all here
@@ -50,6 +55,10 @@ var defaults = []struct {
 	{
 		fallback: func(cfg *Config) bool { return cfg.DialTimeout == 0 },
 		opt:      DefaultDialTimeout,
+	},
+	{
+		fallback: func(cfg *Config) bool { return cfg.RecordCacheLen <= 0 },
+		opt:      DefaultRecordCacheLen,
 	},
 }
 

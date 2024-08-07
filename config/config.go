@@ -15,6 +15,7 @@ type Config struct {
 	PrivatekeyPath string
 	ProtocolPrefix string
 	PublicIpv4     string
+	RecordCacheLen int
 	DialTimeout    int
 }
 

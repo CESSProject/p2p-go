@@ -335,7 +335,7 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
 
-	peer_node.initProtocol(cfg.ProtocolPrefix)
+	peer_node.initProtocol(cfg.ProtocolPrefix, cfg.RecordCacheLen)
 
 	if len(boots) > 0 {
 		peer_node.dir, err = mkdir(cfg.Workspace)
@@ -649,11 +649,11 @@ func verifyWorkspace(ws string) error {
 	return nil
 }
 
-func (n *PeerNode) initProtocol(protocolPrefix string) {
+func (n *PeerNode) initProtocol(protocolPrefix string, cacheLen int) {
 	n.SetProtocolPrefix(protocolPrefix)
 	n.ReadDataProtocol = n.NewReadDataProtocol()
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
-	n.OnlineProtocol = n.NewOnlineProtocol()
+	n.OnlineProtocol = n.NewOnlineProtocol(cacheLen)
 	n.WriteDataProtocol = n.NewWriteDataProtocol()
 }
 

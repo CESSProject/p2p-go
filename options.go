@@ -39,7 +39,7 @@ func PrivatekeyFile(privatekey string) Option {
 	}
 }
 
-// PrivatekeyFile configuration privatekey file
+// set protocol prefix
 func ProtocolPrefix(protocolPrefix string) Option {
 	return func(cfg *Config) error {
 		cfg.ProtocolPrefix = protocolPrefix
@@ -47,18 +47,18 @@ func ProtocolPrefix(protocolPrefix string) Option {
 	}
 }
 
-// PrivatekeyFile configuration privatekey file
-func PublicIpv4(ip string) Option {
+// set timeout for dialing
+func DialTimeout(timeout int) Option {
 	return func(cfg *Config) error {
-		cfg.PublicIpv4 = ip
+		cfg.DialTimeout = timeout
 		return nil
 	}
 }
 
-// Version configuration version
-func DialTimeout(timeout int) Option {
+// set the boot node to record the cache channel length of other nodes
+func RecordCacheLen(length int) Option {
 	return func(cfg *Config) error {
-		cfg.DialTimeout = timeout
+		cfg.RecordCacheLen = length
 		return nil
 	}
 }
