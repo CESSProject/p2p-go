@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -23,7 +24,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -34,7 +34,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
-	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/mr-tron/base58"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -296,12 +295,12 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 	opts = append(opts,
 		libp2p.Identity(prvKey),
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort)),
-		libp2p.ConnectionManager(cfg.ConnManager),
-		libp2p.Transport(tcp.NewTCPTransport),
-		libp2p.Security(tls.ID, tls.New),
 		libp2p.ProtocolVersion(cfg.ProtocolPrefix+p2pProtocolVer),
+		libp2p.WithDialTimeout(time.Second*time.Duration(cfg.DialTimeout)),
+		libp2p.DisableIdentifyAddressDiscovery(),
 		libp2p.DisableMetrics(),
-		libp2p.EnableRelay(),
+		libp2p.DisableRelay(),
+		libp2p.Ping(false),
 	)
 
 	bhost, err := libp2p.New(opts...)
@@ -331,22 +330,24 @@ func NewPeerNode(ctx context.Context, cfg *config.Config) (*PeerNode, error) {
 		protocols:          NewProtocol(),
 	}
 
-	peer_node.dhtable, peer_node.bootnode, peer_node.netenv, err = NewDHT(ctx, bhost, cfg.BucketSize, cfg.Version, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
+	peer_node.dhtable, peer_node.bootnode, peer_node.netenv, err = NewDHT(ctx, bhost, boots, cfg.ProtocolPrefix, peer_node.dhtProtocolVersion)
 	if err != nil {
 		return nil, fmt.Errorf("[NewDHT] %v", err)
 	}
+
+	peer_node.initProtocol(cfg.ProtocolPrefix)
 
 	if len(boots) > 0 {
 		peer_node.dir, err = mkdir(cfg.Workspace)
 		if err != nil {
 			return nil, err
 		}
-		peer_node.initProtocol(cfg.ProtocolPrefix)
 		bootstrapAddr, _ := ma.NewMultiaddr(peer_node.bootnode)
 		peerinfo, _ := peer.AddrInfoFromP2pAddr(bootstrapAddr)
-		peer_node.OnlineAction(peerinfo.ID)
-	} else {
-		peer_node.OnlineProtocol = peer_node.NewOnlineProtocol()
+		err = peer_node.OnlineAction(peerinfo.ID)
+		if err != nil {
+			log.Println("online failed: ", err)
+		}
 	}
 
 	return peer_node, nil
@@ -650,20 +651,17 @@ func verifyWorkspace(ws string) error {
 
 func (n *PeerNode) initProtocol(protocolPrefix string) {
 	n.SetProtocolPrefix(protocolPrefix)
-	n.WriteFileProtocol = n.NewWriteFileProtocol()
-	n.ReadFileProtocol = n.NewReadFileProtocol()
 	n.ReadDataProtocol = n.NewReadDataProtocol()
 	n.ReadDataStatProtocol = n.NewReadDataStatProtocol()
 	n.OnlineProtocol = n.NewOnlineProtocol()
+	n.WriteDataProtocol = n.NewWriteDataProtocol()
 }
 
-func NewDHT(ctx context.Context, h host.Host, bucketsize int, version string, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
+func NewDHT(ctx context.Context, h host.Host, boot_nodes []string, protocolPrefix, dhtProtocol string) (*dht.IpfsDHT, string, string, error) {
 	var options []dht.Option
 	options = append(options,
 		dht.ProtocolPrefix(protocol.ID(protocolPrefix)),
 		dht.V1ProtocolOverride(protocol.ID(dhtProtocol)),
-		dht.Resiliency(10),
-		dht.BucketSize(bucketsize),
 	)
 
 	if len(boot_nodes) == 0 {

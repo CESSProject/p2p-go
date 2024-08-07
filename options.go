@@ -7,12 +7,6 @@
 
 package p2pgo
 
-import (
-	"time"
-
-	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-)
-
 // ListenPort configuration listening port
 func ListenPort(port int) Option {
 	return func(cfg *Config) error {
@@ -25,24 +19,6 @@ func ListenPort(port int) Option {
 func Workspace(workspace string) Option {
 	return func(cfg *Config) error {
 		cfg.Workspace = workspace
-		return nil
-	}
-}
-
-// MaxConnection configuration max connection
-func MaxConnection(low, high int) Option {
-	return func(cfg *Config) error {
-		if low < 0 {
-			low = 1
-		}
-		if high < 0 {
-			high = low
-		}
-		mgr, err := connmgr.NewConnManager(low, high, connmgr.WithGracePeriod(time.Hour), connmgr.WithSilencePeriod(time.Minute))
-		if err != nil {
-			return nil
-		}
-		cfg.ConnManager = mgr
 		return nil
 	}
 }
@@ -79,18 +55,10 @@ func PublicIpv4(ip string) Option {
 	}
 }
 
-// BucketSize configuration bucket size
-func BucketSize(size int) Option {
-	return func(cfg *Config) error {
-		cfg.BucketSize = size
-		return nil
-	}
-}
-
 // Version configuration version
-func Version(ver string) Option {
+func DialTimeout(timeout int) Option {
 	return func(cfg *Config) error {
-		cfg.Version = ver
+		cfg.DialTimeout = timeout
 		return nil
 	}
 }

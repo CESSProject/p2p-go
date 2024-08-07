@@ -28,10 +28,8 @@ import (
 // pattern: /protocol-name/request-or-response-message/version
 const readDataRequest = "/data/readreq/v0"
 
-//const readDataResponse = "/data/readresp/v0"
-
 type readDataResp struct {
-	*pb.ReadfileResponse
+	*pb.ReadDataResponse
 }
 
 type ReadDataProtocol struct {
@@ -76,7 +74,7 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 	}
 	defer f.Close()
 
-	req := pb.ReadfileRequest{
+	req := pb.ReadDataRequest{
 		Roothash:    "",
 		Datahash:    name,
 		MessageData: e.ReadDataProtocol.NewMessageData(uuid.New().String(), false),
@@ -98,24 +96,24 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 		e.ReadDataProtocol.Unlock()
 	}()
 
-	timeout := time.NewTicker(P2PReadReqRespTime)
-	defer timeout.Stop()
-
 	stream, err := e.ReadDataProtocol.NewPeerStream(id, protocol.ID(e.ProtocolPrefix+readDataRequest))
 	if err != nil {
 		return err
 	}
-	defer stream.Close()
+	defer func() {
+		stream.Reset()
+		stream.Close()
+	}()
 
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 	num := 0
 	tmpbuf := make([]byte, 0)
-	recvbuf := make([]byte, 65*1024)
-	recvdata := &pb.ReadfileResponse{}
-
+	recvbuf := make([]byte, 33*1024)
+	recvdata := &pb.ReadDataResponse{}
+	timeout := time.NewTicker(time.Second * 10)
+	defer timeout.Stop()
 	for {
 		req.Offset = offset
-
 		buf, err := proto.Marshal(&req)
 		if err != nil {
 			return errors.Wrapf(err, "[Marshal]")
@@ -131,12 +129,15 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 			return errors.Wrapf(err, "[rw.Flush]")
 		}
 
-		timeout.Reset(P2PReadReqRespTime)
+		timeout.Reset(time.Second * 10)
 		select {
 		case <-timeout.C:
-			return fmt.Errorf("%s", ERR_TimeOut)
+			return fmt.Errorf("%s", ERR_RecvTimeOut)
 		default:
-			num, _ = rw.Read(recvbuf)
+			num, err = rw.Read(recvbuf)
+			if err != nil {
+				return fmt.Errorf("[rw.Read] %v", err)
+			}
 			err = proto.Unmarshal(recvbuf[:num], recvdata)
 			if err != nil {
 				tmpbuf = append(tmpbuf, recvbuf[:num]...)
@@ -145,10 +146,6 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 					break
 				}
 				tmpbuf = make([]byte, 0)
-			}
-
-			if recvdata.MessageData == nil {
-				break
 			}
 
 			if recvdata.Length > 0 {
@@ -167,7 +164,7 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 			}
 
 			if recvdata.Code != P2PResponseOK {
-				return errors.New("not fount")
+				return fmt.Errorf("received error code: %d", recvdata.Code)
 			}
 
 			offset = req.Offset + int64(num)
@@ -176,23 +173,37 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 }
 
 func (e *ReadDataProtocol) onReadDataRequest(s network.Stream) {
+	defer func() {
+		s.Close()
+	}()
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	go e.readData(rw)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go e.readData(rw, &wg)
+	wg.Wait()
 }
 
-func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter) {
+func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
+	defer func() {
+		wg.Done()
+	}()
 	var err error
-	data := &pb.ReadfileRequest{}
+	num := 0
+	data := &pb.ReadDataRequest{}
 	recvbuf := make([]byte, 1024)
 	tmpbuf := make([]byte, 0)
-	tick := time.NewTicker(time.Second * 20)
+	readBuf := make([]byte, FileProtocolBufSize)
+	tick := time.NewTicker(time.Second * 10)
 	defer tick.Stop()
 	for {
 		select {
 		case <-tick.C:
 			return
 		default:
-			num, _ := rw.Read(recvbuf)
+			num, err = rw.Read(recvbuf)
+			if err != nil {
+				return
+			}
 			err = proto.Unmarshal(recvbuf[:num], data)
 			if err != nil {
 				tmpbuf = append(tmpbuf, recvbuf[:num]...)
@@ -208,7 +219,7 @@ func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter) {
 				fpath = filepath.Join(e.ReadDataProtocol.GetDirs().TmpDir, data.Datahash)
 			}
 
-			resp := &pb.ReadfileResponse{
+			resp := &pb.ReadDataResponse{
 				MessageData: e.ReadDataProtocol.NewMessageData(data.MessageData.Id, false),
 				Code:        P2PResponseOK,
 				Offset:      data.Offset,
@@ -256,7 +267,6 @@ func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter) {
 				return
 			}
 
-			var readBuf = make([]byte, FileProtocolBufSize)
 			num, err = f.Read(readBuf)
 			if err != nil {
 				resp.Code = P2PResponseRemoteFailed

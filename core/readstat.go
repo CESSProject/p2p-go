@@ -8,7 +8,8 @@
 package core
 
 import (
-	"io"
+	"bufio"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -25,10 +26,8 @@ import (
 
 // pattern: /protocol-name/request-or-response-message/version
 const readDataStatRequest = "/read/stat/req/v0"
-const readDataStatResponse = "/read/stat/resp/v0"
 
 type readDataStatResp struct {
-	ch chan bool
 	*pb.ReadDataStatResponse
 }
 
@@ -41,148 +40,135 @@ type ReadDataStatProtocol struct {
 func (n *PeerNode) NewReadDataStatProtocol() *ReadDataStatProtocol {
 	e := ReadDataStatProtocol{PeerNode: n, Mutex: new(sync.Mutex), requests: make(map[string]*readDataStatResp)}
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readDataStatRequest), e.onReadDataStatRequest)
-	n.SetStreamHandler(protocol.ID(n.protocolPrefix+readDataStatResponse), e.onReadDataStatResponse)
 	return &e
 }
 
-func (e *protocols) ReadDataStatAction(id peer.ID, roothash string, datahash string) (uint64, error) {
-	var ok bool
+func (e *protocols) ReadDataStatAction(id peer.ID, fid string, fragment string) (uint64, error) {
 	var err error
-	var req pb.ReadDataStatRequest
-	req.Roothash = roothash
-	req.Datahash = datahash
-	req.MessageData = e.ReadDataStatProtocol.NewMessageData(uuid.New().String(), false)
+	var req = &pb.ReadDataStatRequest{
+		Roothash:    fid,
+		Datahash:    fragment,
+		MessageData: e.ReadDataStatProtocol.NewMessageData(uuid.New().String(), false),
+	}
 
-	// store request so response handler has access to it
-	var respChan = make(chan bool, 1)
 	e.ReadDataStatProtocol.Lock()
 	for {
 		if _, ok := e.ReadDataStatProtocol.requests[req.MessageData.Id]; ok {
 			req.MessageData.Id = uuid.New().String()
 			continue
 		}
-		e.ReadDataStatProtocol.requests[req.MessageData.Id] = &readDataStatResp{
-			ch: respChan,
-		}
 		break
 	}
 	e.ReadDataStatProtocol.Unlock()
+
 	defer func() {
 		e.ReadDataStatProtocol.Lock()
 		delete(e.ReadDataStatProtocol.requests, req.MessageData.Id)
-		close(respChan)
 		e.ReadDataStatProtocol.Unlock()
 	}()
-	timeout := time.NewTicker(P2PReadReqRespTime)
-	defer timeout.Stop()
 
-	err = e.ReadDataStatProtocol.SendProtoMessage(id, protocol.ID(e.ProtocolPrefix+readDataStatRequest), &req)
+	stream, err := e.ReadDataStatProtocol.NewPeerStream(id, protocol.ID(e.ProtocolPrefix+readDataStatRequest))
 	if err != nil {
-		return 0, errors.Wrapf(err, "[SendProtoMessage]")
+		return 0, err
 	}
+	defer stream.Close()
 
-	//
-	timeout.Reset(P2PReadReqRespTime)
-	select {
-	case ok = <-respChan:
-		if !ok {
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+	num := 0
+	tmpbuf := make([]byte, 0)
+	recvbuf := make([]byte, 1024)
+	recvdata := &pb.ReadDataStatResponse{}
+
+	timeout := time.NewTicker(time.Second * 10)
+	defer timeout.Stop()
+	for {
+		buf, err := proto.Marshal(req)
+		if err != nil {
+			return 0, fmt.Errorf("[proto.Marshal] %v", err)
+		}
+
+		_, err = rw.Write(buf)
+		if err != nil {
+			return 0, fmt.Errorf("[rw.Write] %v", err)
+		}
+
+		err = rw.Flush()
+		if err != nil {
+			return 0, fmt.Errorf("[rw.Flush] %v", err)
+		}
+
+		timeout.Reset(time.Second * 10)
+		select {
+		case <-timeout.C:
+			return 0, errors.New(ERR_RecvTimeOut)
+		default:
+			num, _ = rw.Read(recvbuf)
+			err = proto.Unmarshal(recvbuf[:num], recvdata)
+			if err != nil {
+				tmpbuf = append(tmpbuf, recvbuf[:num]...)
+				err = proto.Unmarshal(tmpbuf, recvdata)
+				if err != nil {
+					break
+				}
+				tmpbuf = make([]byte, 0)
+			}
+
+			if recvdata.Code == P2PResponseFinish || recvdata.Code == P2PResponseOK {
+				return uint64(recvdata.DataSize), nil
+			}
+
 			return 0, errors.New(ERR_RespFailure)
 		}
-	case <-timeout.C:
-		return 0, errors.New(ERR_TimeOut)
 	}
+}
 
-	e.ReadDataStatProtocol.Lock()
-	resp, ok := e.ReadDataStatProtocol.requests[req.MessageData.Id]
-	if !ok {
-		e.ReadDataStatProtocol.Unlock()
-		return 0, errors.New(ERR_RespFailure)
-	}
-	e.ReadDataStatProtocol.Unlock()
-
-	if resp.ReadDataStatResponse == nil {
-		return 0, errors.New(ERR_RespFailure)
-	}
-
-	if resp.Code != P2PResponseOK {
-		return 0, errors.New(ERR_RespFailure)
-	}
-	return uint64(resp.DataSize), nil
+func (e *ReadDataStatProtocol) onReadDataStatRequest(s network.Stream) {
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	go e.readData(rw)
 }
 
 // remote peer requests handler
-func (e *ReadDataProtocol) onReadDataStatRequest(s network.Stream) {
-	defer s.Close()
-	var resp = &pb.ReadDataStatResponse{
-		Code: P2PResponseFailed,
-	}
-	// get request data
-	var data = &pb.ReadDataStatRequest{}
-	buf, err := io.ReadAll(s)
-	if err != nil {
-		e.ReadDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+readDataStatResponse), resp)
-		return
-	}
-	// unmarshal it
-	err = proto.Unmarshal(buf, data)
-	if err != nil {
-		e.ReadDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+readDataStatResponse), resp)
-		return
-	}
-
-	fpath := FindFile(e.ReadDataProtocol.GetDirs().FileDir, data.Datahash)
-	if fpath == "" {
-		fpath = FindFile(e.ReadDataProtocol.GetDirs().TmpDir, data.Datahash)
-	}
-
-	fstat, err := os.Stat(fpath)
-	if err != nil {
-		resp.Code = P2PResponseEmpty
-		e.ReadDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+readDataStatResponse), resp)
-		return
-	}
-
-	// send response to the request using the message string he provided
-	resp.Code = P2PResponseOK
-	resp.DataHash = data.Datahash
-	resp.DataSize = fstat.Size()
-	resp.MessageData = e.ReadDataStatProtocol.NewMessageData(data.MessageData.Id, false)
-	e.ReadDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+readDataStatResponse), resp)
-}
-
-// remote peer requests handler
-func (e *ReadDataStatProtocol) onReadDataStatResponse(s network.Stream) {
-	defer s.Close()
-	var data = &pb.ReadDataStatResponse{}
-	buf, err := io.ReadAll(s)
-	if err != nil {
-		s.Reset()
-		return
-	}
-
-	// unmarshal it
-	err = proto.Unmarshal(buf, data)
-	if err != nil {
-		s.Reset()
-		return
-	}
-
-	if data.MessageData == nil {
-		s.Reset()
-		return
-	}
-
-	e.ReadDataStatProtocol.Lock()
-	defer e.ReadDataStatProtocol.Unlock()
-
-	// locate request data and remove it if found
-	_, ok := e.requests[data.MessageData.Id]
-	if ok {
-		if data.Code == P2PResponseOK {
-			e.requests[data.MessageData.Id].ch <- true
-			e.requests[data.MessageData.Id].ReadDataStatResponse = data
-		} else {
-			e.requests[data.MessageData.Id].ch <- false
+func (e *ReadDataStatProtocol) readData(rw *bufio.ReadWriter) {
+	var err error
+	resp := &pb.ReadDataStatResponse{}
+	data := &pb.ReadDataStatRequest{}
+	recvbuf := make([]byte, 1024)
+	tmpbuf := make([]byte, 0)
+	tick := time.NewTicker(time.Second * 10)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+			return
+		default:
+			num, _ := rw.Read(recvbuf)
+			err = proto.Unmarshal(recvbuf[:num], data)
+			if err != nil {
+				tmpbuf = append(tmpbuf, recvbuf[:num]...)
+				err = proto.Unmarshal(tmpbuf, data)
+				if err != nil {
+					break
+				}
+				tmpbuf = make([]byte, 0)
+			}
+			fpath := FindFile(e.ReadDataStatProtocol.GetDirs().FileDir, data.Datahash)
+			if fpath == "" {
+				fpath = FindFile(e.ReadDataStatProtocol.GetDirs().TmpDir, data.Datahash)
+			}
+			fstat, err := os.Stat(fpath)
+			if err != nil {
+				resp.Code = P2PResponseEmpty
+				buffer, _ := proto.Marshal(resp)
+				rw.Write(buffer)
+				rw.Flush()
+				return
+			}
+			resp.Code = P2PResponseOK
+			resp.DataSize = fstat.Size()
+			buffer, _ := proto.Marshal(resp)
+			rw.Write(buffer)
+			rw.Flush()
+			return
 		}
 	}
 }

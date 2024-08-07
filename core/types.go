@@ -21,6 +21,7 @@ const P2PResponseFinish uint32 = 210
 const P2PResponseFailed uint32 = 400
 const P2PResponseRemoteFailed uint32 = 500
 const P2PResponseEmpty uint32 = 404
+const P2PResponseForbid uint32 = 403
 
 const MaxFileNameLength = 255
 const MaxCustomDataLength = 255
@@ -31,7 +32,8 @@ const (
 )
 
 const (
-	ERR_TimeOut         = "receiving data timeout"
+	ERR_RecvTimeOut     = "receiving data timeout"
+	ERR_WriteTimeOut    = "writing data timeout"
 	ERR_RespFailure     = "peer response failure"
 	ERR_RespInvalidData = "peer response invalid data"
 	ERR_RespEmptyData   = "received empty data"

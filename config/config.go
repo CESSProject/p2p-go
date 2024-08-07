@@ -7,21 +7,15 @@
 
 package config
 
-import (
-	"github.com/libp2p/go-libp2p/core/connmgr"
-)
-
 // Config describes a set of settings for a libp2p node
 type Config struct {
 	ListenPort     int
-	ConnManager    connmgr.ConnManager
 	BootPeers      []string
 	Workspace      string
 	PrivatekeyPath string
 	ProtocolPrefix string
 	PublicIpv4     string
-	BucketSize     int
-	Version        string
+	DialTimeout    int
 }
 
 // Option is a libp2p config option that can be given to the libp2p constructor

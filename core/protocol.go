@@ -12,17 +12,15 @@ import (
 )
 
 type Protocol interface {
-	WriteFileAction(id peer.ID, roothash, path string) error
-	ReadFileAction(id peer.ID, roothash, datahash, path string, size int64) error
 	ReadDataAction(id peer.ID, name, savepath string, size int64) error
 	ReadDataStatAction(id peer.ID, roothash string, datahash string) (uint64, error)
 	OnlineAction(id peer.ID) error
+	GetRecord() <-chan string
 }
 
 type protocols struct {
 	ProtocolPrefix string
-	*WriteFileProtocol
-	*ReadFileProtocol
+	*WriteDataProtocol
 	*ReadDataProtocol
 	*ReadDataStatProtocol
 	*OnlineProtocol

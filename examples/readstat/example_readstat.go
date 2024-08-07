@@ -10,18 +10,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/libp2p/go-libp2p/core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 const P2P_PORT1 = 4001
 const P2P_PORT2 = 4002
 
 var P2P_BOOT_ADDRS = []string{
-	//testnet
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
@@ -40,6 +37,8 @@ func main() {
 	}
 	defer peer1.Close()
 
+	fmt.Println("peer1:", peer1.Addrs(), peer1.ID())
+
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
@@ -52,21 +51,14 @@ func main() {
 	}
 	defer peer2.Close()
 
-	maddr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/192.168.110.247/tcp/%d/p2p/%s", P2P_PORT2, peer2.ID()))
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("peer2:", peer2.Addrs(), peer2.ID())
 
-	target_addr, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		panic(err)
-	}
+	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
-	err = peer1.Connect(ctx, *target_addr)
+	size, err := peer1.ReadDataStatAction(peer2.ID(), "fid", "fragment")
 	if err != nil {
-		panic(err)
+		fmt.Println("ReadDataStatAction err: ", err)
+		return
 	}
-
-	fragmentsize, err := peer1.ReadDataStatAction(target_addr.ID, "test_fid", "fragment_hash")
-	log.Println("fragment size: ", fragmentsize, " err: ", err)
+	fmt.Println("ok, size: ", size)
 }
