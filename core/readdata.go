@@ -110,7 +110,7 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 	tmpbuf := make([]byte, 0)
 	recvbuf := make([]byte, 33*1024)
 	recvdata := &pb.ReadDataResponse{}
-	timeout := time.NewTicker(time.Second * 10)
+	timeout := time.NewTicker(time.Second * 15)
 	defer timeout.Stop()
 	for {
 		req.Offset = offset
@@ -129,7 +129,7 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string, size int64
 			return errors.Wrapf(err, "[rw.Flush]")
 		}
 
-		timeout.Reset(time.Second * 10)
+		timeout.Reset(time.Second * 15)
 		select {
 		case <-timeout.C:
 			return fmt.Errorf("%s", ERR_RecvTimeOut)
@@ -193,7 +193,7 @@ func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 	recvbuf := make([]byte, 1024)
 	tmpbuf := make([]byte, 0)
 	readBuf := make([]byte, FileProtocolBufSize)
-	tick := time.NewTicker(time.Second * 10)
+	tick := time.NewTicker(time.Second * 15)
 	defer tick.Stop()
 	for {
 		select {
@@ -204,6 +204,7 @@ func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 			if err != nil {
 				return
 			}
+			tick.Reset(time.Second * 15)
 			err = proto.Unmarshal(recvbuf[:num], data)
 			if err != nil {
 				tmpbuf = append(tmpbuf, recvbuf[:num]...)
@@ -299,7 +300,6 @@ func (e *ReadDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 			if resp.Code == P2PResponseFinish {
 				return
 			}
-			tick.Reset(time.Second * 20)
 		}
 	}
 }

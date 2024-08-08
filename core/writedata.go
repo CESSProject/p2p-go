@@ -98,7 +98,7 @@ func (e *protocols) WriteDataAction(id peer.ID, file, fid, fragment string) erro
 	num := 0
 	tmpbuf := make([]byte, 0)
 	recvbuf := make([]byte, 1024)
-	databuf := make([]byte, 3)
+	databuf := make([]byte, 32*1024)
 	recvdata := &pb.WriteDataResponse{}
 
 	var offset int64 = 0
@@ -197,7 +197,7 @@ func (e *WriteDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 	}
 
 	num := 0
-	timeout := time.NewTicker(time.Second * 10)
+	timeout := time.NewTicker(time.Second * 15)
 	defer timeout.Stop()
 
 	for {
@@ -215,6 +215,7 @@ func (e *WriteDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 				os.Remove(fpath)
 				return
 			}
+			timeout.Reset(time.Second * 15)
 			err = proto.Unmarshal(recvbuf[:num], data)
 			if err != nil {
 				tmpbuf = append(tmpbuf, recvbuf[:num]...)
@@ -298,7 +299,6 @@ func (e *WriteDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
 			if respdata.Code == P2PResponseFinish {
 				return
 			}
-			timeout.Reset(time.Second * 10)
 		}
 	}
 }
