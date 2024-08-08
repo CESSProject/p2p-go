@@ -7,7 +7,7 @@ toolchain go1.21.12
 require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.6.0
-	github.com/libp2p/go-libp2p v0.36.0
+	github.com/libp2p/go-libp2p v0.36.1
 	github.com/libp2p/go-libp2p-kad-dht v0.25.2
 	github.com/libp2p/go-libp2p-pubsub v0.11.0
 	github.com/mr-tron/base58 v1.2.0

@@ -16,109 +16,70 @@ message MessageData {
     bool gossip = 7; // true to have receiver peer gossip the message to neighbors 
 }
 
-//// writefile protocol
-
-// a protocol define a set of reuqest and responses
-message WritefileRequest {
-    // Roothash uniquely identifies a user data
-    string Roothash = 1;
-    // Datahash is the currently written data hash value
-    string Datahash = 2;
-    // Data is the data written this time
-    bytes Data = 3;
-    // MessageData is a generic message
-    MessageData messageData = 4;
-    // Offset is the offset of this write
-    int64 Offset = 5;
-    // Length is the length of the data written this time
-    uint32 Length = 6;  
-}
-
-message WritefileResponse {
-    // MessageData is a generic message
-    MessageData messageData = 1;
-    // Offset is the write offset the receiver wants
-    int64 Offset = 2;
-    // Code indicates the result of this transfer
-    uint32 Code = 3;
-}
-
-//// readdata protocol
+//// read data protocol
 
 // a protocol define a set of reuqest and responses
 message ReadDataRequest {
-    // Roothash uniquely identifies a user data
-    string Roothash = 1;
-    // Datahash is the currently written data hash value
-    string Datahash = 2;
-    // MessageData is a generic message
-    MessageData messageData = 3;
-    // Offset is the offset that the reader wants to read
-    int64 offset = 4;
-    // Extended data is used to expand business
-    bytes extendData=5;
+    // generic message
+    MessageData messageData = 1;
+    // file name
+    string Name = 2;
 }
 
 message ReadDataResponse {
+    // generic message
+    MessageData messageData = 1;
     // Data is the returned data
-    bytes Data = 1;
-    // MessageData is a generic message
-    MessageData messageData = 2;
-    // Offset is the data offset returned by the peer
-    int64 offset = 3;
-    // Code indicates the result of this transfer
-    uint32 code = 4;
-    // Length is the returned data length
-    uint32 length = 5;
+    bytes Data = 2;
+    // Data length
+    int64 DataLength = 3;
+    // response code
+    uint32 Code = 4;
+    // response message
+    string Msg = 5;
 }
 
-//// readDataStat protocol
+//// read data stat protocol
 
 // a protocol define a set of reuqest and responses
 message ReadDataStatRequest {
-    // Roothash uniquely identifies a user data
-    string Roothash = 1;
-    // Datahash is the currently written data hash value
-    string Datahash = 2;
-    // MessageData is a generic message
-    MessageData messageData = 3;
+    // generic message
+    MessageData messageData = 1;
+    // file name
+    string Name = 2;
 }
 
 message ReadDataStatResponse {
+    // generic message
+    MessageData messageData = 1;
     // Code indicates the result of this transfer
-    uint32 code = 1;
+    uint32 code = 2;
     // Offset is the write offset the receiver wants
-    int64 dataSize = 2;
-    // Datahash is the currently written data hash value
-    string dataHash = 3;
-    // MessageData is a generic message
-    MessageData messageData = 4;
+    int64 size = 3;
+    // response message
+    string msg = 4;
 }
 
-// a protocol define a set of reuqest and responses
+//// write data protocol
+
 message WriteDataRequest {
-    // Roothash uniquely identifies a user data
-    string Roothash = 1;
-    // Datahash is the currently written data hash value
-    string Datahash = 2;
-    // Data is the data written this time
-    bytes Data = 3;
-    // MessageData is a generic message
-    MessageData messageData = 4;
-    // Offset is the offset of this write
-    int64 Offset = 5;
-    // Length is the length of the data written this time
-    int64 TotalSize = 6;
-    // Length is the length of the data written this time
-    int32 DataLength = 7;
+    // generic message
+    MessageData messageData = 1;
+    // Fid
+    string Fid = 2;
+    // Datahash = sha256sum(Data)
+    string Datahash = 3;
+    // Data
+    bytes Data = 4;
+    // Data length
+    int64 DataLength = 5;
 }
 
 message WriteDataResponse {
-    // MessageData is a generic message
+    // generic message
     MessageData messageData = 1;
-    // Offset is the offset of this write
-    int64 Offset = 2;
-    // Code indicates the result of this transfer
-    uint32 Code = 3;
-    
+    // response code
+    uint32 Code = 2;
+    // response message
+    string Msg = 3;
 }

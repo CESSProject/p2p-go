@@ -16,9 +16,12 @@ import (
 	p2pgo "github.com/CESSProject/p2p-go"
 )
 
-var BootPeers = []string{
+var P2P_BOOT_ADDRS = []string{
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
+
+var send_file = ""
+var send_file_hash = ""
 
 func main() {
 	ctx := context.Background()
@@ -28,9 +31,9 @@ func main() {
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.Workspace("./peer1"),
-		p2pgo.BootPeers(BootPeers),
+		p2pgo.ListenPort(*sourcePort1),
+		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
 		panic(err)
@@ -42,9 +45,9 @@ func main() {
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.Workspace("./peer2"),
-		p2pgo.BootPeers(BootPeers),
+		p2pgo.ListenPort(*sourcePort2),
+		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
 		panic(err)
@@ -55,10 +58,10 @@ func main() {
 
 	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
-	err = peer1.WriteDataAction(peer2.ID(), "test.txt", "fid", "fragment")
+	err = peer1.WriteDataAction(peer2.ID(), send_file, "fid", send_file_hash)
 	if err != nil {
 		fmt.Println("WriteDataAction err: ", err)
 		return
 	}
-	fmt.Println("ok")
+	fmt.Println("success")
 }

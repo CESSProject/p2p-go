@@ -16,12 +16,13 @@ import (
 	p2pgo "github.com/CESSProject/p2p-go"
 )
 
-var BootPeers = []string{
+var P2P_BOOT_ADDRS = []string{
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
+var save_file = "save_file"
+
 func main() {
-	file := "readfile"
 	ctx := context.Background()
 	sourcePort1 := flag.Int("p1", 15000, "Source port number")
 	sourcePort2 := flag.Int("p2", 15001, "Source port number")
@@ -29,9 +30,9 @@ func main() {
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.Workspace("./peer1"),
-		p2pgo.BootPeers(BootPeers),
+		p2pgo.ListenPort(*sourcePort1),
+		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
 		panic(err)
@@ -43,9 +44,9 @@ func main() {
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
-		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.Workspace("./peer2"),
-		p2pgo.BootPeers(BootPeers),
+		p2pgo.ListenPort(*sourcePort2),
+		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
 		panic(err)
@@ -57,11 +58,11 @@ func main() {
 	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
 	// you need to put the test.txt file in ./peer2/file directory
-	// the size cannot exceed the size of test.txt
-	err = peer1.ReadDataAction(peer2.ID(), "test.txt", file, 40)
+	// note: the size of test.txt should not be less than 8388608
+	size, err := peer1.ReadDataAction(peer2.ID(), "test.txt", save_file)
 	if err != nil {
 		fmt.Println("ReadDataAction err: ", err)
 		return
 	}
-	fmt.Println("ok")
+	fmt.Println("success, size: ", size)
 }

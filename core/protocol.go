@@ -12,8 +12,9 @@ import (
 )
 
 type Protocol interface {
-	ReadDataAction(id peer.ID, name, savepath string, size int64) error
-	ReadDataStatAction(id peer.ID, roothash string, datahash string) (uint64, error)
+	WriteDataAction(id peer.ID, file, fid, fragment string) error
+	ReadDataAction(id peer.ID, name, savepath string) (int64, error)
+	ReadDataStatAction(id peer.ID, name string) (uint64, error)
 	OnlineAction(id peer.ID) error
 	GetRecord() <-chan string
 }

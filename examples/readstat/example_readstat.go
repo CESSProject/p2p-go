@@ -9,27 +9,29 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
 )
 
-const P2P_PORT1 = 4001
-const P2P_PORT2 = 4002
-
 var P2P_BOOT_ADDRS = []string{
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
+var read_remote_file = "1"
+
 func main() {
 	ctx := context.Background()
+	sourcePort1 := flag.Int("p1", 15000, "Source port number")
+	sourcePort2 := flag.Int("p2", 15001, "Source port number")
 
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer1"),
-		p2pgo.ListenPort(P2P_PORT1),
+		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
@@ -43,7 +45,7 @@ func main() {
 	peer2, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer2"),
-		p2pgo.ListenPort(P2P_PORT2),
+		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
@@ -55,10 +57,11 @@ func main() {
 
 	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
-	size, err := peer1.ReadDataStatAction(peer2.ID(), "fid", "fragment")
+	// you need to put read_remote_file in the ./peer2/file directory
+	size, err := peer1.ReadDataStatAction(peer2.ID(), read_remote_file)
 	if err != nil {
 		fmt.Println("ReadDataStatAction err: ", err)
 		return
 	}
-	fmt.Println("ok, size: ", size)
+	fmt.Println("success, remote file size: ", size)
 }

@@ -8,15 +8,14 @@
 package core
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
-	"github.com/pkg/errors"
 
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -27,11 +26,11 @@ import (
 
 // pattern: /protocol-name/request-or-response-message/version
 const writeDataRequest = "/data/writereq/v0"
-
-//const readDataResponse = "/data/readresp/v0"
+const writeDataResponse = "/data/writeresp/v0"
 
 type writeDataResp struct {
-	*pb.WritefileResponse
+	ch chan bool
+	*pb.WriteDataResponse
 }
 
 type WriteDataProtocol struct {
@@ -43,37 +42,32 @@ type WriteDataProtocol struct {
 func (n *PeerNode) NewWriteDataProtocol() *WriteDataProtocol {
 	e := WriteDataProtocol{PeerNode: n, Mutex: new(sync.Mutex), requests: make(map[string]*writeDataResp)}
 	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeDataRequest), e.onWriteDataRequest)
+	n.SetStreamHandler(protocol.ID(n.protocolPrefix+writeDataResponse), e.onWriteDataResponse)
 	return &e
 }
 
 func (e *protocols) WriteDataAction(id peer.ID, file, fid, fragment string) error {
-	fstat, err := os.Stat(file)
+	buf, err := os.ReadFile(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("[os.ReadFile] %v", err)
 	}
-	totalsize := fstat.Size()
-	if totalsize <= 0 {
-		return fmt.Errorf("%s: empty file", file)
-	}
-
-	f, err := os.Open(file)
-	if err != nil {
-		return fmt.Errorf("[os.Open] %v", err)
-	}
-	defer f.Close()
 
 	req := pb.WriteDataRequest{
-		Roothash:    fid,
-		Datahash:    fragment,
 		MessageData: e.WriteDataProtocol.NewMessageData(uuid.New().String(), false),
-		TotalSize:   totalsize,
+		Fid:         fid,
+		Datahash:    fragment,
+		Data:        buf,
+		DataLength:  int64(len(buf)),
 	}
-
+	respChan := make(chan bool, 1)
 	e.WriteDataProtocol.Lock()
 	for {
 		if _, ok := e.WriteDataProtocol.requests[req.MessageData.Id]; ok {
 			req.MessageData.Id = uuid.New().String()
 			continue
+		}
+		e.WriteDataProtocol.requests[req.MessageData.Id] = &writeDataResp{
+			ch: respChan,
 		}
 		break
 	}
@@ -82,225 +76,166 @@ func (e *protocols) WriteDataAction(id peer.ID, file, fid, fragment string) erro
 	defer func() {
 		e.WriteDataProtocol.Lock()
 		delete(e.WriteDataProtocol.requests, req.MessageData.Id)
+		close(respChan)
 		e.WriteDataProtocol.Unlock()
 	}()
 
-	stream, err := e.ReadDataProtocol.NewPeerStream(id, protocol.ID(e.ProtocolPrefix+writeDataRequest))
+	err = e.WriteDataProtocol.SendProtoMessage(id, protocol.ID(e.ProtocolPrefix+writeDataRequest), &req)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		stream.Reset()
-		stream.Close()
-	}()
-
-	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	num := 0
-	tmpbuf := make([]byte, 0)
-	recvbuf := make([]byte, 1024)
-	databuf := make([]byte, 32*1024)
-	recvdata := &pb.WriteDataResponse{}
-
-	var offset int64 = 0
-	req.TotalSize = totalsize
-	timeout := time.NewTicker(time.Second * 5)
-	defer timeout.Stop()
+	timeout := time.After(time.Second * 15)
 	for {
-		req.Offset = offset
-		_, err = f.Seek(req.Offset, 0)
-		if err != nil {
-			return fmt.Errorf("[f.Seek] %v", err)
-		}
-
-		num, err = f.Read(databuf)
-		if err != nil {
-			return fmt.Errorf("[f.Read] %v", err)
-		}
-
-		req.Data = databuf[:num]
-		req.DataLength = int32(num)
-
-		buf, err := proto.Marshal(&req)
-		if err != nil {
-			return fmt.Errorf("[proto.Marshal] %v", err)
-		}
-
-		_, err = rw.Write(buf)
-		if err != nil {
-			return fmt.Errorf("[rw.Write] %v", err)
-		}
-
-		err = rw.Flush()
-		if err != nil {
-			return fmt.Errorf("[rw.Flush] %v", err)
-		}
-		offset += int64(num)
-		timeout.Reset(time.Second * 5)
 		select {
-		case <-timeout.C:
-			return errors.New(ERR_WriteTimeOut)
-		default:
-			num, err = rw.Read(recvbuf)
-			if err != nil {
-				return fmt.Errorf("[rw.Read] %v", err)
+		case <-timeout:
+			return fmt.Errorf(ERR_RecvTimeOut)
+		case <-respChan:
+			e.WriteDataProtocol.Lock()
+			resp, ok := e.WriteDataProtocol.requests[req.MessageData.Id]
+			e.WriteDataProtocol.Unlock()
+			if !ok {
+				return fmt.Errorf("received empty data")
 			}
-			err = proto.Unmarshal(recvbuf[:num], recvdata)
-			if err != nil {
-				tmpbuf = append(tmpbuf, recvbuf[:num]...)
-				err = proto.Unmarshal(tmpbuf, recvdata)
-				if err != nil {
-					break
-				}
-				tmpbuf = make([]byte, 0)
+			if resp.Code != P2PResponseOK {
+				return fmt.Errorf("received code: %d err: %v", resp.Code, resp.Msg)
 			}
-			if recvdata.Code == P2PResponseFinish {
-				return nil
-			}
-
-			if recvdata.Code != P2PResponseOK {
-				return fmt.Errorf("received error code: %d", recvdata.Code)
-			}
+			return nil
 		}
 	}
 }
 
 func (e *WriteDataProtocol) onWriteDataRequest(s network.Stream) {
-	defer func() {
-		s.Close()
-	}()
-	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go e.readData(rw, &wg)
-	wg.Wait()
-}
-
-func (e *WriteDataProtocol) readData(rw *bufio.ReadWriter, wg *sync.WaitGroup) {
-	var err error
-	data := &pb.WriteDataRequest{}
-	respdata := &pb.WriteDataResponse{}
-	recvbuf := make([]byte, 33*1024)
-	tmpbuf := make([]byte, 0)
-	var f *os.File
-	fpath := ""
-	defer func() {
-		wg.Done()
-	}()
-
-	time.Sleep(time.Second)
-	if !e.GetRecvFlag() {
-		respdata.Code = P2PResponseForbid
-		buffer, _ := proto.Marshal(respdata)
-		rw.Write(buffer)
-		rw.Flush()
+	if !e.enableRecv {
+		s.Reset()
 		return
 	}
 
-	num := 0
-	timeout := time.NewTicker(time.Second * 15)
-	defer timeout.Stop()
+	defer s.Close()
 
-	for {
-		select {
-		case <-timeout.C:
-			os.Remove(fpath)
-			return
-		default:
-			num, err = rw.Read(recvbuf)
-			if err != nil {
-				respdata.Code = P2PResponseFailed
-				buffer, _ := proto.Marshal(respdata)
-				rw.Write(buffer)
-				rw.Flush()
-				os.Remove(fpath)
-				return
-			}
-			timeout.Reset(time.Second * 15)
-			err = proto.Unmarshal(recvbuf[:num], data)
-			if err != nil {
-				tmpbuf = append(tmpbuf, recvbuf[:num]...)
-				err = proto.Unmarshal(tmpbuf, data)
-				if err != nil {
-					break
-				}
-				tmpbuf = make([]byte, 0)
-			}
-			dir := filepath.Join(e.GetDirs().TmpDir, data.Roothash)
-			err = os.MkdirAll(dir, DirMode)
-			if err != nil {
-				respdata.Code = P2PResponseRemoteFailed
-				buffer, _ := proto.Marshal(respdata)
-				rw.Write(buffer)
-				rw.Flush()
-				os.Remove(fpath)
-				return
-			}
-
-			fpath = filepath.Join(dir, data.Datahash)
-			if data.Datahash == ZeroFileHash_8M {
-				err = writeZeroToFile(fpath, FragmentSize)
-				if err != nil {
-					respdata.Code = P2PResponseRemoteFailed
-					buffer, _ := proto.Marshal(respdata)
-					rw.Write(buffer)
-					rw.Flush()
-					os.Remove(fpath)
-					return
-				}
-				respdata.Code = P2PResponseFinish
-				buffer, _ := proto.Marshal(respdata)
-				rw.Write(buffer)
-				rw.Flush()
-				os.Remove(fpath)
-				return
-			}
-
-			if f == nil {
-				f, err = os.OpenFile(fpath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-				if err != nil {
-					respdata.Code = P2PResponseRemoteFailed
-					buffer, _ := proto.Marshal(respdata)
-					rw.Write(buffer)
-					rw.Flush()
-					return
-				}
-				defer f.Close()
-			}
-
-			_, err = f.Write(data.Data[:data.DataLength])
-			if err != nil {
-				respdata.Code = P2PResponseRemoteFailed
-				buffer, _ := proto.Marshal(respdata)
-				rw.Write(buffer)
-				rw.Flush()
-				os.Remove(fpath)
-				return
-			}
-
-			fstat, err := f.Stat()
-			if err != nil {
-				respdata.Code = P2PResponseRemoteFailed
-				buffer, _ := proto.Marshal(respdata)
-				rw.Write(buffer)
-				rw.Flush()
-				os.Remove(fpath)
-				return
-			}
-
-			if fstat.Size() >= data.TotalSize {
-				respdata.Code = P2PResponseFinish
-			} else {
-				respdata.Code = P2PResponseOK
-			}
-
-			buffer, _ := proto.Marshal(respdata)
-			rw.Write(buffer)
-			rw.Flush()
-			if respdata.Code == P2PResponseFinish {
-				return
-			}
-		}
+	// get request data
+	data := &pb.WriteDataRequest{}
+	buf, err := io.ReadAll(s)
+	if err != nil {
+		s.Reset()
+		return
 	}
+
+	// unmarshal it
+	err = proto.Unmarshal(buf, data)
+	if err != nil {
+		s.Reset()
+		return
+	}
+
+	resp := &pb.WriteDataResponse{
+		MessageData: e.NewMessageData(data.MessageData.Id, false),
+	}
+
+	dir := filepath.Join(e.GetDirs().TmpDir, data.Fid)
+	err = os.MkdirAll(dir, DirMode)
+	if err != nil {
+		resp.Code = P2PResponseRemoteFailed
+		resp.Msg = fmt.Sprintf("os.MkdirAll: %v", err)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	hash, err := CalcSHA256(data.Data)
+	if err != nil {
+		resp.Code = P2PResponseRemoteFailed
+		resp.Msg = fmt.Sprintf("CalcSHA256(len=%d): %v", len(data.Data), err)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	if hash != data.Datahash {
+		resp.Code = P2PResponseFailed
+		resp.Msg = fmt.Sprintf("received data hash: %s != recalculated hash: %s", data.Datahash, hash)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	fpath := filepath.Join(dir, data.Datahash)
+	fstat, err := os.Stat(fpath)
+	if err == nil {
+		if fstat.Size() == data.DataLength {
+			resp.Code = P2PResponseOK
+			resp.Msg = "success"
+			e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+			return
+		}
+		os.Remove(fpath)
+	}
+
+	if data.Datahash == ZeroFileHash_8M {
+		err = writeZeroToFile(fpath, FragmentSize)
+		if err != nil {
+			resp.Code = P2PResponseRemoteFailed
+			resp.Msg = fmt.Sprintf("writeZeroToFile: %v", err)
+			e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+			return
+		}
+		resp.Code = P2PResponseOK
+		resp.Msg = "success"
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		resp.Code = P2PResponseRemoteFailed
+		resp.Msg = fmt.Sprintf("os.Create: %v", err)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.Write(data.Data)
+	if err != nil {
+		resp.Code = P2PResponseRemoteFailed
+		resp.Msg = fmt.Sprintf("f.Write: %v", err)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	err = f.Sync()
+	if err != nil {
+		resp.Code = P2PResponseRemoteFailed
+		resp.Msg = fmt.Sprintf("f.Sync: %v", err)
+		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+		return
+	}
+
+	resp.Code = P2PResponseOK
+	resp.Msg = "success"
+	e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+	return
+}
+
+func (e *WriteDataProtocol) onWriteDataResponse(s network.Stream) {
+	defer s.Close()
+	data := &pb.WriteDataResponse{}
+	buf, err := io.ReadAll(s)
+	if err != nil {
+		s.Reset()
+		return
+	}
+
+	// unmarshal it
+	err = proto.Unmarshal(buf, data)
+	if err != nil {
+		s.Reset()
+		return
+	}
+
+	// locate request data and remove it if found
+	e.WriteDataProtocol.Lock()
+	_, ok := e.requests[data.MessageData.Id]
+	if ok {
+		e.requests[data.MessageData.Id].ch <- true
+		e.requests[data.MessageData.Id].WriteDataResponse = data
+	}
+	e.WriteDataProtocol.Unlock()
 }
 
 func writeZeroToFile(file string, size int64) error {
