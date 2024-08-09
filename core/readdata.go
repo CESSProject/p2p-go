@@ -8,12 +8,12 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 
@@ -46,7 +46,7 @@ func (n *PeerNode) NewReadDataProtocol() *ReadDataProtocol {
 	return &e
 }
 
-func (e *protocols) ReadDataAction(id peer.ID, name, savepath string) (int64, error) {
+func (e *protocols) ReadDataAction(ctx context.Context, id peer.ID, name, savepath string) (int64, error) {
 	fstat, err := os.Stat(savepath)
 	if err == nil {
 		if fstat.IsDir() {
@@ -87,10 +87,10 @@ func (e *protocols) ReadDataAction(id peer.ID, name, savepath string) (int64, er
 	if err != nil {
 		return 0, fmt.Errorf("SendProtoMessage: %v", err)
 	}
-	timeout := time.After(time.Second * 15)
+
 	for {
 		select {
-		case <-timeout:
+		case <-ctx.Done():
 			return 0, fmt.Errorf(ERR_RecvTimeOut)
 		case <-respChan:
 			e.ReadDataProtocol.Lock()

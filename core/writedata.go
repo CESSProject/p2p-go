@@ -8,12 +8,12 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 
@@ -46,7 +46,7 @@ func (n *PeerNode) NewWriteDataProtocol() *WriteDataProtocol {
 	return &e
 }
 
-func (e *protocols) WriteDataAction(id peer.ID, file, fid, fragment string) error {
+func (e *protocols) WriteDataAction(ctx context.Context, id peer.ID, file, fid, fragment string) error {
 	buf, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf("[os.ReadFile] %v", err)
@@ -84,10 +84,10 @@ func (e *protocols) WriteDataAction(id peer.ID, file, fid, fragment string) erro
 	if err != nil {
 		return err
 	}
-	timeout := time.After(time.Second * 15)
+
 	for {
 		select {
-		case <-timeout:
+		case <-ctx.Done():
 			return fmt.Errorf(ERR_RecvTimeOut)
 		case <-respChan:
 			e.WriteDataProtocol.Lock()
@@ -109,7 +109,6 @@ func (e *WriteDataProtocol) onWriteDataRequest(s network.Stream) {
 		s.Reset()
 		return
 	}
-
 	defer s.Close()
 
 	// get request data
@@ -148,14 +147,16 @@ func (e *WriteDataProtocol) onWriteDataRequest(s network.Stream) {
 		return
 	}
 
-	if hash != data.Datahash {
-		resp.Code = P2PResponseFailed
-		resp.Msg = fmt.Sprintf("received data hash: %s != recalculated hash: %s", data.Datahash, hash)
-		e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
-		return
+	if data.Datahash != "" {
+		if hash != data.Datahash {
+			resp.Code = P2PResponseFailed
+			resp.Msg = fmt.Sprintf("received data hash: %s != recalculated hash: %s", data.Datahash, hash)
+			e.WriteDataProtocol.SendProtoMessage(s.Conn().RemotePeer(), protocol.ID(e.ProtocolPrefix+writeDataResponse), resp)
+			return
+		}
 	}
 
-	fpath := filepath.Join(dir, data.Datahash)
+	fpath := filepath.Join(dir, hash)
 	fstat, err := os.Stat(fpath)
 	if err == nil {
 		if fstat.Size() == data.DataLength {
@@ -214,6 +215,7 @@ func (e *WriteDataProtocol) onWriteDataRequest(s network.Stream) {
 
 func (e *WriteDataProtocol) onWriteDataResponse(s network.Stream) {
 	defer s.Close()
+
 	data := &pb.WriteDataResponse{}
 	buf, err := io.ReadAll(s)
 	if err != nil {

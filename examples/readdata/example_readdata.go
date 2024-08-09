@@ -59,7 +59,10 @@ func main() {
 
 	// you need to put the test.txt file in ./peer2/file directory
 	// note: the size of test.txt should not be less than 8388608
-	size, err := peer1.ReadDataAction(peer2.ID(), "test.txt", save_file)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	size, err := peer1.ReadDataAction(ctx, peer2.ID(), "test.txt", save_file)
 	if err != nil {
 		fmt.Println("ReadDataAction err: ", err)
 		return

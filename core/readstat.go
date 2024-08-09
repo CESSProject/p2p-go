@@ -8,11 +8,11 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/CESSProject/p2p-go/pb"
 
@@ -45,7 +45,7 @@ func (n *PeerNode) NewReadDataStatProtocol() *ReadDataStatProtocol {
 	return &e
 }
 
-func (e *protocols) ReadDataStatAction(id peer.ID, name string) (uint64, error) {
+func (e *protocols) ReadDataStatAction(ctx context.Context, id peer.ID, name string) (uint64, error) {
 	req := pb.ReadDataStatRequest{
 		MessageData: e.ReadDataStatProtocol.NewMessageData(uuid.New().String(), false),
 		Name:        name,
@@ -75,10 +75,10 @@ func (e *protocols) ReadDataStatAction(id peer.ID, name string) (uint64, error) 
 	if err != nil {
 		return 0, fmt.Errorf("SendProtoMessage: %v", err)
 	}
-	timeout := time.After(time.Second * 15)
+
 	for {
 		select {
-		case <-timeout:
+		case <-ctx.Done():
 			return 0, fmt.Errorf(ERR_RecvTimeOut)
 		case <-respChan:
 			e.ReadDataStatProtocol.Lock()

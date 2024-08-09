@@ -58,7 +58,10 @@ func main() {
 
 	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
-	err = peer1.WriteDataAction(peer2.ID(), send_file, "fid", send_file_hash)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	err = peer1.WriteDataAction(ctx, peer2.ID(), send_file, "fid", send_file_hash)
 	if err != nil {
 		fmt.Println("WriteDataAction err: ", err)
 		return

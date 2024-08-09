@@ -20,7 +20,7 @@ var P2P_BOOT_ADDRS = []string{
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
-var read_remote_file = "1"
+var read_remote_file = ""
 
 func main() {
 	ctx := context.Background()
@@ -57,8 +57,11 @@ func main() {
 
 	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
 	// you need to put read_remote_file in the ./peer2/file directory
-	size, err := peer1.ReadDataStatAction(peer2.ID(), read_remote_file)
+	size, err := peer1.ReadDataStatAction(ctx, peer2.ID(), read_remote_file)
 	if err != nil {
 		fmt.Println("ReadDataStatAction err: ", err)
 		return
