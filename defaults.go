@@ -9,25 +9,12 @@ package p2pgo
 
 import (
 	"os"
-	"time"
-
-	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 )
 
 // DefaultListenPort configures libp2p to use default port.
 var DefaultListenPort = func(cfg *Config) error {
 	port := 4001
 	return cfg.Apply(ListenPort(port))
-}
-
-// DefaultConnectionManager creates a default connection manager.
-var DefaultConnectionManager = func(cfg *Config) error {
-	mgr, err := connmgr.NewConnManager(10, 100, connmgr.WithGracePeriod(time.Minute), connmgr.WithSilencePeriod(time.Minute))
-	if err != nil {
-		return err
-	}
-	cfg.ConnManager = mgr
-	return nil
 }
 
 // DefaultWorkSpace configures libp2p to use default work space.
@@ -40,8 +27,13 @@ var DefaultWorkSpace = func(cfg *Config) error {
 }
 
 // DefaultWorkSpace configures libp2p to use default work space.
-var DefaultBucketSize = func(cfg *Config) error {
-	return cfg.Apply(BucketSize(100))
+var DefaultDialTimeout = func(cfg *Config) error {
+	return cfg.Apply(DialTimeout(10))
+}
+
+// DefaultWorkSpace configures libp2p to use default work space.
+var DefaultRecordCacheLen = func(cfg *Config) error {
+	return cfg.Apply(RecordCacheLen(1000))
 }
 
 // Complete list of default options and when to fallback on them.
@@ -57,16 +49,16 @@ var defaults = []struct {
 		opt:      DefaultListenPort,
 	},
 	{
-		fallback: func(cfg *Config) bool { return cfg.ConnManager == nil },
-		opt:      DefaultConnectionManager,
-	},
-	{
 		fallback: func(cfg *Config) bool { return cfg.Workspace == "" },
 		opt:      DefaultWorkSpace,
 	},
 	{
-		fallback: func(cfg *Config) bool { return cfg.BucketSize == 0 },
-		opt:      DefaultBucketSize,
+		fallback: func(cfg *Config) bool { return cfg.DialTimeout == 0 },
+		opt:      DefaultDialTimeout,
+	},
+	{
+		fallback: func(cfg *Config) bool { return cfg.RecordCacheLen <= 0 },
+		opt:      DefaultRecordCacheLen,
 	},
 }
 

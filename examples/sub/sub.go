@@ -19,11 +19,12 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-const P2P_PORT = 4001
+const P2P_PORT = 4002
 
 var P2P_BOOT_ADDRS = []string{
 	//testnet
-	"_dnsaddr.boot-miner-devnet.cess.cloud",
+	//"_dnsaddr.boot-miner-testnet.cess.network",
+	"/ip4/192.168.110.247/tcp/3328/p2p/12D3KooWCQBqdQGJj1FUkt7FYdmLhwAxQ1sXC1TSn985MKg6nTbn",
 }
 
 func main() {
@@ -39,6 +40,9 @@ func main() {
 		panic(err)
 	}
 	defer peer_node.Close()
+
+	fmt.Println(peer_node.Addrs())
+	fmt.Println(peer_node.ID().String())
 
 	// create a new PubSub service using the GossipSub router
 	gossipSub, err := pubsub.NewGossipSub(ctx, peer_node.GetHost())

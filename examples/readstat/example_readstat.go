@@ -9,30 +9,29 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"log"
+	"time"
 
 	p2pgo "github.com/CESSProject/p2p-go"
-	"github.com/libp2p/go-libp2p/core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
-const P2P_PORT1 = 4001
-const P2P_PORT2 = 4002
-
 var P2P_BOOT_ADDRS = []string{
-	//testnet
 	"_dnsaddr.boot-miner-devnet.cess.cloud",
 }
 
+var read_remote_file = ""
+
 func main() {
 	ctx := context.Background()
+	sourcePort1 := flag.Int("p1", 15000, "Source port number")
+	sourcePort2 := flag.Int("p2", 15001, "Source port number")
 
 	// peer1
 	peer1, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer1"),
-		p2pgo.ListenPort(P2P_PORT1),
+		p2pgo.ListenPort(*sourcePort1),
 		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
@@ -40,11 +39,13 @@ func main() {
 	}
 	defer peer1.Close()
 
+	fmt.Println("peer1:", peer1.Addrs(), peer1.ID())
+
 	// peer2
 	peer2, err := p2pgo.New(
 		ctx,
 		p2pgo.Workspace("./peer2"),
-		p2pgo.ListenPort(P2P_PORT2),
+		p2pgo.ListenPort(*sourcePort2),
 		p2pgo.BootPeers(P2P_BOOT_ADDRS),
 	)
 	if err != nil {
@@ -52,21 +53,18 @@ func main() {
 	}
 	defer peer2.Close()
 
-	maddr, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/192.168.110.247/tcp/%d/p2p/%s", P2P_PORT2, peer2.ID()))
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("peer2:", peer2.Addrs(), peer2.ID())
 
-	target_addr, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		panic(err)
-	}
+	peer1.Peerstore().AddAddrs(peer2.ID(), peer2.Addrs(), time.Second*5)
 
-	err = peer1.Connect(ctx, *target_addr)
-	if err != nil {
-		panic(err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	fragmentsize, err := peer1.ReadDataStatAction(target_addr.ID, "test_fid", "fragment_hash")
-	log.Println("fragment size: ", fragmentsize, " err: ", err)
+	// you need to put read_remote_file in the ./peer2/file directory
+	size, err := peer1.ReadDataStatAction(ctx, peer2.ID(), read_remote_file)
+	if err != nil {
+		fmt.Println("ReadDataStatAction err: ", err)
+		return
+	}
+	fmt.Println("success, remote file size: ", size)
 }

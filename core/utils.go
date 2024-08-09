@@ -239,7 +239,7 @@ func FreeLocalPort(port uint32) bool {
 
 func FindFile(dir, name string) string {
 	var result string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -249,6 +249,5 @@ func FindFile(dir, name string) string {
 		}
 		return nil
 	})
-	_ = err
 	return result
 }
